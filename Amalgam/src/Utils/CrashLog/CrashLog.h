@@ -3,6 +3,6 @@
 
 namespace CrashLog
 {
-	void Setup();
+	void Initialize();
 	void Unload();
 }

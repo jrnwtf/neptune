@@ -5,6 +5,10 @@ MAKE_SIGNATURE(CBasePlayer_CalcViewModelView, "client.dll", "48 89 74 24 ? 55 41
 MAKE_HOOK(CBasePlayer_CalcViewModelView, S::CBasePlayer_CalcViewModelView(), void,
 	void* rcx, CBaseEntity* pOwner, const Vec3& vEyePosition, Vec3& vEyeAngles)
 {
+#ifdef DEBUG_HOOKS
+	if (!Vars::Hooks::CBasePlayer_CalcViewModelView.Map[DEFAULT_BIND])
+		return CALL_ORIGINAL(rcx, pOwner, vEyePosition, vEyeAngles);
+#endif
 	Vec3 vOffset = { float(Vars::Visuals::Viewmodel::OffsetX.Value), float(Vars::Visuals::Viewmodel::OffsetY.Value), float(Vars::Visuals::Viewmodel::OffsetZ.Value) };
 	bool bOffset = !vOffset.IsZero();
 
@@ -30,15 +34,9 @@ MAKE_HOOK(CBasePlayer_CalcViewModelView, S::CBasePlayer_CalcViewModelView(), voi
 			static Vec3 vAng = {};
 			static int iTick = 0;
 
-			if (!G::AimPosition.IsZero())
+			if (!G::AimPosition.first.IsZero())
 			{
-				vAng = Math::CalcAngle(vEyePosition, G::AimPosition);
-				iTick = I::GlobalVars->tickcount;
-			}
-
-			if (abs(iTick - I::GlobalVars->tickcount) < 32)
-			{
-				Vec3 vDiff = I::EngineClient->GetViewAngles() - vAng;
+				Vec3 vDiff = I::EngineClient->GetViewAngles() - Math::CalcAngle(vEyePosition, G::AimPosition.first);
 				if (bFlip)
 					vDiff.y *= -1;
 				vEyeAngles = I::EngineClient->GetViewAngles() - vDiff;
@@ -67,5 +65,9 @@ MAKE_HOOK(CBasePlayer_CalcViewModelView, S::CBasePlayer_CalcViewModelView(), voi
 MAKE_HOOK(ClientModeTFNormal_GetViewModelFOV, U::Memory.GetVFunc(I::ClientModeShared, 32), float,
 	/*void* rcx*/)
 {
+#ifdef DEBUG_HOOKS
+	if (!Vars::Hooks::CBasePlayer_CalcViewModelView.Map[DEFAULT_BIND])
+		return CALL_ORIGINAL(/*rcx*/);
+#endif
 	return Vars::Visuals::Viewmodel::FieldOfView.Value ? Vars::Visuals::Viewmodel::FieldOfView.Value : CALL_ORIGINAL(/*rcx*/);
 }

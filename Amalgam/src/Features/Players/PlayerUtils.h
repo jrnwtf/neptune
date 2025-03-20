@@ -7,20 +7,22 @@
 #define CHEATER_TAG (IGNORED_TAG-1)
 #define FRIEND_TAG (CHEATER_TAG-1)
 #define PARTY_TAG (FRIEND_TAG-1)
-#define TAG_COUNT (-PARTY_TAG)
+#define F2P_TAG (PARTY_TAG-1)
+#define TAG_COUNT (-F2P_TAG)
 
 struct ListPlayer
 {
-	const char* m_sName;
+	std::string m_sName;
 	uint32_t m_uFriendsID;
 	int m_iUserID;
 	int m_iTeam;
-	int m_iClass;
 	bool m_bAlive;
 	bool m_bLocal;
+	bool m_bFake;
 	bool m_bFriend;
 	bool m_bParty;
-	bool m_bFake;
+	bool m_bF2P;
+	int m_iLevel;
 };
 
 struct PriorityLabel_t
@@ -37,6 +39,7 @@ struct PriorityLabel_t
 class CPlayerlistUtils
 {
 public:
+	uint32_t GetFriendsID(int iIndex);
 	PriorityLabel_t* GetTag(int iID);
 	int GetTag(std::string sTag);
 	inline int TagToIndex(int iTag)
@@ -88,19 +91,15 @@ public:
 		{ "Ignored", { 200, 200, 200, 255 }, -1, false, true, true },
 		{ "Cheater", { 255, 100, 100, 255 }, 1, false, true, true },
 		{ "Friend", { 100, 255, 100, 255 }, 0, true, false, true },
-		{ "Party", { 100, 100, 255, 255 }, 0, true, false, true }
+		{ "Party", { 100, 100, 255, 255 }, 0, true, false, true },
+		{ "F2P", { 255, 255, 255, 255 }, 0, true, false, true }
 	};
 
 	std::vector<ListPlayer> m_vPlayerCache = {};
 	std::unordered_map<uint32_t, ListPlayer> m_mPriorityCache = {};
 
-	bool m_bLoadPlayers = true;
-	bool m_bSavePlayers = false;
-	bool m_bLoadTags = true;
-	bool m_bSaveTags = false;
-
-	const std::vector<const char*> m_vListPitch = { "None", "Up", "Down", "Zero", "Auto" };
-	const std::vector<const char*> m_vListYaw = { "None", "Forward", "Backward", "Left", "Right", "Invert", "Edge", "Auto" };
+	bool m_bLoad = true;
+	bool m_bSave = false;
 };
 
 ADD_FEATURE(CPlayerlistUtils, PlayerUtils)

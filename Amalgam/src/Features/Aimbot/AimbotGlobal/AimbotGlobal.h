@@ -2,22 +2,12 @@
 #include "../../../SDK/SDK.h"
 #include "../../Backtrack/Backtrack.h"
 
-enum struct ETargetType
-{
-	Unknown,
-	Player,
-	Sentry,
-	Dispenser,
-	Teleporter,
-	Sticky,
-	NPC,
-	Bomb
-};
+Enum(Target, Unknown, Player, Sentry, Dispenser, Teleporter, Sticky, NPC, Bomb)
 
 struct Target_t
 {
 	CBaseEntity* m_pEntity = nullptr;
-	ETargetType m_TargetType = ETargetType::Unknown;
+	int m_iTargetType = TargetEnum::Unknown;
 	Vec3 m_vPos = {};
 	Vec3 m_vAngleTo = {};
 	float m_flFOVTo = std::numeric_limits<float>::max();
@@ -25,8 +15,9 @@ struct Target_t
 	int m_nPriority = 0;
 	int m_nAimedHitbox = -1;
 
-	TickRecord m_Tick = {};
+	TickRecord m_tRecord = {};
 	bool m_bBacktrack = false;
+	bool m_bDormant = false;
 };
 
 class CAimbotGlobal
@@ -36,9 +27,11 @@ public:
 	void SortPriority(std::vector<Target_t>*);
 
 	bool PlayerBoneInFOV(CTFPlayer* pTarget, Vec3 vLocalPos, Vec3 vLocalAngles, float& flFOVTo, Vec3& vPos, Vec3& vAngleTo, int iHitboxes = Vars::Aimbot::Hitscan::HitboxesEnum::Head | Vars::Aimbot::Hitscan::HitboxesEnum::Body | Vars::Aimbot::Hitscan::HitboxesEnum::Pelvis | Vars::Aimbot::Hitscan::HitboxesEnum::Arms | Vars::Aimbot::Hitscan::HitboxesEnum::Legs);
-	bool IsHitboxValid(int nHitbox, int iHitboxes = Vars::Aimbot::Hitscan::HitboxesEnum::Head | Vars::Aimbot::Hitscan::HitboxesEnum::Body | Vars::Aimbot::Hitscan::HitboxesEnum::Pelvis | Vars::Aimbot::Hitscan::HitboxesEnum::Arms | Vars::Aimbot::Hitscan::HitboxesEnum::Legs);
+	bool PlayerPosInFOV(CTFPlayer* pTarget, Vec3 vLocalPos, Vec3 vLocalAngles, float& flFOVTo, Vec3& vPos, Vec3& vAngleTo);
 
-	bool ShouldIgnore(CBaseEntity* pTarget, CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
+	bool IsHitboxValid(uint32_t uHash, int nHitbox, int iHitboxes = Vars::Aimbot::Hitscan::HitboxesEnum::Head | Vars::Aimbot::Hitscan::HitboxesEnum::Body | Vars::Aimbot::Hitscan::HitboxesEnum::Pelvis | Vars::Aimbot::Hitscan::HitboxesEnum::Arms | Vars::Aimbot::Hitscan::HitboxesEnum::Legs);
+
+	bool ShouldIgnore(CBaseEntity* pTarget, CTFPlayer* pLocal, CTFWeaponBase* pWeapon, bool bIgnoreDormant = true);
 	int GetPriority(int targetIdx);
 
 	bool ValidBomb(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CBaseEntity* pBomb);

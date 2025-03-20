@@ -78,19 +78,20 @@ public:
 	NETVAR_OFF(m_surfaceFriction, float, "CBasePlayer", "m_szLastPlaceName", 32);
 	NETVAR_OFF(m_chTextureType, char, "CBasePlayer", "m_szLastPlaceName", 36);
 	NETVAR_OFF(m_hMyWearables, CUtlVector<CHandle<CEconWearable>>, "CBasePlayer", "m_szLastPlaceName", 56);
+	NETVAR_OFF(m_iMetalCount, int, "CBasePlayer", "m_iAmmo", 12);
 
 	CONDGET(IsOnGround, m_fFlags(), FL_ONGROUND);
 	CONDGET(IsInWater, m_fFlags(), FL_INWATER);
 	CONDGET(IsDucking, m_fFlags(), FL_DUCKING);
 
-	VIRTUAL(PreThink, void, void(*)(void*), this, 261);
-	VIRTUAL(Think, void, void(*)(void*), this, 121);
-	VIRTUAL(PostThink, void, void(*)(void*), this, 262);
-	VIRTUAL(GetRenderedWeaponModel, CBaseAnimating*, CBaseAnimating*(*)(void*), this, 251);
+	VIRTUAL(PreThink, void, void*, this, 262);
+	VIRTUAL(Think, void, void*, this, 122);
+	VIRTUAL(PostThink, void, void*, this, 263);
+	VIRTUAL(GetRenderedWeaponModel, CBaseAnimating*, void*, this, 252);
 	
 	inline void SelectItem(const char* ptr, int subtype)
 	{
-		reinterpret_cast<void(*)(void*, const char*, int)>(U::Memory.GetVFunc(this, 271))(this, ptr, subtype);
+		reinterpret_cast<void(*)(void*, const char*, int)>(U::Memory.GetVFunc(this, 272))(this, ptr, subtype);
 	}
 
 	inline bool IsAlive()

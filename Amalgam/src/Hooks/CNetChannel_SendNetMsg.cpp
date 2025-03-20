@@ -4,11 +4,16 @@
 #include "../Features/Backtrack/Backtrack.h"
 #include "../Features/Misc/Misc.h"
 
-MAKE_SIGNATURE(CNetChan_SendNetMsg, "engine.dll", "48 89 5C 24 ? 48 89 74 24 ? 48 89 7C 24 ? 41 56 48 83 EC ? 48 8B F1 45 0F B6 F1", 0x0);
+MAKE_SIGNATURE(CNetChannel_SendNetMsg, "engine.dll", "48 89 5C 24 ? 48 89 74 24 ? 48 89 7C 24 ? 41 56 48 83 EC ? 48 8B F1 45 0F B6 F1", 0x0);
 
-MAKE_HOOK(CNetChan_SendNetMsg, S::CNetChan_SendNetMsg(), bool,
+MAKE_HOOK(CNetChannel_SendNetMsg, S::CNetChannel_SendNetMsg(), bool,
 	CNetChannel* pNetChan, INetMessage& msg, bool bForceReliable, bool bVoice)
 {
+#ifdef DEBUG_HOOKS
+	if (!Vars::Hooks::CNetChannel_SendNetMsg.Map[DEFAULT_BIND])
+		return CALL_ORIGINAL(pNetChan, msg, bForceReliable, bVoice);
+#endif
+
 	if (!G::Unload)
 	{
 		switch (msg.GetType())
@@ -23,14 +28,32 @@ MAKE_HOOK(CNetChan_SendNetMsg, S::CNetChan_SendNetMsg(), bool,
 				// intercept and change any vars we want to control
 				switch (FNV1A::Hash32(localCvar->Name))
 				{
-				case FNV1A::Hash32Const("cl_interp"): strncpy_s(localCvar->Value, std::to_string(F::Backtrack.m_flWishInterp).c_str(), MAX_OSPATH); break;
-				case FNV1A::Hash32Const("cl_interp_ratio"): strncpy_s(localCvar->Value, "1.0", MAX_OSPATH); break;
-				case FNV1A::Hash32Const("cl_interpolate"): strncpy_s(localCvar->Value, "1", MAX_OSPATH); break;
-				case FNV1A::Hash32Const("cl_cmdrate"): strncpy_s(localCvar->Value, std::to_string(F::Misc.iWishCmdrate).c_str(), MAX_OSPATH); break;
-				case FNV1A::Hash32Const("cl_updaterate"): strncpy_s(localCvar->Value, std::to_string(F::Misc.iWishUpdaterate).c_str(), MAX_OSPATH); break;
+				case FNV1A::Hash32Const("cl_interp"):
+					if (F::Backtrack.m_flWishInterp != -1.f)
+						strncpy_s(localCvar->Value, std::to_string(F::Backtrack.m_flWishInterp).c_str(), MAX_OSPATH);
+					if (Vars::Misc::Game::AntiCheatCompatibility.Value)
+					{ try {
+						float flValue = std::stof(localCvar->Value);
+						strncpy_s(localCvar->Value, std::to_string(std::min(flValue, 0.1f)).c_str(), MAX_OSPATH);
+					} catch (...) {}; }
+					break;
+				case FNV1A::Hash32Const("cl_cmdrate"):
+					if (F::Misc.iWishCmdrate != -1)
+						strncpy_s(localCvar->Value, std::to_string(F::Misc.iWishCmdrate).c_str(), MAX_OSPATH);
+					if (Vars::Misc::Game::AntiCheatCompatibility.Value)
+					{ try {
+						int iValue = std::stof(localCvar->Value);
+						strncpy_s(localCvar->Value, std::to_string(std::max(iValue, 10)).c_str(), MAX_OSPATH);
+					} catch (...) {}; }
+					break;
+				case FNV1A::Hash32Const("cl_interp_ratio"):
+				case FNV1A::Hash32Const("cl_interpolate"):
+					strncpy_s(localCvar->Value, "1", MAX_OSPATH);
+				//case FNV1A::Hash32Const("cl_updaterate"): strncpy_s(localCvar->Value, std::to_string(F::Misc.iWishUpdaterate).c_str(), MAX_OSPATH); break;
 				}
 
-				if (Vars::Debug::Logging.Value)
+				/*
+				if ( Vars::Debug::Logging.Value )
 				{
 					switch (FNV1A::Hash32(localCvar->Name))
 					{
@@ -38,10 +61,11 @@ MAKE_HOOK(CNetChan_SendNetMsg, S::CNetChan_SendNetMsg(), bool,
 					case FNV1A::Hash32Const("cl_interp_ratio"):
 					case FNV1A::Hash32Const("cl_interpolate"):
 					case FNV1A::Hash32Const("cl_cmdrate"):
-					case FNV1A::Hash32Const("cl_updaterate"):
+					//case FNV1A::Hash32Const("cl_updaterate"):
 						SDK::Output("SendNetMsg", std::format("{}: {}", localCvar->Name, localCvar->Value).c_str(), { 100, 0, 255, 255 });
 					}
 				}
+				*/
 			}
 			break;
 		}
@@ -55,30 +79,47 @@ MAKE_HOOK(CNetChan_SendNetMsg, S::CNetChan_SendNetMsg(), bool,
 				return false;
 			break;
 		case clc_RespondCvarValue:
-			// causes b1g crash
-			if (Vars::Visuals::Removals::ConvarQueries.Value)
+			if (Vars::Misc::Game::AntiCheatCompatibility.Value)
 			{
-				if (const auto pMsg = reinterpret_cast<uintptr_t*>(&msg))
+				auto pMsg = reinterpret_cast<uintptr_t*>(&msg);
+				if (!pMsg) break;
+
+				auto cvarName = reinterpret_cast<const char*>(pMsg[6]);
+				if (!cvarName) break;
+
+				auto pConVar = U::ConVars.FindVar(cvarName);
+				if (!pConVar) break;
+
+				static std::string sValue = "";
+				switch (FNV1A::Hash32(cvarName))
 				{
-					if (const auto cvarName = reinterpret_cast<const char*>(pMsg[6]))
-					{
-						// Some servers check dxlevel and for some reason its default value is 0
-						if (FNV1A::Hash32(cvarName) != FNV1A::Hash32Const("mat_dxlevel"))
-						{
-							if (const auto pConVar = U::ConVars.FindVar(cvarName))
-							{
-								if (auto defaultValue = pConVar->m_pParent->m_pszDefaultValue)
-								{
-									pMsg[7] = uintptr_t(defaultValue);
-									SDK::Output("Removals::ConvarQueries", msg.ToString(), Color_t(), Vars::Debug::Logging.Value);
-									break;
-								}
-							}
-						}
-						// Even if we didn't find the cvar we should be fine
-						// https://github.com/OthmanAba/TeamFortress2/blob/1b81dded673d49adebf4d0958e52236ecc28a956/tf2_src/engine/baseclientstate.cpp#L1825
-					}
+				case FNV1A::Hash32Const("cl_interp"):
+					if (F::Backtrack.m_flWishInterp != -1.f)
+						sValue = std::to_string(std::min(F::Backtrack.m_flWishInterp, 0.1f));
+					else
+						sValue = pConVar->GetString();
+					break;
+				case FNV1A::Hash32Const("cl_interp_ratio"):
+					sValue = "1";
+					break;
+				case FNV1A::Hash32Const("cl_cmdrate"):
+					if (F::Misc.iWishCmdrate != -1)
+						sValue = std::to_string(F::Misc.iWishCmdrate);
+					else
+						sValue = pConVar->GetString();
+					break;
+				case FNV1A::Hash32Const("cl_updaterate"):
+					sValue = pConVar->GetString();
+					break;
+				case FNV1A::Hash32Const("mat_dxlevel"):
+					sValue = pConVar->GetString();
+					break;
+				default:
+					sValue = pConVar->m_pParent->m_pszDefaultValue;
 				}
+				pMsg[7] = uintptr_t(sValue.c_str());
+			
+				SDK::Output("Convar spoof", msg.ToString(), Vars::Menu::Theme::Accent.Value, Vars::Debug::Logging.Value);
 			}
 			break;
 		case clc_Move:
@@ -124,7 +165,6 @@ MAKE_HOOK(CNetChan_SendNetMsg, S::CNetChan_SendNetMsg(), bool,
 				if (iCmdCount > iAllowedNewCommands)
 				{
 					SDK::Output("clc_Move", std::format("{:d} sent <{:d} | {:d}>, max was {:d}.", iCmdCount + 3, pMsg->m_nNewCommands, pMsg->m_nBackupCommands, iAllowedNewCommands).c_str(), { 255, 0, 0, 255 });
-					F::Ticks.m_iShiftedTicks = F::Ticks.m_iShiftedGoal -= iCmdCount - iAllowedNewCommands;
 					F::Ticks.m_iDeficit = iCmdCount - iAllowedNewCommands;
 				}
 			}

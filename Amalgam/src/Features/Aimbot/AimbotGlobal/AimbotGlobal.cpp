@@ -29,7 +29,7 @@ bool CAimbotGlobal::PlayerBoneInFOV(CTFPlayer* pTarget, Vec3 vLocalPos, Vec3 vLo
 	float flMinFOV = 180.f;
 	for (int nHitbox = 0; nHitbox < pTarget->GetNumOfHitboxes(); nHitbox++)
 	{
-		if (!IsHitboxValid(nHitbox, iHitboxes))
+		if (!IsHitboxValid(H::Entities.GetModel(pTarget->entindex()), nHitbox, iHitboxes))
 			continue;
 
 		Vec3 vCurPos = pTarget->GetHitboxCenter(nHitbox);
@@ -47,40 +47,81 @@ bool CAimbotGlobal::PlayerBoneInFOV(CTFPlayer* pTarget, Vec3 vLocalPos, Vec3 vLo
 	return flMinFOV < Vars::Aimbot::General::AimFOV.Value;
 }
 
-bool CAimbotGlobal::IsHitboxValid(int nHitbox, int iHitboxes)
+bool CAimbotGlobal::PlayerPosInFOV( CTFPlayer* pTarget, Vec3 vLocalPos, Vec3 vLocalAngles, float& flFOVTo, Vec3& vPos, Vec3& vAngleTo )
 {
-	switch (nHitbox)
+	vPos = pTarget->GetCenter();
+	vAngleTo = Math::CalcAngle(vLocalPos, vPos);
+	flFOVTo = Math::CalcFov(vLocalAngles, vAngleTo);
+
+	return flFOVTo < Vars::Aimbot::General::AimFOV.Value;
+}
+
+bool CAimbotGlobal::IsHitboxValid(uint32_t uHash, int nHitbox, int iHitboxes)
+{
+	switch (uHash)
 	{
-	case -1: return true;
-	case HITBOX_HEAD: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Head;
-	case HITBOX_PELVIS: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Pelvis;
-	case HITBOX_BODY:
-	case HITBOX_THORAX:
-	case HITBOX_CHEST:
-	case HITBOX_UPPER_CHEST: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Body;
-	case HITBOX_RIGHT_HAND:
-	case HITBOX_LEFT_HAND:
-	case HITBOX_RIGHT_UPPER_ARM:
-	case HITBOX_RIGHT_FOREARM:
-	case HITBOX_LEFT_UPPER_ARM:
-	case HITBOX_LEFT_FOREARM: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Arms;
-	case HITBOX_RIGHT_THIGH:
-	case HITBOX_LEFT_THIGH:
-	case HITBOX_RIGHT_CALF:
-	case HITBOX_LEFT_CALF:
-	case HITBOX_RIGHT_FOOT:
-	case HITBOX_LEFT_FOOT: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Legs;
+	case FNV1A::Hash32Const("models/vsh/player/saxton_hale.mdl"):
+	{
+		switch (nHitbox)
+		{
+		case -1: return true;
+		case HITBOX_SAXTON_HEAD: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Head;
+		case HITBOX_SAXTON_BODY:
+		case HITBOX_SAXTON_THORAX:
+		case HITBOX_SAXTON_CHEST:
+		case HITBOX_SAXTON_UPPER_CHEST:
+		case HITBOX_SAXTON_NECK: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Body;
+		case HITBOX_SAXTON_PELVIS: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Pelvis;
+		case HITBOX_SAXTON_LEFT_UPPER_ARM:
+		case HITBOX_SAXTON_LEFT_FOREARM:
+		case HITBOX_SAXTON_LEFT_HAND:
+		case HITBOX_SAXTON_RIGHT_UPPER_ARM:
+		case HITBOX_SAXTON_RIGHT_FOREARM:
+		case HITBOX_SAXTON_RIGHT_HAND: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Arms;
+		case HITBOX_SAXTON_LEFT_THIGH:
+		case HITBOX_SAXTON_LEFT_CALF:
+		case HITBOX_SAXTON_LEFT_FOOT:
+		case HITBOX_SAXTON_RIGHT_THIGH:
+		case HITBOX_SAXTON_RIGHT_CALF:
+		case HITBOX_SAXTON_RIGHT_FOOT: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Legs;
+		}
+	}
+	default:
+	{
+		switch (nHitbox)
+		{
+		case -1: return true;
+		case HITBOX_HEAD: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Head;
+		case HITBOX_BODY:
+		case HITBOX_THORAX:
+		case HITBOX_CHEST:
+		case HITBOX_UPPER_CHEST: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Body;
+		case HITBOX_PELVIS: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Pelvis;
+		case HITBOX_LEFT_UPPER_ARM:
+		case HITBOX_LEFT_FOREARM:
+		case HITBOX_LEFT_HAND:
+		case HITBOX_RIGHT_UPPER_ARM:
+		case HITBOX_RIGHT_FOREARM:
+		case HITBOX_RIGHT_HAND: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Arms;
+		case HITBOX_LEFT_THIGH:
+		case HITBOX_LEFT_CALF:
+		case HITBOX_LEFT_FOOT:
+		case HITBOX_RIGHT_THIGH:
+		case HITBOX_RIGHT_CALF:
+		case HITBOX_RIGHT_FOOT: return iHitboxes & Vars::Aimbot::Hitscan::HitboxesEnum::Legs;
+		}
+	}
 	}
 
 	return false;
 }
 
-bool CAimbotGlobal::ShouldIgnore(CBaseEntity* pEntity, CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
+bool CAimbotGlobal::ShouldIgnore(CBaseEntity* pEntity, CTFPlayer* pLocal, CTFWeaponBase* pWeapon, bool bIgnoreDormant)
 {
-	if (pEntity->IsDormant())
+	if (bIgnoreDormant && pEntity->IsDormant())
 		return true;
 
-	if (auto pGameRules = I::TFGameRules->Get())
+	if (auto pGameRules = I::TFGameRules())
 	{
 		if (pGameRules->m_bTruceActive() && pLocal->m_iTeamNum() != pEntity->m_iTeamNum())
 			return true;
@@ -106,14 +147,14 @@ bool CAimbotGlobal::ShouldIgnore(CBaseEntity* pEntity, CTFPlayer* pLocal, CTFWea
 			|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Cloaked && pPlayer->IsInvisible() && pPlayer->GetInvisPercentage() >= Vars::Aimbot::General::IgnoreCloakPercentage.Value
 			|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::DeadRinger && pPlayer->m_bFeignDeathReady()
 			|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Taunting && pPlayer->IsTaunting()
-			|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Disguised && pPlayer->IsDisguised())
+			|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Disguised && pPlayer->InCond(TF_COND_DISGUISED))
 			return true;
 		if (Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Vaccinator)
 		{
 			switch (G::PrimaryWeaponType)
 			{
 			case EWeaponType::HITSCAN:
-				if (pPlayer->IsBulletResist() && pWeapon->m_iItemDefinitionIndex() != Spy_m_TheEnforcer)
+				if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BULLET_RESIST) && SDK::AttribHookValue(0, "mod_pierce_resists_absorbs", pWeapon) != 0)
 					return true;
 				break;
 			case EWeaponType::PROJECTILE:
@@ -121,15 +162,15 @@ bool CAimbotGlobal::ShouldIgnore(CBaseEntity* pEntity, CTFPlayer* pLocal, CTFWea
 				{
 				case TF_WEAPON_FLAMETHROWER:
 				case TF_WEAPON_FLAREGUN:
-					if (pPlayer->IsFireResist())
+					if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_FIRE_RESIST))
 						return true;
 					break;
 				case TF_WEAPON_COMPOUND_BOW:
-					if (pPlayer->IsBulletResist())
+					if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BULLET_RESIST))
 						return true;
 					break;
 				default:
-					if (pPlayer->IsBlastResist())
+					if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BLAST_RESIST))
 						return true;
 				}
 			}
@@ -152,14 +193,24 @@ bool CAimbotGlobal::ShouldIgnore(CBaseEntity* pEntity, CTFPlayer* pLocal, CTFWea
 			return false;
 
 		auto pOwner = pBuilding->m_hBuilder().Get();
-		if (pOwner && F::PlayerUtils.IsIgnored(pOwner->entindex()))
-			return true;
+		if (pOwner)
+		{
+			if (F::PlayerUtils.IsIgnored(pOwner->entindex()))
+				return true;
+
+			if (Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Friends && H::Entities.IsFriend(pOwner->entindex())
+				|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Party && H::Entities.InParty(pOwner->entindex()))
+				return true;
+		}
 
 		return false;
 	}
 	case ETFClassID::CTFGrenadePipebombProjectile:
 	{
 		auto pProjectile = pEntity->As<CTFGrenadePipebombProjectile>();
+
+		if (!(Vars::Aimbot::General::Target.Value & Vars::Aimbot::General::TargetEnum::Stickies))
+			return true;
 
 		if (pLocal->m_iTeamNum() == pEntity->m_iTeamNum())
 			return true;
@@ -178,7 +229,10 @@ bool CAimbotGlobal::ShouldIgnore(CBaseEntity* pEntity, CTFPlayer* pLocal, CTFWea
 	case ETFClassID::CMerasmus:
 	case ETFClassID::CTFBaseBoss:
 	{
-		if (pEntity->m_iTeamNum() != 5)
+		if (!(Vars::Aimbot::General::Target.Value & Vars::Aimbot::General::TargetEnum::NPCs))
+			return true;
+
+		if (pEntity->m_iTeamNum() != TF_TEAM_HALLOWEEN)
 			return true;
 
 		return false;
@@ -186,7 +240,19 @@ bool CAimbotGlobal::ShouldIgnore(CBaseEntity* pEntity, CTFPlayer* pLocal, CTFWea
 	case ETFClassID::CTFTankBoss:
 	case ETFClassID::CZombie:
 	{
+
+		if (!(Vars::Aimbot::General::Target.Value & Vars::Aimbot::General::TargetEnum::NPCs))
+			return true;
+
 		if (pLocal->m_iTeamNum() == pEntity->m_iTeamNum())
+			return true;
+
+		return false;
+	}
+	case ETFClassID::CTFPumpkinBomb:
+	case ETFClassID::CTFGenericBomb:
+	{
+		if (!(Vars::Aimbot::General::Target.Value & Vars::Aimbot::General::TargetEnum::Bombs))
 			return true;
 
 		return false;

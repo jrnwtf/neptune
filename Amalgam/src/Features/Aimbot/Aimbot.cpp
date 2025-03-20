@@ -9,17 +9,19 @@
 #include "AutoRocketJump/AutoRocketJump.h"
 #include "../Misc/Misc.h"
 #include "../Visuals/Visuals.h"
+#include "../NavBot/NavEngine/NavEngine.h"
 
 bool CAimbot::ShouldRun(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
 	if (!pLocal || !pWeapon
 		|| !pLocal->IsAlive()
+		|| pLocal->IsAGhost()
 		|| pLocal->IsTaunting()
-		|| pLocal->IsBonked()
+		|| pLocal->InCond(TF_COND_STUNNED) && pLocal->m_iStunFlags() & (TF_STUN_CONTROLS | TF_STUN_LOSER_STATE)
 		|| pLocal->m_bFeignDeathReady()
-		|| pLocal->IsCloaked()
-		|| pLocal->IsInBumperKart()
-		|| pLocal->IsAGhost())
+		|| pLocal->InCond(TF_COND_PHASE)
+		|| pLocal->InCond(TF_COND_STEALTHED)
+		|| pLocal->InCond(TF_COND_HALLOWEEN_KART))
 		return false;
 
 	switch (pWeapon->m_iItemDefinitionIndex())
@@ -29,7 +31,7 @@ bool CAimbot::ShouldRun(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		return false;
 	}
 
-	if (I::EngineVGui->IsGameUIVisible() || I::MatSystemSurface->IsCursorVisible())
+	if (I::EngineVGui->IsGameUIVisible())
 		return false;
 
 	return true;
@@ -37,10 +39,11 @@ bool CAimbot::ShouldRun(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 
 void CAimbot::RunAimbot(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd, bool bSecondaryType)
 {
-	EWeaponType eWeaponType = !bSecondaryType ? G::PrimaryWeaponType : G::SecondaryWeaponType;
+	m_bRunningSecondary = bSecondaryType;
+	EWeaponType eWeaponType = !m_bRunningSecondary ? G::PrimaryWeaponType : G::SecondaryWeaponType;
 
 	bool bOriginal;
-	if (bSecondaryType)
+	if (m_bRunningSecondary)
 		bOriginal = G::CanPrimaryAttack, G::CanPrimaryAttack = G::CanSecondaryAttack;
 
 	switch (eWeaponType)
@@ -50,22 +53,23 @@ void CAimbot::RunAimbot(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 	case EWeaponType::MELEE: F::AimbotMelee.Run(pLocal, pWeapon, pCmd); break;
 	}
 
-	if (bSecondaryType)
+	if (m_bRunningSecondary)
 		G::CanPrimaryAttack = bOriginal;
 }
 
 void CAimbot::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
-	if (F::AimbotProjectile.m_bLastTickCancel)
+	if (F::AimbotProjectile.m_iLastTickCancel)
 	{
-		pCmd->weaponselect = F::AimbotProjectile.m_bLastTickCancel;
-		F::AimbotProjectile.m_bLastTickCancel = 0;
+		pCmd->weaponselect = F::AimbotProjectile.m_iLastTickCancel;
+		F::AimbotProjectile.m_iLastTickCancel = 0;
 	}
 
-	bRan = false;
-	G::AimPosition = Vec3();
+	m_bRan = false;
 	if (abs(G::Target.second - I::GlobalVars->tickcount) > 32)
 		G::Target = { 0, 0 };
+	if (abs(G::AimPosition.second - I::GlobalVars->tickcount) > 32)
+		G::AimPosition = { {}, 0 };
 
 	if (pCmd->weaponselect)
 		return;

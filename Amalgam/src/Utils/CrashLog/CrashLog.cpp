@@ -144,24 +144,23 @@ static LONG APIENTRY ExceptionFilter(PEXCEPTION_POINTERS ExceptionInfo)
 		ssErrorStream << "\nShift + Enter to skip repetitive exceptions. ";
 	bException = true;
 
-	MessageBox(nullptr, ssErrorStream.str().c_str(), "Unhandled exception", MB_OK | MB_ICONERROR);
+	SDK::Output("Unhandled exception", ssErrorStream.str().c_str(), {}, false, false, false, true, MB_OK | MB_ICONERROR);
 
 	ssErrorStream << "\n\n\n\n";
 	std::ofstream file;
-	file.open(F::Configs.sConfigPath + "\\crash_log.txt", std::ios_base::app);
+	file.open(F::Configs.m_sConfigPath + "\\crash_log.txt", std::ios_base::app);
 	file << ssErrorStream.str();
 	file.close();
 
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
-static PVOID handle;
-void CrashLog::Setup()
+static PVOID pHandle;
+void CrashLog::Initialize()
 {
-	handle = AddVectoredExceptionHandler(1, ExceptionFilter);
+	pHandle = AddVectoredExceptionHandler(1, ExceptionFilter);
 }
-
-void CrashLog::Unload( )
+void CrashLog::Unload()
 {
-	RemoveVectoredExceptionHandler( handle );
+	RemoveVectoredExceptionHandler(pHandle);
 }

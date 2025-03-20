@@ -15,6 +15,7 @@ MAKE_SIGNATURE(CBaseEntity_SetAbsVelocity, "client.dll", "48 89 5C 24 ? 57 48 83
 MAKE_SIGNATURE(CBaseEntity_EstimateAbsVelocity, "client.dll", "48 89 5C 24 ? 57 48 83 EC ? 48 8B FA 48 8B D9 E8 ? ? ? ? 48 3B D8", 0x0);
 MAKE_SIGNATURE(CBaseEntity_CreateShadow, "client.dll", "48 89 5C 24 ? 57 48 83 EC ? 48 8B 41 ? 48 8B F9 48 83 C1 ? FF 90", 0x0);
 MAKE_SIGNATURE(CBaseEntity_InvalidateBoneCache, "client.dll", "8B 05 ? ? ? ? FF C8 C7 81", 0x0);
+MAKE_SIGNATURE(CBaseEntity_ShouldCollide, "client.dll", "83 B9 ? ? ? ? ? 75 ? 41 C1 E8", 0x0);
 
 enum CollideType_t
 {
@@ -92,8 +93,8 @@ public:
 	NETVAR_OFF(m_flOldSimulationTime, float, "CBaseEntity", "m_flSimulationTime", 4);
 	NETVAR_OFF(m_Particles, CParticleProperty*, "CBaseEntity", "m_flElasticity", -56);
 
-	VIRTUAL(UpdateVisibility, void, void(*)(CBaseEntity*), this, 91);
-
+	VIRTUAL(UpdateVisibility, void, CBaseEntity*, this, 91);
+	
 	inline Vec3 GetCenter()
 	{
 		return m_vecOrigin() + (m_vecMins() + m_vecMaxs()) / 2;
@@ -193,5 +194,25 @@ public:
 	inline void InvalidateBoneCache()
 	{
 		S::CBaseEntity_InvalidateBoneCache.Call<void>(this);
+	}
+
+	inline bool ShouldCollide( int collisionGroup, int contentsMask )
+	{
+		return reinterpret_cast< bool( * )( CBaseEntity*, int, int ) >( U::Memory.GetVFunc( this, 146 ) )(this, collisionGroup, contentsMask);
+		//return S::CBaseEntity_ShouldCollide.Call<bool>( this, collisionGroup, contentsMask );
+	}
+	
+	inline int SolidMask()
+	{
+		if (IsPlayer())
+		{
+			switch (m_iTeamNum())
+			{
+			case TF_TEAM_RED: return MASK_PLAYERSOLID | CONTENTS_BLUETEAM;
+			case TF_TEAM_BLUE: return MASK_PLAYERSOLID | CONTENTS_REDTEAM;
+			}
+			return MASK_PLAYERSOLID;
+		}
+		return MASK_SOLID;
 	}
 };

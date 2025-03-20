@@ -24,22 +24,33 @@ private:
 MAKE_HOOK(IVEngineClient_ClientCmd_Unrestricted, U::Memory.GetVFunc(I::EngineClient, 106), void,
 	void* rcx, const char* szCmdString)
 {
+#ifdef DEBUG_HOOKS
+	if (!Vars::Hooks::IVEngineClient_ClientCmd_Unrestricted.Map[DEFAULT_BIND])
+		return CALL_ORIGINAL(rcx, szCmdString);
+#endif
+
 	if (!G::Unload)
 	{
 		std::string sCmdString = szCmdString;
 		std::transform(sCmdString.begin(), sCmdString.end(), sCmdString.begin(), ::tolower);
-
-		std::deque<std::string> vArgs;
-		boost::split(vArgs, sCmdString, split_q());
-
-		if (!vArgs.empty())
+		//if ( sCmdString.rfind("say", 0) != 0 )
 		{
-			std::string sCommand = vArgs.front();
-			vArgs.pop_front();
+			std::deque<std::string> vArgs;
+			boost::split( vArgs, sCmdString, split_q( ) );
 
-			if (F::Commands.Run(sCommand, vArgs))
-				return;
+			if ( !vArgs.empty( ) )
+			{
+				std::string sCommand = vArgs.front( );
+				vArgs.pop_front( );
+
+				if ( F::Commands.Run( sCommand, vArgs ) )
+					return;
+			}
 		}
+		/*else
+		{
+			SDK::Output( "ClientCmd_Unrestricted", szCmdString, Vars::Menu::Theme::Accent.Value );
+		}*/
 	}
 
 	CALL_ORIGINAL(rcx, szCmdString);

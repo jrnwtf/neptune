@@ -52,7 +52,6 @@ class CGlow
 
 	float flSavedBlend = 1.f;
 	bool bExtra = false;
-
 public:
 	void Initialize();
 	void Unload();

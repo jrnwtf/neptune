@@ -8,12 +8,17 @@ MAKE_SIGNATURE(CPrediction_RunSimulation, "client.dll", "48 83 EC 38 4C 8B 44", 
 MAKE_HOOK(CPrediction_RunSimulation, S::CPrediction_RunSimulation(), void,
 	void* rcx, int current_command, float curtime, CUserCmd* cmd, CTFPlayer* localPlayer)
 {
+#ifdef DEBUG_HOOKS
+	if (!Vars::Hooks::CPrediction_RunSimulation.Map[DEFAULT_BIND])
+		return CALL_ORIGINAL(rcx, current_command, curtime, cmd, localPlayer);
+#endif
+
 	static int nStaticDifference = 0;
 	const int nLastDifference = nStaticDifference;
 	const int nCurrDifference = nStaticDifference = I::ClientState->lastoutgoingcommand - current_command;
 
 #ifndef TICKBASE_DEBUG
-	if (F::Ticks.m_iShiftStart && !nLastDifference && nCurrDifference)
+	if (F::Ticks.m_bShifted && !nLastDifference && nCurrDifference)
 		localPlayer->m_nTickBase() -= F::Ticks.m_iShiftStart - F::Ticks.m_iShiftedGoal - 1;
 
 #else
@@ -25,7 +30,7 @@ MAKE_HOOK(CPrediction_RunSimulation, S::CPrediction_RunSimulation(), void,
 	const int nLastTickBase = nStaticTickBase;
 	const int nCurrTickBase = nStaticTickBase = localPlayer->m_nTickBase();
 
-	if (F::Ticks.m_iShiftStart && !nLastDifference && nCurrDifference)
+	if (F::Ticks.m_bShifted && !nLastDifference && nCurrDifference)
 	{
 		localPlayer->m_nTickBase() -= F::Ticks.m_iShiftStart - F::Ticks.m_iShiftedGoal - 1;
 		nStaticTickBase = localPlayer->m_nTickBase();

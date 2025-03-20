@@ -1,16 +1,32 @@
 #include "../SDK/SDK.h"
 
 #include "../Features/Visuals/Visuals.h"
+#include "../Features/NoSpread/NoSpreadHitscan/NoSpreadHitscan.h"
+#include "../Features/EnginePrediction/EnginePrediction.h"
 
 MAKE_SIGNATURE(CBaseEntity_FireBullets, "client.dll", "48 89 74 24 ? 55 57 41 55 41 56 41 57 48 8D AC 24 ? ? ? ? 48 81 EC ? ? ? ? F3 41 0F 10 58", 0x0);
-
+static int iBullet{ 0 };
+static int iLastTickCount{ 0 };
 MAKE_HOOK(CBaseEntity_FireBullets, S::CBaseEntity_FireBullets(), void,
 	void* rcx, CBaseCombatWeapon* pWeapon, const FireBulletsInfo_t& info, bool bDoEffects, int nDamageType, int nCustomDamageType)
 {
+#ifdef DEBUG_HOOKS
+	if (!Vars::Hooks::CBaseEntity_FireBullets.Map[DEFAULT_BIND])
+		return CALL_ORIGINAL(rcx, pWeapon, info, nDamageType, nDamageType, nCustomDamageType);
+#endif
+
 	auto pLocal = H::Entities.GetLocal();
 	auto pPlayer = reinterpret_cast<CBaseEntity*>(rcx);
 	if (!pLocal || pPlayer != pLocal || G::Unload)
 		return CALL_ORIGINAL(rcx, pWeapon, info, bDoEffects, nDamageType, nCustomDamageType);
+
+	if ( I::GlobalVars->tickcount != iLastTickCount )
+	{
+		iLastTickCount = I::GlobalVars->tickcount;
+		iBullet = 0;
+	}
+	else
+		iBullet++;
 
 	const Vec3 vStart = info.m_vecSrc;
 	const Vec3 vEnd = vStart + info.m_vecDirShooting * info.m_flDistance;
@@ -58,7 +74,8 @@ MAKE_HOOK(CBaseEntity_FireBullets, S::CBaseEntity_FireBullets(), void,
 		if (bClear)
 			G::LineStorage.clear();
 
-		G::LineStorage.push_back({ {trace.startpos, trace.endpos}, I::GlobalVars->curtime + 5.f, Vars::Colors::Bullet.Value, true });
+		G::LineStorage.emplace_back(std::pair<Vec3, Vec3>(trace.startpos, trace.endpos), I::GlobalVars->curtime + 5.f, F::NoSpreadHitscan.m_iPredictionBullet > -1 && iBullet == F::NoSpreadHitscan.m_iPredictionBullet ? Vars::Colors::NoSpread.Value : Vars::Colors::Line.Value, true);
+		SDK::Output( "CBaseEntity_FireBullets", std::format( "Fired bullet({},{}), m_bPrimaryAttack: {}", iBullet, info.m_iTracerFreq, info.m_bPrimaryAttack).c_str( ), Vars::Menu::Theme::Accent.Value );
 	}
 	else if (uHash == FNV1A::Hash32Const("Beam"))
 	{
@@ -76,15 +93,16 @@ MAKE_HOOK(CBaseEntity_FireBullets, S::CBaseEntity_FireBullets(), void,
 		beamInfo.m_flSpeed = Vars::Visuals::Beams::Speed.Value;
 		beamInfo.m_nStartFrame = 0;
 		beamInfo.m_flFrameRate = 0;
-		beamInfo.m_flRed = Vars::Visuals::Beams::BeamColor.Value.r;
-		beamInfo.m_flGreen = Vars::Visuals::Beams::BeamColor.Value.g;
-		beamInfo.m_flBlue = Vars::Visuals::Beams::BeamColor.Value.b;
+		Color_t clr = F::NoSpreadHitscan.m_iPredictionBullet > -1 && iBullet == F::NoSpreadHitscan.m_iPredictionBullet ? Vars::Colors::NoSpread.Value : Vars::Visuals::Beams::BeamColor.Value;
+		beamInfo.m_flRed = clr.r;
+		beamInfo.m_flGreen = clr.g;
+		beamInfo.m_flBlue = clr.b;
 		beamInfo.m_nSegments = Vars::Visuals::Beams::Segments.Value;
 		beamInfo.m_bRenderable = true;
 		beamInfo.m_nFlags = Vars::Visuals::Beams::Flags.Value;
 		beamInfo.m_vecStart = trace.startpos;
 		beamInfo.m_vecEnd = trace.endpos;
-
+		SDK::Output( "CBaseEntity_FireBullets", std::format( "Fired bullet({},{}), m_bPrimaryAttack: {}", iBullet, info.m_iTracerFreq, info.m_bPrimaryAttack).c_str( ), Vars::Menu::Theme::Accent.Value );
 		if (auto pBeam = I::ViewRenderBeams->CreateBeamPoints(beamInfo))
 			I::ViewRenderBeams->DrawBeam(pBeam);
 	}

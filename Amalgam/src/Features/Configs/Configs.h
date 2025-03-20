@@ -34,21 +34,25 @@ class CConfigs
 public:
 	CConfigs();
 
-	bool SaveConfig(const std::string& configName, bool bNotify = true);
-	bool LoadConfig(const std::string& configName, bool bNotify = true);
-	bool SaveVisual(const std::string& configName, bool bNotify = true);
-	bool LoadVisual(const std::string& configName, bool bNotify = true);
-	void RemoveConfig(const std::string& configName);
-	void RemoveVisual(const std::string& configName);
+	bool SaveConfig(const std::string& sConfigName, bool bNotify = true);
+	bool LoadConfig(const std::string& sConfigName, bool bNotify = true);
+	bool SaveVisual(const std::string& sConfigName, bool bNotify = true);
+	bool LoadVisual(const std::string& sConfigName, bool bNotify = true);
+	void RemoveConfig(const std::string& sConfigName, bool bNotify = true);
+	void RemoveVisual(const std::string& sConfigName, bool bNotify = true);
+	void ResetConfig(const std::string& sConfigName, bool bNotify = true);
+	void ResetVisual(const std::string& sConfigName, bool bNotify = true);
 
 	boost::property_tree::ptree ColorToTree(const Color_t& color);
 	void TreeToColor(const boost::property_tree::ptree& tree, Color_t& out);
 
-	std::string sCurrentConfig = "default";
-	std::string sCurrentVisuals = "default";
-	std::string sConfigPath;
-	std::string sVisualsPath;
-	const std::string sConfigExtension = ".json";
+	std::string m_sCurrentConfig = "default";
+	std::string m_sCurrentVisuals = "default";
+	std::string m_sConfigPath;
+	std::string m_sVisualsPath;
+	const std::string m_sConfigExtension = ".json";
+
+	bool m_bConfigLoaded = false;
 };
 
 ADD_FEATURE(CConfigs, Configs);

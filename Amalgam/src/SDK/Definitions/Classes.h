@@ -4,6 +4,8 @@
 #include "Main/CBaseCombatCharacter.h"
 #include "Main/CBaseCombatWeapon.h"
 #include "Main/CBaseEntity.h"
+#include "Main/CFuncRespawnRoom.h"
+#include "Main/CBaseTeamObjectiveResource.h"
 #include "Main/CBaseFlex.h"
 #include "Main/CBaseHandle.h"
 #include "Main/CBaseObject.h"
@@ -34,3 +36,4 @@
 #include "Main/ITexture.h"
 #include "Main/KeyValues.h"
 #include "Main/MD5.h"
+#include "Main/ValveRandom.h"

@@ -9,6 +9,7 @@ class CMisc
 	void AutoPeek(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void MovementLock(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void BreakJump(CTFPlayer* pLocal, CUserCmd* pCmd);
+	void BreakShootSound(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void AntiAFK(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void InstantRespawnMVM(CTFPlayer* pLocal);
 
@@ -19,6 +20,7 @@ class CMisc
 	void TauntKartControl(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void FastMovement(CTFPlayer* pLocal, CUserCmd* pCmd);
 
+	void EdgeJump(CTFPlayer* pLocal, CUserCmd* pCmd, bool bPost = false);
 	Vec3 vPeekReturnPos = {};
 	//bool bSteamCleared = false;
 
@@ -34,7 +36,8 @@ public:
 	bool SteamRPC();
 
 	int iWishCmdrate = -1;
-	int iWishUpdaterate = -1;
+	bool m_bAntiAFK = false;
+	//int iWishUpdaterate = -1;
 };
 
 ADD_FEATURE(CMisc, Misc)

@@ -1,5 +1,6 @@
 #include "Interfaces.h"
 #include "../Memory/Memory.h"
+#include "../../Core/Core.h"
 #include "../Assert/Assert.h"
 #include "../../SDK/Definitions/Interfaces.h"
 #include <TlHelp32.h>
@@ -8,7 +9,7 @@
 
 #pragma warning (disable: 4172)
 
-const char* SearchForDLL(const char* pszDLLSearch)
+static const char* SearchForDLL(const char* pszDLLSearch)
 {
 	HANDLE hProcessSnap = INVALID_HANDLE_VALUE;
 	PROCESSENTRY32 pe32;
@@ -73,7 +74,6 @@ InterfaceInit_t::InterfaceInit_t(void** pPtr, const char* sDLLName, const char* 
 
 bool CInterfaces::Initialize()
 {
-	bool bFail{false};
 	for (auto& Interface : m_vecInterfaces)
 	{
 		if (!Interface->m_pPtr || !Interface->m_pszDLLName || !Interface->m_pszVersion)
@@ -89,8 +89,8 @@ bool CInterfaces::Initialize()
 			auto dwDest = U::Memory.FindSignature(Interface->m_pszDLLName, Interface->m_pszVersion);
 			if (!dwDest)
 			{
-				AssertCustom(dwDest, std::format("CInterfaces::Initialize() failed to find signature:\n  {}\n  {}", Interface->m_pszDLLName, Interface->m_pszVersion).c_str());
-				bFail = true;
+				U::Core.AppendFailText(std::format("CInterfaces::Initialize() failed to find signature:\n  {}\n  {}", Interface->m_pszDLLName, Interface->m_pszVersion).c_str());
+				m_bFailed = true;
 				continue;
 			}
 
@@ -104,9 +104,15 @@ bool CInterfaces::Initialize()
 			}
 		}
 
-		bFail = (bFail || !*Interface->m_pPtr);
-		AssertCustom(*Interface->m_pPtr, std::format("CInterfaces::Initialize() failed to initialize:\n  {}\n  {}", Interface->m_pszDLLName, Interface->m_pszVersion).c_str());
+		if (!*Interface->m_pPtr)
+		{
+			U::Core.AppendFailText(std::format("CInterfaces::Initialize() failed to initialize:\n  {}\n  {}", Interface->m_pszDLLName, Interface->m_pszVersion).c_str());
+			m_bFailed = true;
+		}
 	}
 
-	return !(bFail = (!H::Interfaces.Initialize() || bFail)); // Initialize any null interfaces
+	if (!H::Interfaces.Initialize())
+		m_bFailed = true; // Initialize any null interfaces
+
+	return !m_bFailed;
 }

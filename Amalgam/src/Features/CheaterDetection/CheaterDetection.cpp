@@ -5,7 +5,7 @@
 
 bool CCheaterDetection::ShouldScan()
 {
-	if (!Vars::CheaterDetection::Methods.Value || I::EngineClient->IsPlayingTimeDemo())
+	if (!Vars::CheaterDetection::Methods.Value || I::EngineClient->IsPlayingDemo())
 		return false;
 
 	static float flOldTime = I::GlobalVars->curtime;
@@ -44,13 +44,13 @@ bool CCheaterDetection::IsFlicking(CTFPlayer* pEntity) // awful
 		return false;
 	}
 
-	vAngles.push_back({ pEntity->GetEyeAngles(), false });
+	vAngles.emplace_front(pEntity->GetEyeAngles(), false);
 	if (vAngles.size() > 3)
-		vAngles.pop_front();
+		vAngles.pop_back();
 
-	if (vAngles.size() != 3 || !vAngles[0].second && !vAngles[1].second && !vAngles[2].second
-		|| Math::CalcFov(vAngles[0].first, vAngles[1].first) < Vars::CheaterDetection::MinimumFlick.Value
-		|| Math::CalcFov(vAngles[0].first, vAngles[2].first) > Vars::CheaterDetection::MaximumNoise.Value * (TICK_INTERVAL / 0.015f))
+	if (vAngles.size() != 3 || !vAngles[0].m_bAttacking && !vAngles[1].m_bAttacking && !vAngles[2].m_bAttacking
+		|| Math::CalcFov(vAngles[0].m_vAngle, vAngles[1].m_vAngle) < Vars::CheaterDetection::MinimumFlick.Value
+		|| Math::CalcFov(vAngles[0].m_vAngle, vAngles[2].m_vAngle) > Vars::CheaterDetection::MaximumNoise.Value * (TICK_INTERVAL / 0.015f))
 		return false;
 
 	vAngles.clear();
@@ -81,8 +81,12 @@ bool CCheaterDetection::IsDuckSpeed(CTFPlayer* pEntity)
 
 void CCheaterDetection::Infract(CTFPlayer* pEntity, std::string sReason)
 {
-	mData[pEntity].m_iDetections++;
-	const bool bMark = mData[pEntity].m_iDetections >= Vars::CheaterDetection::DetectionsRequired.Value;
+	bool bMark = false;
+	if (Vars::CheaterDetection::DetectionsRequired.Value)
+	{
+		mData[pEntity].m_iDetections++;
+		bMark = mData[pEntity].m_iDetections >= Vars::CheaterDetection::DetectionsRequired.Value;
+	}
 
 	F::Records.CheatDetection(mData[pEntity].m_sName, bMark ? "marked" : "infracted", sReason);
 	if (bMark)
@@ -94,7 +98,7 @@ void CCheaterDetection::Infract(CTFPlayer* pEntity, std::string sReason)
 
 void CCheaterDetection::Run()
 {
-	if (!ShouldScan() || !I::EngineClient->IsConnected() || I::EngineClient->IsPlayingTimeDemo())
+	if (!ShouldScan() || !I::EngineClient->IsConnected() || I::EngineClient->IsPlayingDemo())
 		return;
 
 	for (auto& pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ALL))
@@ -157,7 +161,7 @@ void CCheaterDetection::ReportDamage(IGameEvent* pEvent)
 	if (!(Vars::CheaterDetection::Methods.Value & Vars::CheaterDetection::MethodsEnum::AimFlicking))
 		return;
 
-	const int iIndex = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("attacker"));
+	int iIndex = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("attacker"));
 	if (iIndex == I::EngineClient->GetLocalPlayer())
 		return;
 
@@ -174,5 +178,5 @@ void CCheaterDetection::ReportDamage(IGameEvent* pEvent)
 	}
 
 	if (!mData[pEntity->As<CTFPlayer>()].m_AimFlicking.m_vAngles.empty())
-		mData[pEntity->As<CTFPlayer>()].m_AimFlicking.m_vAngles.back().second = true;
+		mData[pEntity->As<CTFPlayer>()].m_AimFlicking.m_vAngles.back().m_bAttacking = true;
 }

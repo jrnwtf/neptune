@@ -166,6 +166,58 @@ public:
 	{
 		return Max(v1).Min(v2);
 	}
+	
+	Vec2 Lerp(const Vec2& v, float t) const
+	{
+		return { x + (v.x - x) * t, y + (v.y - y) * t };
+	}
+
+	Vec2 Lerp(float v, float t) const
+	{
+		return { x + (v - x) * t, y + (v - y) * t };
+	}
+
+	Vec2 DeltaAngle(const Vec2& v) const
+	{
+		auto deltaAngle = [](const float flAngleA, const float flAngleB)
+			{
+				float flOut = fmodf((flAngleA - flAngleB) + 180.f, 360.f);
+				return flOut += flOut < 0 ? 180.f : -180.f;
+			};
+
+		return { deltaAngle(x, v.x), deltaAngle(y, v.y) };
+	}
+
+	Vec2 DeltaAngle(float v) const
+	{
+		auto deltaAngle = [](const float flAngleA, const float flAngleB)
+			{
+				float flOut = fmodf((flAngleA - flAngleB) + 180.f, 360.f);
+				return flOut += flOut < 0 ? 180.f : -180.f;
+			};
+
+		return { deltaAngle(x, v), deltaAngle(y, v) };
+	}
+
+	Vec2 LerpAngle(const Vec2& v, float t) const
+	{
+		auto shortDist = [](const float flAngleA, const float flAngleB)
+			{
+				const float flDelta = fmodf((flAngleA - flAngleB), 360.f);
+				return fmodf(2 * flDelta, 360.f) - flDelta;
+			};
+		return { x - shortDist(x, v.x) * t, y - shortDist(y, v.y) * t };
+	}
+
+	Vec2 LerpAngle(float v, float t) const
+	{
+		auto shortDist = [](const float flAngleA, const float flAngleB)
+			{
+				const float flDelta = fmodf((flAngleA - flAngleB), 360.f);
+				return fmodf(2 * flDelta, 360.f) - flDelta;
+			};
+		return { x - shortDist(x, v) * t, y - shortDist(y, v) * t };
+	}
 
 	float Length(void) const
 	{
@@ -192,10 +244,10 @@ public:
 		return x * v.x + y * v.y;
 	}
 
-	bool IsZero(void) const
+	bool IsZero(const float tolerance = 0.001f) const
 	{
-		return fabsf(x) < 0.001f &&
-			   fabsf(y) < 0.001f;
+		return fabsf(x) < tolerance &&
+			   fabsf(y) < tolerance;
 	}
 };
 using Vector2D = Vec2;
@@ -239,6 +291,11 @@ public:
 	Vec3& operator=(const Vec3& v)
 	{
 		x = v.x; y = v.y; z = v.z; return *this;
+	}
+
+	Vec3& operator-()
+	{
+		x = -x; y = -y; z = -z; return *this;
 	}
 
 	float& operator[](int i)
@@ -376,6 +433,58 @@ public:
 		return Max(v1).Min(v2);
 	}
 
+	Vec3 Lerp(const Vec3& v, float t) const
+	{
+		return { x + (v.x - x) * t, y + (v.y - y) * t, z + (v.z - z) * t };
+	}
+
+	Vec3 Lerp(float v, float t) const
+	{
+		return { x + (v - x) * t, y + (v - y) * t, z + (v - z) * t };
+	}
+
+	Vec3 DeltaAngle(const Vec3& v) const
+	{
+		auto deltaAngle = [](const float flAngleA, const float flAngleB)
+			{
+				float flOut = fmodf((flAngleA - flAngleB) + 180.f, 360.f);
+				return flOut += flOut < 0 ? 180.f : -180.f;
+			};
+
+		return { deltaAngle(x, v.x), deltaAngle(y, v.y), deltaAngle(z, v.z) };
+	}
+
+	Vec3 DeltaAngle(float v) const
+	{
+		auto deltaAngle = [](const float flAngleA, const float flAngleB)
+			{
+				float flOut = fmodf((flAngleA - flAngleB) + 180.f, 360.f);
+				return flOut += flOut < 0 ? 180.f : -180.f;
+			};
+
+		return { deltaAngle(x, v), deltaAngle(y, v), deltaAngle(z, v) };
+	}
+
+	Vec3 LerpAngle(const Vec3& v, float t) const
+	{
+		auto shortDist = [](const float flAngleA, const float flAngleB)
+			{
+				const float flDelta = fmodf((flAngleA - flAngleB), 360.f);
+				return fmodf(2 * flDelta, 360.f) - flDelta;
+			};
+		return { x - shortDist(x, v.x) * t, y - shortDist(y, v.y) * t, z - shortDist(z, v.z) * t };
+	}
+
+	Vec3 LerpAngle(float v, float t) const
+	{
+		auto shortDist = [](const float flAngleA, const float flAngleB)
+			{
+				const float flDelta = fmodf((flAngleA - flAngleB), 360.f);
+				return fmodf(2 * flDelta, 360.f) - flDelta;
+			};
+		return { x - shortDist(x, v) * t, y - shortDist(y, v) * t, z - shortDist(z, v) * t };
+	}
+
 	float Length(void) const
 	{
 		return sqrtf(x * x + y * y + z * z);
@@ -439,11 +548,11 @@ public:
 		return Vec3(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x);
 	}
 
-	bool IsZero(void) const
+	bool IsZero(const float tolerance = 0.001f) const
 	{
-		return fabsf(x) < 0.001f &&
-			   fabsf(y) < 0.001f &&
-			   fabsf(z) < 0.001f;
+		return fabsf(x) < tolerance &&
+			   fabsf(y) < tolerance &&
+			   fabsf(z) < tolerance;
 	}
 
 	Vec3 Scale(float fl)

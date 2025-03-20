@@ -34,9 +34,12 @@ public:
 	void SaveShootPos(CTFPlayer* pLocal);
 	Vec3 GetShootPos();
 
+	bool CanChoke();
+
 	bool m_bDoubletap = false;
 	bool m_bWarp = false;
 	bool m_bRecharge = false;
+	bool m_bRechargeQueue = false;
 	bool m_bAntiWarp = false;
 	bool m_bSpeedhack = false;
 
@@ -44,6 +47,7 @@ public:
 	int m_iShiftedGoal = 0;
 	int m_iShiftStart = 0;
 	bool m_bShifting = false;
+	bool m_bShifted = false;
 
 	int m_iWait = 0;
 	int m_iMaxShift = 24;

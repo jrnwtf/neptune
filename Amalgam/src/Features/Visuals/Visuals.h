@@ -27,6 +27,7 @@ private:
 public:
 	void DrawFOV(CTFPlayer* pLocal);
 	void DrawTicks(CTFPlayer* pLocal);
+	void DrawNavBot(CTFPlayer* pLocal);
 	void DrawPing(CTFPlayer* pLocal);
 	void ProjectileTrace(CTFPlayer* pPlayer, CTFWeaponBase* pWeapon, const bool bQuick = true);
 	void SplashRadius(CTFPlayer* pLocal);
@@ -38,6 +39,7 @@ public:
 	void DrawLines();
 	void DrawPaths();
 	void DrawBoxes();
+	void DrawNavEngine();
 	void RestoreLines();
 	void RestorePaths();
 	void RestoreBoxes();
@@ -48,7 +50,7 @@ public:
 	void FOV(CTFPlayer* pLocal, CViewSetup* pView);
 	void ThirdPerson(CTFPlayer* pLocal, CViewSetup* pView);
 	void DrawSightlines();
-	void Store();
+	void Store(CTFPlayer* pLocal);
 	void DrawPickupTimers();
 	void Event(IGameEvent* pEvent, uint32_t uHash);
 

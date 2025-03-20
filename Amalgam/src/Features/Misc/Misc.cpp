@@ -17,24 +17,27 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 	AntiAFK(pLocal, pCmd);
 	InstantRespawnMVM(pLocal);
 
-	if (!pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->m_MoveType() != MOVETYPE_WALK || pLocal->IsSwimming() || pLocal->IsCharging() || pLocal->IsInBumperKart())
+	if (!pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->m_MoveType() != MOVETYPE_WALK || pLocal->IsSwimming() || pLocal->InCond(TF_COND_SHIELD_CHARGE) || pLocal->InCond(TF_COND_HALLOWEEN_KART))
 		return;
 
 	AutoJump(pLocal, pCmd);
+	EdgeJump(pLocal, pCmd);
 	AutoJumpbug(pLocal, pCmd);
 	AutoStrafe(pLocal, pCmd);
 	AutoPeek(pLocal, pCmd);
-	MovementLock(pLocal, pCmd);
 	BreakJump(pLocal, pCmd);
 }
 
 void CMisc::RunPost(CTFPlayer* pLocal, CUserCmd* pCmd, bool pSendPacket)
 {
-	if (!pLocal || !pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->m_MoveType() != MOVETYPE_WALK || pLocal->IsSwimming() || pLocal->IsCharging())
+	if (!pLocal || !pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->m_MoveType() != MOVETYPE_WALK || pLocal->IsSwimming() || pLocal->InCond(TF_COND_SHIELD_CHARGE))
 		return;
 
+	EdgeJump(pLocal, pCmd, true);
 	TauntKartControl(pLocal, pCmd);
 	FastMovement(pLocal, pCmd);
+	BreakShootSound(pLocal, pCmd);
+	MovementLock(pLocal, pCmd);
 }
 
 
@@ -48,13 +51,28 @@ void CMisc::AutoJump(CTFPlayer* pLocal, CUserCmd* pCmd)
 	const bool bLastJump = bStaticJump, bLastGrounded = bStaticGrounded;
 	const bool bCurJump = bStaticJump = pCmd->buttons & IN_JUMP, bCurGrounded = bStaticGrounded = pLocal->m_hGroundEntity();
 
-	if (bCurJump && bLastJump && (pLocal->m_hGroundEntity().Get() ? !pLocal->IsDucking() : true))
+	if (bCurJump && bLastJump && (bCurGrounded ? !pLocal->IsDucking() : true))
 	{
 		if (!(bCurGrounded && !bLastGrounded))
 			pCmd->buttons &= ~IN_JUMP;
 
 		if (!(pCmd->buttons & IN_JUMP) && bCurGrounded && !bLastAttempted)
 			pCmd->buttons |= IN_JUMP;
+	}
+
+	if (Vars::Misc::Game::AntiCheatCompatibility.Value)
+	{	// prevent more than 9 bhops occurring. if a server has this under that threshold they're retarded anyways
+		static int iJumps = 0;
+		if (bCurGrounded)
+		{
+			if (!bLastGrounded && pCmd->buttons & IN_JUMP)
+				iJumps++;
+			else
+				iJumps = 0;
+
+			if (iJumps > 9)
+				pCmd->buttons &= ~IN_JUMP;
+		}
 	}
 
 	bLastAttempted = pCmd->buttons & IN_JUMP;
@@ -72,7 +90,7 @@ void CMisc::AutoJumpbug(CTFPlayer* pLocal, CUserCmd* pCmd)
 	CTraceFilterWorldAndPropsOnly filter = {};
 
 	Vec3 vOrigin = pLocal->m_vecOrigin();
-	SDK::TraceHull(vOrigin, vOrigin - Vec3(0, 0, flTraceDistance), pLocal->m_vecMins(), pLocal->m_vecMaxs(), MASK_PLAYERSOLID, &filter, &trace);
+	SDK::TraceHull(vOrigin, vOrigin - Vec3(0, 0, flTraceDistance), pLocal->m_vecMins(), pLocal->m_vecMaxs(), pLocal->SolidMask(), &filter, &trace);
 	if (!trace.DidHit() || trace.fraction * flTraceDistance < flUnduckHeight) // don't try if we aren't in range to unduck or are too low
 		return;
 
@@ -147,8 +165,8 @@ void CMisc::AutoPeek(CTFPlayer* pLocal, CUserCmd* pCmd)
 		}
 		else
 		{
-			static Timer particleTimer{};
-			if (particleTimer.Run(700))
+			static Timer tTimer = {};
+			if (tTimer.Run(0.7f))
 				H::Particles.DispatchParticleEffect("ping_circle", vPeekReturnPos, {});
 		}
 
@@ -178,19 +196,33 @@ void CMisc::MovementLock(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
 	static bool bLock = false;
 
-	if (!Vars::Misc::Movement::MovementLock.Value)
+	if (!Vars::Misc::Movement::MovementLock.Value || pLocal->InCond(TF_COND_HALLOWEEN_KART))
 	{
 		bLock = false;
 		return;
 	}
 
+	Vec3 vVel = pLocal->m_vecVelocity();
+	static Vec3 vLastTickVel = {};
 	static Vec3 vDir = {};
-	if (!bLock)
+
+	if ( !bLock && static_cast< int >( vVel.x ) == 0 && static_cast< int >( vVel.y ) == 0 && static_cast< int >( vVel.z ) == -6
+		&& static_cast< int >( vLastTickVel.x ) == 0 && static_cast< int >( vLastTickVel.y ) == 0 && static_cast< int >( vLastTickVel.z ) == -6 )
 	{
 		bLock = true;
 		vDir = Math::RotatePoint({ pCmd->forwardmove * (fmodf(fabsf(pCmd->viewangles.x), 180.f) > 90.f ? -1 : 1), -pCmd->sidemove, 0.f }, {}, { 0, pCmd->viewangles.y, 0 });
 		vDir.z = pCmd->upmove;
 	}
+
+	vLastTickVel = vVel;
+
+	if (bLock && static_cast<int>(vVel.x) != 0 && static_cast<int>(vVel.y) != 0 && static_cast<int>(vVel.z) != -6)
+	{
+		bLock = false;
+	}
+
+	if ( !bLock )
+		return;
 
 	Vec3 vMove = Math::RotatePoint(vDir, {}, { 0, -pCmd->viewangles.y, 0 });
 	pCmd->forwardmove = vMove.x * (fmodf(fabsf(pCmd->viewangles.x), 180.f) > 90.f ? -1 : 1);
@@ -226,20 +258,78 @@ void CMisc::BreakJump(CTFPlayer* pLocal, CUserCmd* pCmd)
 	pCmd->buttons |= IN_DUCK;
 }
 
+void CMisc::BreakShootSound(CTFPlayer* pLocal, CUserCmd* pCmd)
+{
+	// TODO:
+	// Find a way to properly check whenever we have switched weapons or not 
+	// (current method is too slow and other methods i've tried are not reliable)
+
+	static int iOriginalWeaponSlot = -1;
+	auto pWeapon = H::Entities.GetWeapon();
+	if (!Vars::Misc::Exploits::BreakShootSound.Value || F::Ticks.m_bDoubletap || pLocal->m_iClass() != TF_CLASS_SOLDIER || !pWeapon)
+		return;
+
+	static bool bLastWasInAttack = false;
+	static int iLastWeaponSelect = -1;
+	//static bool bSwitching = false;
+	const int iCurrSlot = pWeapon->GetSlot();
+	if (pCmd->weaponselect && pCmd->weaponselect != iLastWeaponSelect)
+	{
+		iOriginalWeaponSlot = -1;
+	}
+	auto pSwap = iCurrSlot == SLOT_SECONDARY ? pLocal->GetWeaponFromSlot(SLOT_PRIMARY) : iCurrSlot == SLOT_PRIMARY ? pLocal->GetWeaponFromSlot(SLOT_SECONDARY) : pLocal->GetWeaponFromSlot(iOriginalWeaponSlot);
+	if (pSwap && !pCmd->weaponselect)
+	{
+		const int iItemDefIdx = pSwap->m_iItemDefinitionIndex();
+		if (iItemDefIdx == Soldier_s_TheBASEJumper || iItemDefIdx == Soldier_s_Gunboats || iItemDefIdx == Soldier_s_TheMantreads)
+		{
+			pSwap = pLocal->GetWeaponFromSlot(SLOT_MELEE);
+		}
+		if ( pSwap )
+		{
+			if ( bLastWasInAttack )
+			{
+				if ( iOriginalWeaponSlot < 0 )
+				{
+					iOriginalWeaponSlot = iCurrSlot;
+					pCmd->weaponselect = pSwap->entindex( );
+					iLastWeaponSelect = pCmd->weaponselect;
+				}
+			}
+			else/* if ( true )*/
+			{
+				if ( iOriginalWeaponSlot == iCurrSlot && G::CanPrimaryAttack/*&& !G::Choking*/ )
+				{
+					iOriginalWeaponSlot = -1;
+				}
+				else if ( iOriginalWeaponSlot >= 0 && iOriginalWeaponSlot != iCurrSlot )
+				{
+					pCmd->weaponselect = pSwap->entindex( );
+					iLastWeaponSelect = pCmd->weaponselect;
+				}
+			}
+		}
+	}
+	
+	bLastWasInAttack = G::Attacking == 1 && G::CanPrimaryAttack;
+}
+
 void CMisc::AntiAFK(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
-	static Timer afkTimer{};
-
+	static Timer tTimer = {};
+	m_bAntiAFK = false;
 	static auto mp_idledealmethod = U::ConVars.FindVar("mp_idledealmethod");
 	static auto mp_idlemaxtime = U::ConVars.FindVar("mp_idlemaxtime");
 	const int iIdleMethod = mp_idledealmethod ? mp_idledealmethod->GetInt() : 1;
 	const float flMaxIdleTime = mp_idlemaxtime ? mp_idlemaxtime->GetFloat() : 3.f;
 
 	if (pCmd->buttons & (IN_MOVELEFT | IN_MOVERIGHT | IN_FORWARD | IN_BACK) || !pLocal->IsAlive())
-		afkTimer.Update();
-	// Trigger 10 seconds before kick
-	else if (Vars::Misc::Automation::AntiAFK.Value && iIdleMethod && afkTimer.Check(flMaxIdleTime * 60 * 1000 - 10000))
+			tTimer.Update();
+	else if (Vars::Misc::Automation::AntiAFK.Value && iIdleMethod && tTimer.Check(flMaxIdleTime * 60.f - 10.f)) // trigger 10 seconds before kick
+	{
 		pCmd->buttons |= I::GlobalVars->tickcount % 2 ? IN_FORWARD : IN_BACK;
+		m_bAntiAFK = true;
+	}
 }
 
 void CMisc::InstantRespawnMVM(CTFPlayer* pLocal)
@@ -273,33 +363,22 @@ void CMisc::CheatsBypass()
 
 void CMisc::PingReducer()
 {
+	static Timer tTimer = {};
+	if (!tTimer.Run(0.1f))
+		return;
+
 	auto pNetChan = reinterpret_cast<CNetChannel*>(I::EngineClient->GetNetChannelInfo());
-	if (!pNetChan)
+	const auto& pResource = H::Entities.GetPR( );
+	if (!pNetChan || !pResource)
 		return;
 
 	static auto cl_cmdrate = U::ConVars.FindVar("cl_cmdrate");
 	const int iCmdRate = cl_cmdrate ? cl_cmdrate->GetInt() : 66;
+	const int Ping = pResource->GetPing( I::EngineClient->GetLocalPlayer( ) );
+	const int iTarget = Vars::Misc::Exploits::PingReducer.Value && ( Ping > Vars::Misc::Exploits::PingTarget.Value ) ? -1 : iCmdRate;
 
-	// force highest cl_updaterate command possible
-	static auto sv_maxupdaterate = U::ConVars.FindVar("sv_maxupdaterate");
-	const int iMaxUpdateRate = sv_maxupdaterate ? sv_maxupdaterate->GetInt() : 66;
-
-	static Timer updateRateTimer{};
-	if (updateRateTimer.Run(100))
-	{
-		if (iWishUpdaterate != iMaxUpdateRate)
-		{
-			NET_SetConVar cmd("cl_updaterate", std::to_string(iWishUpdaterate = iMaxUpdateRate).c_str());
-			pNetChan->SendNetMsg(cmd);
-		}
-
-		const int iTarget = Vars::Misc::Exploits::PingReducer.Value ? Vars::Misc::Exploits::PingTarget.Value : iCmdRate;
-		if (iWishCmdrate != iTarget)
-		{
-			NET_SetConVar cmd("cl_cmdrate", std::to_string(iWishCmdrate = iTarget).c_str());
-			pNetChan->SendNetMsg(cmd);
-		}
-	}
+	NET_SetConVar cmd("cl_cmdrate", std::to_string(iWishCmdrate = iTarget).c_str());
+	pNetChan->SendNetMsg(cmd);
 }
 
 void CMisc::WeaponSway()
@@ -313,8 +392,6 @@ void CMisc::WeaponSway()
 	if (cl_wpn_sway_scale)
 		cl_wpn_sway_scale->SetValue(bSway ? Vars::Visuals::Viewmodel::SwayScale.Value : 0.f);
 }
-
-
 
 void CMisc::TauntKartControl(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
@@ -338,7 +415,7 @@ void CMisc::TauntKartControl(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 		G::SilentAngles = true;
 	}
-	else if (Vars::Misc::Automation::KartControl.Value && pLocal->IsInBumperKart())
+	else if (Vars::Misc::Automation::KartControl.Value && pLocal->InCond(TF_COND_HALLOWEEN_KART))
 	{
 		const bool bForward = pCmd->buttons & IN_FORWARD;
 		const bool bBack = pCmd->buttons & IN_BACK;
@@ -358,7 +435,7 @@ void CMisc::TauntKartControl(CTFPlayer* pLocal, CUserCmd* pCmd)
 		}
 		else if (pCmd->buttons & (IN_FORWARD | IN_BACK | IN_MOVELEFT | IN_MOVERIGHT))
 		{
-			if (flipVar || F::Ticks.m_iShiftedTicks == F::Ticks.m_iMaxShift)
+			if (flipVar || !F::Ticks.CanChoke())
 			{	// you could just do this if you didn't care about viewangles
 				const Vec3 vecMove(pCmd->forwardmove, pCmd->sidemove, 0.f);
 				const float flLength = vecMove.Length();
@@ -380,7 +457,7 @@ void CMisc::TauntKartControl(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 void CMisc::FastMovement(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
-	if (!pLocal->m_hGroundEntity() || pLocal->IsInBumperKart())
+	if (!pLocal->m_hGroundEntity() || pLocal->InCond(TF_COND_HALLOWEEN_KART))
 		return;
 
 	const float flSpeed = pLocal->m_vecVelocity().Length2D();
@@ -405,6 +482,7 @@ void CMisc::FastMovement(CTFPlayer* pLocal, CUserCmd* pCmd)
 	case 1:
 	{
 		if ((pLocal->IsDucking() ? !Vars::Misc::Movement::CrouchSpeed.Value : !Vars::Misc::Movement::FastAccel.Value)
+			|| Vars::Misc::Game::AntiCheatCompatibility.Value
 			|| G::Attacking == 1 || F::Ticks.m_bDoubletap || F::Ticks.m_bSpeedhack || F::Ticks.m_bRecharge || G::AntiAim || I::GlobalVars->tickcount % 2)
 			return;
 
@@ -426,7 +504,17 @@ void CMisc::FastMovement(CTFPlayer* pLocal, CUserCmd* pCmd)
 	}
 }
 
+void CMisc::EdgeJump(CTFPlayer* pLocal, CUserCmd* pCmd, bool bPost)
+{
+	if (!Vars::Misc::Movement::EdgeJump.Value)
+		return;
 
+	static bool bStaticGround = false;
+	if (!bPost)
+		bStaticGround = pLocal->m_hGroundEntity();
+	else if (bStaticGround && !pLocal->m_hGroundEntity())
+		pCmd->buttons |= IN_JUMP;
+}
 
 void CMisc::Event(IGameEvent* pEvent, uint32_t uHash)
 {
@@ -435,8 +523,8 @@ void CMisc::Event(IGameEvent* pEvent, uint32_t uHash)
 	case FNV1A::Hash32Const("client_disconnect"):
 	case FNV1A::Hash32Const("client_beginconnect"):
 	case FNV1A::Hash32Const("game_newmap"):
-		iWishCmdrate = iWishUpdaterate = -1;
-		F::Backtrack.m_flWishInterp = 0.f;
+		iWishCmdrate /*= iWishUpdaterate*/ = -1;
+		F::Backtrack.m_flWishInterp = -1.f;
 		[[fallthrough]];
 	case FNV1A::Hash32Const("teamplay_round_start"):
 		G::LineStorage.clear();
@@ -447,14 +535,14 @@ void CMisc::Event(IGameEvent* pEvent, uint32_t uHash)
 
 int CMisc::AntiBackstab(CTFPlayer* pLocal, CUserCmd* pCmd, bool bSendPacket)
 {
-	if (!Vars::Misc::Automation::AntiBackstab.Value || !bSendPacket || G::Attacking == 1 || pLocal->m_MoveType() != MOVETYPE_WALK || pLocal->IsInBumperKart())
+	if (!Vars::Misc::Automation::AntiBackstab.Value || !bSendPacket || G::Attacking == 1 || !pLocal || pLocal->m_MoveType() != MOVETYPE_WALK || pLocal->InCond(TF_COND_HALLOWEEN_KART))
 		return 0;
 
 	std::vector<std::pair<Vec3, CBaseEntity*>> vTargets = {};
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
 	{
 		auto pPlayer = pEntity->As<CTFPlayer>();
-		if (pPlayer->IsDormant() || !pPlayer->IsAlive() || pPlayer->IsAGhost() || pPlayer->IsCloaked())
+		if (pPlayer->IsDormant() || !pPlayer->IsAlive() || pPlayer->IsAGhost() || pPlayer->InCond(TF_COND_STEALTHED))
 			continue;
 
 		auto pWeapon = pPlayer->m_hActiveWeapon().Get()->As<CTFWeaponBase>();
@@ -474,7 +562,7 @@ int CMisc::AntiBackstab(CTFPlayer* pLocal, CUserCmd* pCmd, bool bSendPacket)
 			&& (vLocalPos.DistTo(vTargetPos2) > flDistance || !SDK::VisPosWorld(pLocal, pPlayer, vLocalPos, vTargetPos2)))
 			continue;
 
-		vTargets.push_back({ vTargetPos2, pEntity });
+		vTargets.emplace_back(vTargetPos2, pEntity);
 	}
 	if (vTargets.empty())
 		return 0;
@@ -536,9 +624,7 @@ int CMisc::AntiBackstab(CTFPlayer* pLocal, CUserCmd* pCmd, bool bSendPacket)
 			pCmd->viewangles.x = 269.f;
 		}
 		else
-		{
 			pCmd->viewangles.x = 271.f;
-		}
 		// may slip up some auto backstabs depending on mode, though we are still able to be stabbed
 
 		return 2;
@@ -550,12 +636,12 @@ int CMisc::AntiBackstab(CTFPlayer* pLocal, CUserCmd* pCmd, bool bSendPacket)
 
 void CMisc::UnlockAchievements()
 {
-	const auto achievementmgr = reinterpret_cast<IAchievementMgr*(*)(void)>(U::Memory.GetVFunc(I::EngineClient, 114))();
-	if (achievementmgr)
+	const auto pAchievementMgr = reinterpret_cast<IAchievementMgr*(*)(void)>(U::Memory.GetVFunc(I::EngineClient, 114))();
+	if (pAchievementMgr)
 	{
 		I::SteamUserStats->RequestCurrentStats();
-		for (int i = 0; i < achievementmgr->GetAchievementCount(); i++)
-			achievementmgr->AwardAchievement(achievementmgr->GetAchievementByIndex(i)->GetAchievementID());
+		for (int i = 0; i < pAchievementMgr->GetAchievementCount(); i++)
+			pAchievementMgr->AwardAchievement(pAchievementMgr->GetAchievementByIndex(i)->GetAchievementID());
 		I::SteamUserStats->StoreStats();
 		I::SteamUserStats->RequestCurrentStats();
 	}
@@ -563,12 +649,12 @@ void CMisc::UnlockAchievements()
 
 void CMisc::LockAchievements()
 {
-	const auto achievementmgr = reinterpret_cast<IAchievementMgr*(*)(void)>(U::Memory.GetVFunc(I::EngineClient, 114))();
-	if (achievementmgr)
+	const auto pAchievementMgr = reinterpret_cast<IAchievementMgr*(*)(void)>(U::Memory.GetVFunc(I::EngineClient, 114))();
+	if (pAchievementMgr)
 	{
 		I::SteamUserStats->RequestCurrentStats();
-		for (int i = 0; i < achievementmgr->GetAchievementCount(); i++)
-			I::SteamUserStats->ClearAchievement(achievementmgr->GetAchievementByIndex(i)->GetName());
+		for (int i = 0; i < pAchievementMgr->GetAchievementCount(); i++)
+			I::SteamUserStats->ClearAchievement(pAchievementMgr->GetAchievementByIndex(i)->GetName());
 		I::SteamUserStats->StoreStats();
 		I::SteamUserStats->RequestCurrentStats();
 	}

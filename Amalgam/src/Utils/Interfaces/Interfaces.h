@@ -44,6 +44,7 @@ class CInterfaces
 {
 private:
 	std::vector<InterfaceInit_t*> m_vecInterfaces = {};
+	bool m_bFailed = false;
 
 public:
 	bool Initialize();

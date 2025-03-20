@@ -4,11 +4,11 @@
 
 struct KeyStorage
 {
-	bool bIsDown = false;
-	bool bIsPressed = false;
-	bool bIsDouble = false;
-	bool bIsReleased = false;
-	double dPressTime = 0;
+	bool m_bIsDown = false;
+	bool m_bIsPressed = false;
+	bool m_bIsDouble = false;
+	bool m_bIsReleased = false;
+	double m_dPressTime = 0;
 };
 
 class CKeyHandler
@@ -29,6 +29,8 @@ public:
 
 	// Was the button just released? This will only be true once.
 	bool Released(int iKey, const bool bStore = false, KeyStorage* pStorage = nullptr);
+
+	std::unordered_map<int, KeyStorage> m_mKeyStorage;
 };
 
 ADD_FEATURE_CUSTOM(CKeyHandler, KeyHandler, U);

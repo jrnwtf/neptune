@@ -6,14 +6,14 @@
 
 #pragma warning (disable : 6385)
 
-BOOL CALLBACK TeamFortressWindow(HWND hwnd, LPARAM lParam)
+static BOOL CALLBACK TeamFortressWindow(HWND hwnd, LPARAM lParam)
 {
 	char windowTitle[1024];
 	GetWindowTextA(hwnd, windowTitle, sizeof(windowTitle));
-	std::string sTitle = windowTitle;
-	if (sTitle.find("Team Fortress 2 - Direct3D") == 0
-		|| sTitle.find("Team Fortress 2 - Vulkan") == 0) // support both dx9 & vulkan
+	switch (FNV1A::Hash32(windowTitle))
 	{
+	case FNV1A::Hash32Const("Team Fortress 2 - Direct3D 9 - 64 Bit"):
+	case FNV1A::Hash32Const("Team Fortress 2 - Vulkan - 64 Bit"):
 		*reinterpret_cast<HWND*>(lParam) = hwnd;
 	}
 
@@ -23,7 +23,7 @@ BOOL CALLBACK TeamFortressWindow(HWND hwnd, LPARAM lParam)
 
 
 
-void SDK::Output(const char* cFunction, const char* cLog, Color_t cColor, bool bConsole, bool bChat, bool bToast, bool bDebug)
+void SDK::Output(const char* cFunction, const char* cLog, Color_t cColor, bool bConsole, bool bChat, bool bToast, bool bDebug, int iMessageBox)
 {
 	if (cLog)
 	{
@@ -37,7 +37,9 @@ void SDK::Output(const char* cFunction, const char* cLog, Color_t cColor, bool b
 		if (bToast)
 			F::Notifications.Add(std::format("[{}] {}", cFunction, cLog));
 		if (bDebug)
-			OutputDebugStringA(std::format("[{}] {}\n", cFunction, cLog).c_str());
+			OutputDebugString(std::format("[{}] {}\n", cFunction, cLog).c_str());
+		if (iMessageBox != -1)
+			MessageBox(nullptr, cLog, cFunction, iMessageBox);
 	}
 	else
 	{
@@ -48,18 +50,17 @@ void SDK::Output(const char* cFunction, const char* cLog, Color_t cColor, bool b
 		if (bToast)
 			F::Notifications.Add(std::format("{}", cFunction));
 		if (bDebug)
-			OutputDebugStringA(std::format("{}\n", cFunction).c_str());
+			OutputDebugString(std::format("{}\n", cFunction).c_str());
+		if (iMessageBox != -1)
+			MessageBox(nullptr, "", cFunction, iMessageBox);
 	}
 }
 
 HWND SDK::GetTeamFortressWindow()
 {
 	static HWND hwWindow = nullptr;
-	while (!hwWindow)
-	{
+	if (!hwWindow)
 		EnumWindows(TeamFortressWindow, reinterpret_cast<LPARAM>(&hwWindow));
-		Sleep(100);
-	}
 	return hwWindow;
 }
 
@@ -246,12 +247,15 @@ bool SDK::IsOnScreen(CBaseEntity* pEntity, Vec3 vOrigin)
 	return !(flRight < 0 || flLeft > H::Draw.m_nScreenW || flTop < 0 || flBottom > H::Draw.m_nScreenH);
 }
 
-bool SDK::IsOnScreen(CBaseEntity* pEntity)
+bool SDK::IsOnScreen(CBaseEntity* pEntity, bool bShouldGetOwner)
 {
-	if (auto pOwner = pEntity->m_hOwnerEntity().Get())
-		pEntity = pOwner;
+	if (bShouldGetOwner)
+	{
+		if (auto pOwner = pEntity->m_hOwnerEntity().Get())
+			pEntity = pOwner;
+	}
 
-	return IsOnScreen(pEntity, pEntity->entindex() == I::EngineClient->GetLocalPlayer() ? F::EnginePrediction.m_vOrigin : pEntity->GetAbsOrigin());
+	return IsOnScreen(pEntity, pEntity->entindex() == I::EngineClient->GetLocalPlayer() && !I::EngineClient->IsPlayingDemo() ? F::EnginePrediction.m_vOrigin : pEntity->GetAbsOrigin());
 }
 
 void SDK::Trace(const Vec3& vecStart, const Vec3& vecEnd, unsigned int nMask, ITraceFilter* pFilter, CGameTrace* pTrace)
@@ -262,7 +266,7 @@ void SDK::Trace(const Vec3& vecStart, const Vec3& vecEnd, unsigned int nMask, IT
 
 #ifdef DEBUG_TRACES
 	if (Vars::Debug::VisualizeTraces.Value)
-		G::LineStorage.push_back({ { vecStart, Vars::Debug::VisualizeTraceHits.Value ? pTrace->endpos : vecEnd }, I::GlobalVars->curtime + 0.015f, {}, bool(GetAsyncKeyState(VK_MENU) & 0x8000) });
+		G::LineStorage.emplace_back(std::pair<Vec3, Vec3>(vecStart, Vars::Debug::VisualizeTraceHits.Value ? pTrace->endpos : vecEnd), I::GlobalVars->curtime + 0.015f, Color_t(), bool(GetAsyncKeyState(VK_MENU) & 0x8000));
 #endif
 }
 
@@ -275,11 +279,11 @@ void SDK::TraceHull(const Vec3& vecStart, const Vec3& vecEnd, const Vec3& vecHul
 #ifdef DEBUG_TRACES
 	if (Vars::Debug::VisualizeTraces.Value)
 	{
-		G::LineStorage.push_back({ { vecStart, Vars::Debug::VisualizeTraceHits.Value ? pTrace->endpos : vecEnd }, I::GlobalVars->curtime + 0.015f, {}, bool(GetAsyncKeyState(VK_MENU) & 0x8000) });
+		G::LineStorage.emplace_back(std::pair<Vec3, Vec3>(vecStart, Vars::Debug::VisualizeTraceHits.Value ? pTrace->endpos : vecEnd), I::GlobalVars->curtime + 0.015f, Color_t(), bool(GetAsyncKeyState(VK_MENU) & 0x8000));
 		if (!(vecHullMax - vecHullMin).IsZero())
 		{
-			G::BoxStorage.push_back({ vecStart, vecHullMin, vecHullMax, {}, I::GlobalVars->curtime + 0.015f, {}, { 0, 0, 0, 0 }, bool(GetAsyncKeyState(VK_MENU) & 0x8000) });
-			G::BoxStorage.push_back({ Vars::Debug::VisualizeTraceHits.Value ? pTrace->endpos : vecEnd, vecHullMin, vecHullMax, {}, I::GlobalVars->curtime + 0.015f, {}, { 0, 0, 0, 0 }, bool(GetAsyncKeyState(VK_MENU) & 0x8000) });
+			G::BoxStorage.emplace_back(vecStart, vecHullMin, vecHullMax, Vec3(), I::GlobalVars->curtime + 0.015f, Color_t(), Color_t(0, 0, 0, 0), bool(GetAsyncKeyState(VK_MENU) & 0x8000));
+			G::BoxStorage.emplace_back(Vars::Debug::VisualizeTraceHits.Value ? pTrace->endpos : vecEnd, vecHullMin, vecHullMax, Vec3(), I::GlobalVars->curtime + 0.015f, Color_t(), Color_t(0, 0, 0, 0), bool(GetAsyncKeyState(VK_MENU) & 0x8000));
 		}
 	}
 #endif
@@ -315,8 +319,15 @@ bool SDK::VisPosWorld(CBaseEntity* pSkip, const CBaseEntity* pEntity, const Vec3
 
 int SDK::GetRoundState()
 {
-	if (auto pGameRules = I::TFGameRules->Get())
+	if (auto pGameRules = I::TFGameRules())
 		return pGameRules->m_iRoundState();
+	return 0;
+}
+
+int SDK::GetWinningTeam()
+{
+	if (auto pGameRules = I::TFGameRules())
+		return pGameRules->m_iWinningTeam();
 	return 0;
 }
 
@@ -333,7 +344,8 @@ EWeaponType SDK::GetWeaponType(CTFWeaponBase* pWeapon, EWeaponType* pSecondaryTy
 		{
 		case TF_WEAPON_BAT_WOOD:
 		case TF_WEAPON_BAT_GIFTWRAP:
-			*pSecondaryType = EWeaponType::PROJECTILE;
+			if (pWeapon->HasPrimaryAmmoForShot())
+				*pSecondaryType = EWeaponType::PROJECTILE;
 		}
 	}
 
@@ -640,7 +652,7 @@ void SDK::WalkTo(CUserCmd* pCmd, CTFPlayer* pLocal, Vec3& a, Vec3& b, float scal
 	pCmd->upmove = result.z * scale;
 }
 
-void SDK::WalkTo(CUserCmd* pCmd, CTFPlayer* pLocal, Vec3& pDestination)
+void SDK::WalkTo(CUserCmd* pCmd, CTFPlayer* pLocal, Vec3 pDestination)
 {
 	Vec3 localPos = pLocal->m_vecOrigin();
 	WalkTo(pCmd, pLocal, localPos, pDestination, 1.f);
@@ -661,9 +673,6 @@ bool CTraceFilterSetup::ShouldHitEntity(IHandleEntity* pServerEntity, int nConte
 		return false;
 
 	auto pEntity = reinterpret_cast<CBaseEntity*>(pServerEntity);
-	auto pLocal = H::Entities.GetLocal();
-
-	const int iTargetTeam = pEntity->m_iTeamNum(), iLocalTeam = pLocal ? pLocal->m_iTeamNum() : iTargetTeam;
 
 	switch (pEntity->GetClassID())
 	{
@@ -675,7 +684,12 @@ bool CTraceFilterSetup::ShouldHitEntity(IHandleEntity* pServerEntity, int nConte
 	case ETFClassID::CObjectSentrygun:
 	case ETFClassID::CObjectDispenser:
 	case ETFClassID::CObjectTeleporter: return true;
-	case ETFClassID::CTFPlayer: return iTargetTeam != iLocalTeam;
+	case ETFClassID::CTFPlayer:
+	{
+		auto pLocal = H::Entities.GetLocal();
+		const int iTargetTeam = pEntity->m_iTeamNum(), iLocalTeam = pLocal ? pLocal->m_iTeamNum() : iTargetTeam;
+		return iTargetTeam != iLocalTeam;
+	}
 	}
 
 	return true;
@@ -724,4 +738,264 @@ void SDK::GetProjectileFireSetupAirblast(CTFPlayer* pPlayer, const Vec3& vAngIn,
 	Trace(vShootPos, vEndPos, MASK_SOLID, &filter, &trace);
 
 	Math::VectorAngles(trace.endpos - vPosIn, vAngOut);
+}
+
+//Pasted from somewhere in the valves tf2 server code
+float SDK::CalculateSplashRadiusDamageFalloff( CTFWeaponBase* pWeapon, CTFPlayer* pAttacker, CTFWeaponBaseGrenadeProj* pProjectile, float flRadius )
+{
+	float flFalloff{ 0.0f };
+	const int dmgType = pProjectile->GetDamageType( );
+
+	if ( dmgType & DMG_RADIUS_MAX )
+		flFalloff = 0.0f;
+	else if ( dmgType & DMG_HALF_FALLOFF )
+		flFalloff = 0.5f;
+	else if ( flRadius )
+		flFalloff = pProjectile->m_flDamage( ) / flRadius;
+	else
+		flFalloff = 1.0f;
+
+	if ( pWeapon )
+	{
+		float flFalloffMod = 1.f;
+		AttribHookValue( flFalloffMod, "mult_dmg_falloff", pWeapon );
+		if ( flFalloffMod != 1.f )
+			flFalloff += flFalloffMod;
+	}
+
+	if ( pAttacker && pAttacker->InCond( TF_COND_RUNE_PRECISION ) )
+		flFalloff = 1.0f;
+	return flFalloff;
+}
+
+float SDK::CalculateSplashRadiusDamage( CTFWeaponBase* pWeapon, CTFPlayer* pAttacker, CTFWeaponBaseGrenadeProj* pProjectile, float flRadius, float flDist, float& flDamageNoBuffs, bool bSelf )
+{
+	float flFalloff{ CalculateSplashRadiusDamageFalloff( pWeapon, pAttacker, pProjectile, flRadius ) };
+	float flDamage{ Math::RemapValClamped( flDist, 0.f, flRadius, pProjectile->m_flDamage( ), pProjectile->m_flDamage( ) * flFalloff ) };
+	flDamageNoBuffs = flDamage;
+
+	bool bCrit{ ( pProjectile->GetDamageType( ) & DMG_CRITICAL ) > 0 };
+	if ( bCrit || pAttacker->IsMiniCritBoosted( ) )
+	{
+		float flDamageBonus{ 0.f };
+		if ( bCrit ) {
+			flDamageBonus = ( TF_DAMAGE_CRIT_MULTIPLIER - 1.f ) * flDamage;
+		}
+		else {
+			flDamageBonus = ( TF_DAMAGE_MINICRIT_MULTIPLIER - 1.f ) * flDamage;
+		}
+
+		flDamage += flDamageBonus;
+	}
+
+	// Grenades & Pipebombs do less damage to ourselves.
+	if ( bSelf && pWeapon )
+	{
+		switch ( pWeapon->GetWeaponID( ) )
+		{
+		case TF_WEAPON_PIPEBOMBLAUNCHER:
+		case TF_WEAPON_GRENADELAUNCHER:
+		case TF_WEAPON_CANNON:
+		case TF_WEAPON_STICKBOMB:
+			flDamage *= 0.75f;
+			flDamageNoBuffs *= 0.75f;
+			break;
+		}
+	}
+	return flDamage;
+}
+
+bool SDK::WeaponDoesNotUseAmmo( CTFWeaponBase* pWeapon, bool bIncludeInfiniteAmmo )
+{
+	if ( !pWeapon )
+		return false;
+
+	if ( pWeapon->GetSlot( ) == SLOT_MELEE )
+		return false;
+
+	switch ( pWeapon->m_iItemDefinitionIndex( ) ) {
+	case Soldier_s_TheBuffBanner:
+	case Soldier_s_FestiveBuffBanner:
+	case Soldier_s_TheBattalionsBackup:
+	case Soldier_s_TheConcheror:
+	case Demoman_s_TheTideTurner:
+	case Demoman_s_TheCharginTarge:
+	case Demoman_s_TheSplendidScreen:
+	case Demoman_s_FestiveTarge:
+	case Demoman_m_TheBootlegger:
+	case Demoman_m_AliBabasWeeBooties:
+	case Engi_s_TheWrangler:
+	case Engi_s_FestiveWrangler:
+	case Sniper_s_CozyCamper:
+	case Sniper_s_DarwinsDangerShield:
+	case Sniper_s_TheRazorback:
+	case Pyro_s_ThermalThruster: return true;
+	default: {
+		switch ( pWeapon->GetWeaponID( ) ) {
+		case TF_WEAPON_PARTICLE_CANNON:
+		case TF_WEAPON_RAYGUN:
+		case TF_WEAPON_DRG_POMSON: return bIncludeInfiniteAmmo;
+		case TF_WEAPON_FLAREGUN_REVENGE:
+		case TF_WEAPON_MEDIGUN:
+		case TF_WEAPON_PDA:
+		case TF_WEAPON_PDA_ENGINEER_BUILD:
+		case TF_WEAPON_PDA_ENGINEER_DESTROY:
+		case TF_WEAPON_PDA_SPY:
+		case TF_WEAPON_PDA_SPY_BUILD:
+		case TF_WEAPON_BUILDER:
+		case TF_WEAPON_LUNCHBOX:
+		case TF_WEAPON_THROWABLE:
+		case TF_WEAPON_JAR:
+		case TF_WEAPON_JAR_GAS:
+		case TF_WEAPON_JAR_MILK:
+		case TF_WEAPON_GRAPPLINGHOOK: return true;
+		default: return false;
+		}
+		break;
+	}
+	}
+}
+
+bool SDK::WeaponDoesNotUseAmmo( int WeaponID, int DefIdx, bool bIncludeInfiniteAmmo )
+{
+	switch ( DefIdx ) {
+	case Soldier_s_TheBuffBanner:
+	case Soldier_s_FestiveBuffBanner:
+	case Soldier_s_TheBattalionsBackup:
+	case Soldier_s_TheConcheror:
+	case Demoman_s_TheTideTurner:
+	case Demoman_s_TheCharginTarge:
+	case Demoman_s_TheSplendidScreen:
+	case Demoman_s_FestiveTarge:
+	case Demoman_m_TheBootlegger:
+	case Demoman_m_AliBabasWeeBooties:
+	case Engi_s_TheWrangler:
+	case Engi_s_FestiveWrangler:
+	case Sniper_s_CozyCamper:
+	case Sniper_s_DarwinsDangerShield:
+	case Sniper_s_TheRazorback:
+	case Pyro_s_ThermalThruster: return true;
+	default: {
+		switch ( WeaponID ) {
+		case TF_WEAPON_PARTICLE_CANNON:
+		case TF_WEAPON_RAYGUN:
+		case TF_WEAPON_DRG_POMSON: return bIncludeInfiniteAmmo;
+		case TF_WEAPON_FLAREGUN_REVENGE:
+		case TF_WEAPON_MEDIGUN:
+		case TF_WEAPON_PDA:
+		case TF_WEAPON_PDA_ENGINEER_BUILD:
+		case TF_WEAPON_PDA_ENGINEER_DESTROY:
+		case TF_WEAPON_PDA_SPY:
+		case TF_WEAPON_PDA_SPY_BUILD:
+		case TF_WEAPON_BUILDER:
+		case TF_WEAPON_LUNCHBOX:
+		case TF_WEAPON_THROWABLE:
+		case TF_WEAPON_JAR:
+		case TF_WEAPON_JAR_GAS:
+		case TF_WEAPON_JAR_MILK:
+		case TF_WEAPON_GRAPPLINGHOOK: return true;
+		default: return false;
+		}
+		break;
+	}
+	}
+}
+
+
+// Is there a way of doing this without hardcoded numbers???
+int SDK::GetWeaponMaxReserveAmmo( int WeaponID, int DefIdx )
+{
+	switch ( DefIdx )
+	{
+	case Engi_m_TheWidowmaker:
+	case Engi_s_TheShortCircuit:
+		return 200;	
+	case Scout_m_ForceANature:
+	case Scout_m_FestiveForceANature:
+	case Scout_m_BackcountryBlaster:
+		return 32;
+	case Demoman_s_TheQuickiebombLauncher:
+		return 24;
+	case Demoman_s_TheScottishResistance:
+		return 36;
+	case Demoman_s_StickyJumper:
+		return 72;
+	case Soldier_m_RocketJumper:
+		return 60;
+	default:
+	{
+		switch ( WeaponID )
+		{
+		case TF_WEAPON_MINIGUN:
+		case TF_WEAPON_PISTOL:
+		case TF_WEAPON_FLAMETHROWER:
+			return 200;
+		case TF_WEAPON_SYRINGEGUN_MEDIC:
+			return 150;
+		case TF_WEAPON_SMG:
+			return 75;
+		case TF_WEAPON_FLAME_BALL:
+			return 40;
+		case TF_WEAPON_CROSSBOW:
+			return 38;
+		case TF_WEAPON_HANDGUN_SCOUT_SECONDARY:
+		case TF_WEAPON_PISTOL_SCOUT:
+		case TF_WEAPON_HANDGUN_SCOUT_PRIMARY:
+			return 36;
+		case TF_WEAPON_SCATTERGUN:
+		case TF_WEAPON_PEP_BRAWLER_BLASTER:
+		case TF_WEAPON_SODA_POPPER:
+		case TF_WEAPON_SHOTGUN_HWG:
+		case TF_WEAPON_SHOTGUN_PRIMARY:
+		case TF_WEAPON_SHOTGUN_PYRO:
+		case TF_WEAPON_SHOTGUN_SOLDIER:
+			return 32;
+		case TF_WEAPON_SNIPERRIFLE:
+		case TF_WEAPON_SNIPERRIFLE_CLASSIC:
+		case TF_WEAPON_SNIPERRIFLE_DECAP:
+			return 25;
+		case TF_WEAPON_STICKBOMB:
+		case TF_WEAPON_STICKY_BALL_LAUNCHER:
+		case TF_WEAPON_REVOLVER:
+			return 24;
+		case TF_WEAPON_ROCKETLAUNCHER:
+		case TF_WEAPON_ROCKETLAUNCHER_DIRECTHIT:
+			return 20;
+		case TF_WEAPON_CANNON:
+		case TF_WEAPON_SHOTGUN_BUILDING_RESCUE:
+		case TF_WEAPON_GRENADELAUNCHER:
+		case TF_WEAPON_FLAREGUN:
+			return 16;
+		case TF_WEAPON_COMPOUND_BOW:
+			return 12;
+		default:
+			break;
+		}
+		break;
+	}
+	}
+
+	return 32;
+}
+
+std::string SDK::GetLevelName( )
+{
+	const std::string name = I::EngineClient->GetLevelName( );
+	const char* data = name.data( );
+	const size_t length = name.length( );
+	size_t slash = 0;
+	size_t bsp = length;
+
+	for ( size_t i = length - 1; i != std::string::npos; --i )
+	{
+		if ( data[ i ] == '/' )
+		{
+			slash = i + 1;
+			break;
+		}
+		if ( data[ i ] == '.' )
+			bsp = i;
+	}
+
+	return { data + slash, bsp - slash };
 }

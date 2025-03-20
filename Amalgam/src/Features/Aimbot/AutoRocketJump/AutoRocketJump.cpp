@@ -10,7 +10,7 @@ bool CAutoRocketJump::SetAngles(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 		return true;
 
 	ProjectileInfo projInfo = {};
-	if (!F::ProjSim.GetInfo(pLocal, pWeapon, {}, projInfo, ProjSim_NoRandomAngles) || !F::ProjSim.Initialize(projInfo, false))
+	if (!F::ProjSim.GetInfo(pLocal, pWeapon, {}, projInfo, ProjSimEnum::NoRandomAngles) || !F::ProjSim.Initialize(projInfo, false))
 		return false;
 	Vec3 vOrigin = pLocal->m_vecOrigin();
 	Vec3 vLocalPos = pLocal->GetShootPos();
@@ -64,7 +64,7 @@ bool CAutoRocketJump::SetAngles(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 		m_vAngles.x = flPitch = vAngleTo.x, m_vAngles.y = flYaw = vAngleTo.y;
 	}
 
-	if (!F::ProjSim.GetInfo(pLocal, pWeapon, { flPitch, flYaw, 0 }, projInfo, ProjSim_Trace | ProjSim_NoRandomAngles))
+	if (!F::ProjSim.GetInfo(pLocal, pWeapon, { flPitch, flYaw, 0 }, projInfo, ProjSimEnum::Trace | ProjSimEnum::NoRandomAngles))
 		return false;
 
 	{	// correct yaw
@@ -103,7 +103,7 @@ bool CAutoRocketJump::SetAngles(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 
 void CAutoRocketJump::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
-	if (!pLocal || !pWeapon || !pCmd || !pLocal->IsAlive() || pLocal->IsAGhost() || I::EngineVGui->IsGameUIVisible() || I::MatSystemSurface->IsCursorVisible())
+	if (!pLocal || !pWeapon || !pCmd || !pLocal->IsAlive() || pLocal->IsAGhost() || I::EngineVGui->IsGameUIVisible())
 	{
 		m_iFrame = -1;
 		return;
@@ -133,7 +133,6 @@ void CAutoRocketJump::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* p
 	else if (Vars::Misc::Movement::AutoRocketJump.Value || Vars::Misc::Movement::AutoCTap.Value)
 		pCmd->buttons &= ~IN_ATTACK2; // fix for retarded issue
 
-
 	if (m_iFrame == -1 && (pWeapon->m_iItemDefinitionIndex() == Soldier_m_TheBeggarsBazooka ? G::Attacking == 1 : G::CanPrimaryAttack || G::Reloading)
 		&& SetAngles(pLocal, pWeapon, pCmd))
 	{
@@ -143,7 +142,7 @@ void CAutoRocketJump::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* p
 			PlayerStorage localStorage;
 			ProjectileInfo projInfo = {};
 
-			bool bProjSimSetup = F::ProjSim.GetInfo(pLocal, pWeapon, m_vAngles, projInfo, ProjSim_Trace | ProjSim_InitCheck | ProjSim_NoRandomAngles) && F::ProjSim.Initialize(projInfo);
+			bool bProjSimSetup = F::ProjSim.GetInfo(pLocal, pWeapon, m_vAngles, projInfo, ProjSimEnum::Trace | ProjSimEnum::InitCheck | ProjSimEnum::NoRandomAngles) && F::ProjSim.Initialize(projInfo);
 			bool bMoveSimSetup = F::MoveSim.Initialize(pLocal, localStorage, false); // do move sim after to not mess with proj sim
 			if (bMoveSimSetup && bProjSimSetup)
 			{
@@ -185,10 +184,9 @@ void CAutoRocketJump::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* p
 							if (Vars::Debug::Info.Value)
 							{
 								//G::LineStorage.clear(); G::BoxStorage.clear();
-								//G::LineStorage.push_back({ { vOriginal, trace.endpos }, I::GlobalVars->curtime + 5.f, {}, true });
-								G::LineStorage.push_back({ { pLocal->GetShootPos(), trace.endpos}, I::GlobalVars->curtime + 5.f, {}, true });
 								Vec3 angles; Math::VectorAngles(trace.plane.normal, angles);
-								G::BoxStorage.push_back({ trace.endpos, { -1.f, -1.f, -1.f }, { 1.f, 1.f, 1.f }, angles, I::GlobalVars->curtime + 5.f, {}, { 0, 0, 0, 0 }, true });
+								G::BoxStorage.emplace_back(trace.endpos + trace.plane.normal, Vec3(-1.f, -1.f, -1.f), Vec3(1.f, 1.f, 1.f), angles, I::GlobalVars->curtime + 5.f, Color_t(), Color_t(0, 0, 0, 0), true);
+								G::LineStorage.emplace_back(std::pair<Vec3, Vec3>(localStorage.m_MoveData.m_vecAbsOrigin + pLocal->m_vecViewOffset(), trace.endpos + trace.plane.normal), I::GlobalVars->curtime + 5.f, Color_t(), true);
 							}
 						}
 

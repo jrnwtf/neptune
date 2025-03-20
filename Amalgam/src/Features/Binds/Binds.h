@@ -1,21 +1,27 @@
 #pragma once
 #include "../../SDK/SDK.h"
 
+Enum(Bind, Key, Class, WeaponType, ItemSlot)
+namespace BindEnum
+{
+	Enum(Key, Hold, Toggle, DoubleClick)
+	Enum(Class, Scout, Soldier, Pyro, Demoman, Heavy, Engineer, Medic, Sniper, Spy)
+	Enum(WeaponType, Hitscan, Projectile, Melee)
+	//Enum(ItemType, First, Second, Third, Fourth, Fifth, Sixth, Seventh, Eighth, Ninth)
+}
+
 struct Bind_t
 {
-	std::string Name = "";
-	int Type = 0; // Key, Class, Weapon type
-	int Info = 0; // Key: Hold, Toggle, Double click
-	// Class: Scout, Soldier, Pyro, Demoman, Heavy, Engineer, Medic, Sniper, Spy
-	// Weapon type: Hitscan, Projectile, Melee
-	int Key = 0;
-	bool Not = false;
-	KeyStorage Storage = {};
+	std::string m_sName = "";
+	int m_iType = 0;
+	int m_iInfo = 0;
+	int m_iKey = 0;
+	bool m_bNot = false;
 
-	bool Active = false;
-	bool Visible = true;
+	bool m_bActive = false;
+	bool m_bVisible = true;
 
-	int Parent = -1;
+	int m_iParent = -1;
 };
 
 class CBinds
@@ -27,10 +33,11 @@ public:
 
 	bool HasChildren(int iBind);
 	int GetParent(int iBind);
-	void AddBind(int iBind, Bind_t tCond);
+	void AddBind(int iBind, Bind_t& tCond);
 	void RemoveBind(int iBind, bool bForce = true);
 
-	std::vector<Bind_t> vBinds = {};
+	std::vector<Bind_t> m_vBinds = {};
+	std::unordered_map<int, KeyStorage> m_mKeyStorage;
 };
 
 ADD_FEATURE(CBinds, Binds)

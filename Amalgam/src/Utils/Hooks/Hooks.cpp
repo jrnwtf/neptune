@@ -1,11 +1,12 @@
 #include "Hooks.h"
 
 #include "../Assert/Assert.h"
+#include "../../Core/Core.h"
 #include "../../Hooks/Direct3DDevice9.h"
 
 CHook::CHook(std::string sName, void* pInitFunc)
 {
-	this->m_pInitFunc = pInitFunc;
+	m_pInitFunc = pInitFunc;
 	U::Hooks.m_mHooks[sName] = this;
 }
 
@@ -22,15 +23,17 @@ bool CHooks::Initialize()
 			bFail = true;
 	}
 
-	const bool bEnableAll{MH_EnableHook(MH_ALL_HOOKS) == MH_OK};
-	AssertCustom(bEnableAll, "MH failed to enable all hooks!");
-
-	bFail = (bFail || !bEnableAll);
-	return !bFail;
+	m_bFailed = MH_EnableHook(MH_ALL_HOOKS) != MH_OK;
+	if (m_bFailed)
+		U::Core.AppendFailText("MinHook failed to enable all hooks!");
+	return !m_bFailed;
 }
 
-void CHooks::Unload()
+bool CHooks::Unload()
 {
-	AssertCustom(MH_Uninitialize() == MH_OK, "MH failed to unload all hooks!");
+	m_bFailed = MH_Uninitialize() != MH_OK;
+	if (m_bFailed)
+		U::Core.AppendFailText("MinHook failed to unload all hooks!");
 	WndProc::Unload();
+	return !m_bFailed;
 }

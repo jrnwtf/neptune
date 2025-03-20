@@ -4,6 +4,8 @@
 #include <regex>
 #include <numeric>
 
+MAKE_SIGNATURE(CTFWeaponBaseGun_GetWeaponSpread, "client.dll", "48 89 5C 24 ? 57 48 83 EC ? 4C 63 91", 0x0);
+
 void CNoSpreadHitscan::Reset()
 {
 	m_bWaitingForPlayerPerf = false;
@@ -22,7 +24,7 @@ bool CNoSpreadHitscan::ShouldRun(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, bool
 	if (G::PrimaryWeaponType != EWeaponType::HITSCAN)
 		return false;
 
-	if (pWeapon->GetWeaponSpread() <= 0.f)
+	if ((bCreateMove ? pWeapon->GetWeaponSpread() : S::CTFWeaponBaseGun_GetWeaponSpread.Call<float>(pWeapon)) <= 0.f)
 		return false;
 
 	return bCreateMove ? G::Attacking == 1 : true;
@@ -68,8 +70,8 @@ void CNoSpreadHitscan::AskForPlayerPerf()
 	if (G::Choking)
 		return;
 
-	static Timer playerperfTimer{};
-	if (!m_bWaitingForPlayerPerf ? playerperfTimer.Run(Vars::Aimbot::General::NoSpreadInterval.Value * 1000) : playerperfTimer.Run(Vars::Aimbot::General::NoSpreadBackupInterval.Value * 1000))
+	static Timer tTimer = {};
+	if (!m_bWaitingForPlayerPerf ? tTimer.Run(Vars::Aimbot::General::NoSpreadInterval.Value) : tTimer.Run(Vars::Aimbot::General::NoSpreadBackupInterval.Value))
 	{
 		I::ClientState->SendStringCmd("playerperf");
 		m_bWaitingForPlayerPerf = true;
@@ -77,19 +79,13 @@ void CNoSpreadHitscan::AskForPlayerPerf()
 	}
 }
 
-bool CNoSpreadHitscan::ParsePlayerPerf(bf_read& msgData)
+bool CNoSpreadHitscan::ParsePlayerPerf(std::string sMsg)
 {
 	if (!Vars::Aimbot::General::NoSpread.Value)
 		return false;
 
-	char rawMsg[256]; msgData.ReadString(rawMsg, sizeof(rawMsg), true);
-	msgData.Seek(0);
-
-	std::string msg(rawMsg);
-	msg.erase(msg.begin());
-
 	std::smatch matches = {};
-	std::regex_match(msg, matches, std::regex(R"((\d+.\d+)\s\d+\s\d+\s\d+.\d+\s\d+.\d+\svel\s\d+.\d+)"));
+	std::regex_match(sMsg, matches, std::regex(R"((\d+.\d+)\s\d+\s\d+\s\d+.\d+\s\d+.\d+\svel\s\d+.\d+)"));
 
 	if (matches.size() == 2)
 	{
@@ -129,11 +125,12 @@ bool CNoSpreadHitscan::ParsePlayerPerf(bf_read& msgData)
 		return true;
 	}
 
-	return std::regex_match(msg, std::regex(R"(\d+.\d+\s\d+\s\d+)"));
+	return std::regex_match(sMsg, std::regex(R"(\d+.\d+\s\d+\s\d+)"));
 }
 
 void CNoSpreadHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
+	m_iPredictionBullet = -1;
 	if (!ShouldRun(pLocal, pWeapon, true))
 		return;
 
@@ -150,11 +147,13 @@ void CNoSpreadHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* 
 	int iBulletsPerShot = pWeapon->GetBulletsPerShot();
 	float flFireRate = std::ceilf(pWeapon->GetFireRate() / TICK_INTERVAL) * TICK_INTERVAL;
 
-	std::vector<Vec3> vBulletCorrections = {};
+	CValve_Random* Random = new CValve_Random();
+
+	std::vector<std::pair<int,Vec3>> vBulletCorrections = {};
 	Vec3 vAverageSpread = {};
 	for (int iBullet = 0; iBullet < iBulletsPerShot; iBullet++)
 	{
-		SDK::RandomSeed(m_iSeed + iBullet);
+		Random->SetSeed(m_iSeed + iBullet);// SDK::RandomSeed(m_iSeed + iBullet);
 
 		if (!iBullet) // check if we'll get a guaranteed perfect shot
 		{
@@ -168,32 +167,34 @@ void CNoSpreadHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* 
 			}
 		}
 
-		const float x = SDK::RandomFloat(-0.5f, 0.5f) + SDK::RandomFloat(-0.5f, 0.5f);
-		const float y = SDK::RandomFloat(-0.5f, 0.5f) + SDK::RandomFloat(-0.5f, 0.5f);
+		const float x = Random->RandomFloat(-0.5f, 0.5f) + Random->RandomFloat(-0.5f, 0.5f);//SDK::RandomFloat(-0.5f, 0.5f) + SDK::RandomFloat(-0.5f, 0.5f);
+		const float y = Random->RandomFloat(-0.5f, 0.5f) + Random->RandomFloat(-0.5f, 0.5f);//SDK::RandomFloat(-0.5f, 0.5f) + SDK::RandomFloat(-0.5f, 0.5f);
 
 		Vec3 vForward, vRight, vUp; Math::AngleVectors(pCmd->viewangles, &vForward, &vRight, &vUp);
 		Vec3 vFixedSpread = vForward + (vRight * x * flSpread) + (vUp * y * flSpread);
 		vFixedSpread.Normalize();
 		vAverageSpread += vFixedSpread;
 
-		vBulletCorrections.push_back(vFixedSpread);
+		vBulletCorrections.push_back( { iBullet, vFixedSpread } );
 	}
 	vAverageSpread /= static_cast<float>(iBulletsPerShot);
 
 	const auto cFixedSpread = std::ranges::min_element(vBulletCorrections,
-		[&](const Vec3& lhs, const Vec3& rhs)
+		[&](const std::pair<int,Vec3>& lhs, const std::pair<int,Vec3>& rhs)
 		{
-			return lhs.DistTo(vAverageSpread) < rhs.DistTo(vAverageSpread);
+			return lhs.second.DistTo(vAverageSpread) < rhs.second.DistTo(vAverageSpread);
 		});
 
-	if (cFixedSpread == vBulletCorrections.end())
+	if (cFixedSpread == vBulletCorrections.end() && iBulletsPerShot > 1)
 		return;
 
 	Vec3 vFixedAngles{};
-	Math::VectorAngles(*cFixedSpread, vFixedAngles);
-
+	Math::VectorAngles((*cFixedSpread).second, vFixedAngles);
 	pCmd->viewangles += pCmd->viewangles - vFixedAngles;
 	Math::ClampAngles(pCmd->viewangles);
+
+	m_iPredictionBullet = ( *cFixedSpread ).first;
+	//SDK::Output( "CNoSpreadHitscan::Run", std::format( "Predicted closest bullet({})", m_iPredictionBullet ).c_str( ), Vars::Menu::Theme::Accent.Value );
 
 	G::SilentAngles = true;
 }

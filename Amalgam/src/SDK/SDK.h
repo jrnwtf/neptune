@@ -65,7 +65,7 @@ template <typename T> int sign(T val)
 
 namespace SDK
 {
-	void Output(const char* cFunction, const char* cLog = nullptr, Color_t cColor = { 255, 255, 255, 255 }, bool bConsole = true, bool bChat = false, bool bToast = false, bool bDebug = false);
+	void Output(const char* cFunction, const char* cLog = nullptr, Color_t cColor = { 255, 255, 255, 255 }, bool bConsole = true, bool bChat = false, bool bToast = false, bool bDebug = false, int iMessageBox = -1);
 
 	HWND GetTeamFortressWindow();
 	bool IsGameWindowInFocus();
@@ -88,7 +88,7 @@ namespace SDK
 	bool W2S(const Vec3& vOrigin, Vec3& vScreen, bool bAlways = false);
 	bool IsOnScreen(CBaseEntity* pEntity, const matrix3x4& transform, float* pLeft = nullptr, float* pRight = nullptr, float* pTop = nullptr, float* pBottom = nullptr);
 	bool IsOnScreen(CBaseEntity* pEntity, Vec3 vOrigin);
-	bool IsOnScreen(CBaseEntity* pEntity);
+	bool IsOnScreen(CBaseEntity* pEntity, bool bShouldGetOwner = true);
 
 	void Trace(const Vec3& vecStart, const Vec3& vecEnd, unsigned int nMask, ITraceFilter* pFilter, CGameTrace* pTrace);
 	void TraceHull(const Vec3& vecStart, const Vec3& vecEnd, const Vec3& vecHullMin, const Vec3& vecHullMax, unsigned int nMask, ITraceFilter* pFilter, CGameTrace* pTrace);
@@ -98,6 +98,7 @@ namespace SDK
 	bool VisPosWorld(CBaseEntity* pSkip, const CBaseEntity* pEntity, const Vec3& from, const Vec3& to, unsigned int nMask = MASK_SHOT | CONTENTS_GRATE);
 
 	int GetRoundState();
+	int GetWinningTeam();
 	EWeaponType GetWeaponType(CTFWeaponBase* pWeapon, EWeaponType* pSecondaryType = nullptr);
 	const char* GetClassByIndex(const int nClass);
 
@@ -109,8 +110,15 @@ namespace SDK
 
 	Vec3 ComputeMove(const CUserCmd* pCmd, CTFPlayer* pLocal, Vec3& a, Vec3& b);
 	void WalkTo(CUserCmd* pCmd, CTFPlayer* pLocal, Vec3& a, Vec3& b, float scale);
-	void WalkTo(CUserCmd* pCmd, CTFPlayer* pLocal, Vec3& pDestination);
+	void WalkTo(CUserCmd* pCmd, CTFPlayer* pLocal, Vec3 pDestination);
 
 	void GetProjectileFireSetup(CTFPlayer* pPlayer, const Vec3& vAngIn, Vec3 vOffset, Vec3& vPosOut, Vec3& vAngOut, bool bPipes = false, bool bInterp = false);
 	void GetProjectileFireSetupAirblast(CTFPlayer* pPlayer, const Vec3& vAngIn, Vec3 vPosIn, Vec3& vAngOut, bool bInterp = false);
+
+	float CalculateSplashRadiusDamageFalloff(CTFWeaponBase* pWeapon, CTFPlayer* pAttacker, CTFWeaponBaseGrenadeProj* pProjectile, float flRadius);
+	float CalculateSplashRadiusDamage(CTFWeaponBase* pWeapon, CTFPlayer* pAttacker, CTFWeaponBaseGrenadeProj* pProjectile, float flRadius, float flDist, float& flDamageNoBuffs, bool bSelf = false );
+	bool WeaponDoesNotUseAmmo( CTFWeaponBase* pWeapon, bool bIncludeInfiniteAmmo = true );
+	bool WeaponDoesNotUseAmmo( int WeaponID, int DefIdx, bool bIncludeInfiniteAmmo = true );
+	int GetWeaponMaxReserveAmmo( int WeaponID, int DefIdx );
+	std::string GetLevelName( );
 }

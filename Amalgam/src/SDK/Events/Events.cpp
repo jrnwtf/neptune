@@ -1,5 +1,6 @@
 #include "Events.h"
 
+#include "../../Core/Core.h"
 #include "../../Features/Backtrack/Backtrack.h"
 #include "../../Features/CheaterDetection/CheaterDetection.h"
 #include "../../Features/CritHack/CritHack.h"
@@ -8,25 +9,26 @@
 #include "../../Features/Records/Records.h"
 #include "../../Features/Resolver/Resolver.h"
 #include "../../Features/Visuals/Visuals.h"
+#include "../../Features/Killstreak/Killstreak.h"
 
 bool CEventListener::Initialize()
 {
 	std::vector<const char*> vEvents = { 
-		"client_beginconnect", "client_connected", "client_disconnect", "game_newmap", "teamplay_round_start", "player_connect_client", "player_spawn", "player_changeclass", "player_hurt", "vote_cast", "item_pickup", "revive_player_notify"
+		"client_beginconnect", "client_connected", "client_disconnect", "game_newmap", "teamplay_round_start", "player_connect_client", "player_spawn", "player_death", "player_changeclass", "player_hurt", "vote_cast", "item_pickup", "revive_player_notify"
 	};
 
-	bool bFail{false};
 	for (auto szEvent : vEvents)
 	{
 		I::GameEventManager->AddListener(this, szEvent, false);
 
 		if (!I::GameEventManager->FindListener(this, szEvent))
 		{
-			SDK::Output("Amalgam", std::format("Failed to add listener: {}", szEvent).c_str(), { 255, 150, 175, 255 });
-			bFail = true;
+			U::Core.AppendFailText(std::format("Failed to add listener: {}", szEvent).c_str());
+			m_bFailed = true;
 		}
 	}
-	return !bFail;
+
+	return !m_bFailed;
 }
 
 void CEventListener::Unload()
@@ -43,7 +45,7 @@ void CEventListener::FireGameEvent(IGameEvent* pEvent)
 	auto uHash = FNV1A::Hash32(pEvent->GetName());
 
 	F::Records.Event(pEvent, uHash, pLocal);
-	if (I::EngineClient->IsPlayingTimeDemo())
+	if (I::EngineClient->IsPlayingDemo())
 		return;
 
 	F::CritHack.Event(pEvent, uHash, pLocal);
@@ -57,6 +59,10 @@ void CEventListener::FireGameEvent(IGameEvent* pEvent)
 		break;
 	case FNV1A::Hash32Const("player_spawn"):
 		F::Backtrack.SetLerp(pEvent);
+		F::Killstreak.PlayerSpawn(pEvent);
+		break;
+	case FNV1A::Hash32Const("player_death"):
+		F::Killstreak.PlayerDeath(pEvent);
 		break;
 	case FNV1A::Hash32Const("revive_player_notify"):
 	{

@@ -40,14 +40,15 @@ public:
 class CSignatures
 {
 private:
-	std::vector<CSignature*> m_vecSignatures = {};
+	std::vector<CSignature*> m_vSignatures = {};
+	bool m_bFailed = false;
 
 public:
 	bool Initialize();
 
 	inline void AddSignature(CSignature* pSignature)
 	{
-		m_vecSignatures.push_back(pSignature);
+		m_vSignatures.push_back(pSignature);
 	}
 };
 

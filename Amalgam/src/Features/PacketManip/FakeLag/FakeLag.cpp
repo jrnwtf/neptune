@@ -6,8 +6,9 @@
 bool CFakeLag::IsAllowed(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
 	if (!(Vars::CL_Move::Fakelag::Fakelag.Value || m_bPreservingBlast || m_bUnducking)
-		|| I::ClientState->chokedcommands >= std::min(24 - F::Ticks.m_iShiftedTicks, 21)
-		|| F::Ticks.m_iShiftedGoal != F::Ticks.m_iShiftedTicks || F::Ticks.m_bRecharge)
+		|| I::ClientState->chokedcommands >= std::min(24 - F::Ticks.m_iShiftedTicks, std::min(21, F::Ticks.m_iMaxShift))
+		|| F::Ticks.m_iShiftedGoal != F::Ticks.m_iShiftedTicks || F::Ticks.m_bRecharge
+		|| !pLocal->IsAlive() || pLocal->IsAGhost())
 		return false;
 
 	if (m_bPreservingBlast)
@@ -45,13 +46,15 @@ bool CFakeLag::IsAllowed(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 
 void CFakeLag::PreserveBlastJump(CTFPlayer* pLocal)
 {
-	bool bLastPreservingBlast = m_bPreservingBlast;
 	m_bPreservingBlast = false;
 
-	if (!Vars::CL_Move::Fakelag::RetainBlastJump.Value || bLastPreservingBlast || Vars::Misc::Movement::AutoRocketJump.Value || Vars::Misc::Movement::AutoCTap.Value
+	if (!Vars::CL_Move::Fakelag::RetainBlastJump.Value || Vars::Misc::Movement::AutoRocketJump.Value || Vars::Misc::Movement::AutoCTap.Value
 		|| !pLocal->IsAlive() || pLocal->IsAGhost() || Vars::CL_Move::Fakelag::RetainSoldierOnly.Value && pLocal->m_iClass() != TF_CLASS_SOLDIER)
 		return;
-	if (!pLocal->InCond(TF_COND_BLASTJUMPING) || !pLocal->m_hGroundEntity())
+	static bool bStaticGround = true;
+	const bool bLastGround = bStaticGround;
+	const bool bCurrGround = bStaticGround = pLocal->m_hGroundEntity();
+	if (!pLocal->InCond(TF_COND_BLASTJUMPING) || bLastGround || !bCurrGround)
 		return;
 
 	m_bPreservingBlast = true;

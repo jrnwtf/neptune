@@ -46,12 +46,15 @@ type __fastcall Hooks::name::Func(__VA_ARGS__)
 
 class CHooks
 {
+private:
+	bool m_bFailed = false;
+
 public:
 	std::unordered_map<std::string, CHook*> m_mHooks = {};
 
 public:
 	bool Initialize();
-	void Unload();
+	bool Unload();
 };
 
 ADD_FEATURE_CUSTOM(CHooks, Hooks, U);

@@ -25,11 +25,19 @@ struct CriticalStorage_t
 	float m_flCritTokenBucket;
 	int m_nCritChecks;
 	int m_nCritSeedRequests;
+	int m_iLastCritCheckFrame;
+	float m_flLastRapidFireCritCheckTime;
+	float m_flCritTime;
 };
 
 MAKE_HOOK(CL_ProcessPacketEntities, S::CL_ProcessPacketEntities(), bool,
 	SVC_PacketEntities* entmsg)
 {
+#ifdef DEBUG_HOOKS
+	if (!Vars::Hooks::CL_ProcessPacketEntities.Map[DEFAULT_BIND])
+		return CALL_ORIGINAL(entmsg);
+#endif
+
 	if (entmsg->m_bIsDelta || G::Unload) // we won't need to restore
 		return CALL_ORIGINAL(entmsg);
 
@@ -56,11 +64,17 @@ MAKE_HOOK(CL_ProcessPacketEntities, S::CL_ProcessPacketEntities(), bool,
 		mCriticalStorage[i].m_flCritTokenBucket = pWeapon->m_flCritTokenBucket();
 		mCriticalStorage[i].m_nCritChecks = pWeapon->m_nCritChecks();
 		mCriticalStorage[i].m_nCritSeedRequests = pWeapon->m_nCritSeedRequests();
+		mCriticalStorage[i].m_iLastCritCheckFrame = pWeapon->m_iLastCritCheckFrame();
+		mCriticalStorage[i].m_flLastRapidFireCritCheckTime = pWeapon->m_flLastRapidFireCritCheckTime();
+		mCriticalStorage[i].m_flCritTime = pWeapon->m_flCritTime();
 
 		if (Vars::Debug::Logging.Value) I::CVar->ConsolePrintf("\n");
 		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): mCriticalStorage[i].m_flCritTokenBucket = {}", i, uintptr_t(pWeapon), pWeapon->m_flCritTokenBucket()).c_str(), { 100, 150, 255, 255 }, Vars::Debug::Logging.Value);
 		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): mCriticalStorage[i].m_nCritChecks = {}", i, uintptr_t(pWeapon), pWeapon->m_nCritChecks()).c_str(), { 100, 150, 255, 255 }, Vars::Debug::Logging.Value);
 		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): mCriticalStorage[i].m_nCritSeedRequests = {}", i, uintptr_t(pWeapon), pWeapon->m_nCritSeedRequests()).c_str(), { 100, 150, 255, 255 }, Vars::Debug::Logging.Value);
+		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): mCriticalStorage[i].m_iLastCritCheckFrame = {}", i, uintptr_t(pWeapon), pWeapon->m_iLastCritCheckFrame()).c_str(), { 100, 150, 255, 255 }, Vars::Debug::Logging.Value);
+		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): mCriticalStorage[i].m_flLastRapidFireCritCheckTime = {}", i, uintptr_t(pWeapon), pWeapon->m_flLastRapidFireCritCheckTime()).c_str(), { 100, 150, 255, 255 }, Vars::Debug::Logging.Value);
+		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): mCriticalStorage[i].m_flCritTime = {}", i, uintptr_t(pWeapon), pWeapon->m_flCritTime()).c_str(), { 100, 150, 255, 255 }, Vars::Debug::Logging.Value);
 	}
 
 	bool bReturn = CALL_ORIGINAL(entmsg);
@@ -86,11 +100,18 @@ MAKE_HOOK(CL_ProcessPacketEntities, S::CL_ProcessPacketEntities(), bool,
 		pWeapon->m_flCritTokenBucket() = tStorage.m_flCritTokenBucket;
 		pWeapon->m_nCritChecks() = tStorage.m_nCritChecks;
 		pWeapon->m_nCritSeedRequests() = tStorage.m_nCritSeedRequests;
+		pWeapon->m_iLastCritCheckFrame() = tStorage.m_iLastCritCheckFrame;
+		pWeapon->m_flLastRapidFireCritCheckTime() = tStorage.m_flLastRapidFireCritCheckTime;
+		pWeapon->m_flCritTime() = tStorage.m_flCritTime;
 
 		if (Vars::Debug::Logging.Value) I::CVar->ConsolePrintf("\n");
 		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): pWeapon->m_flCritTokenBucket() = {}", iSlot, uintptr_t(pWeapon), pWeapon->m_flCritTokenBucket()).c_str(), { 100, 255, 150, 255 }, Vars::Debug::Logging.Value);
 		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): pWeapon->m_nCritChecks() = {}", iSlot, uintptr_t(pWeapon), pWeapon->m_nCritChecks()).c_str(), { 100, 255, 150, 255 }, Vars::Debug::Logging.Value);
 		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): pWeapon->m_nCritSeedRequests() = {}", iSlot, uintptr_t(pWeapon), pWeapon->m_nCritSeedRequests()).c_str(), { 100, 255, 150, 255 }, Vars::Debug::Logging.Value);
+		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): pWeapon->m_iLastCritCheckFrame() = {}", iSlot, uintptr_t(pWeapon), pWeapon->m_iLastCritCheckFrame()).c_str(), { 100, 255, 150, 255 }, Vars::Debug::Logging.Value);
+		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): pWeapon->m_flLastRapidFireCritCheckTime() = {}", iSlot, uintptr_t(pWeapon), pWeapon->m_flLastRapidFireCritCheckTime()).c_str(), { 100, 255, 150, 255 }, Vars::Debug::Logging.Value);
+		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): pWeapon->m_flCritTime() = {}", iSlot, uintptr_t(pWeapon), pWeapon->m_flCritTime()).c_str(), { 100, 255, 150, 255 }, Vars::Debug::Logging.Value);
+
 	}
 
 	return bReturn;

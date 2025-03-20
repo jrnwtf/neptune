@@ -8,6 +8,10 @@
 MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::ClientModeShared, 39), bool,
 	void* rcx, const CViewSetup* pSetup)
 {
+#ifdef DEBUG_HOOKS
+	if (!Vars::Hooks::CClientModeShared_DoPostScreenSpaceEffects.Map[DEFAULT_BIND])
+		return CALL_ORIGINAL(rcx, pSetup);
+#endif
 	F::Chams.mEntities.clear();
 
 	if (I::EngineVGui->IsGameUIVisible() || Vars::Visuals::UI::CleanScreenshots.Value && I::EngineClient->IsTakingScreenshot() || G::Unload)
@@ -25,6 +29,7 @@ MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::Clie
 	if (F::CameraWindow.m_bDrawing)
 		return CALL_ORIGINAL(rcx, pSetup);
 
+	F::Visuals.DrawNavEngine();
 	F::Visuals.DrawBoxes();
 	F::Visuals.DrawPaths();
 	F::Visuals.DrawLines();

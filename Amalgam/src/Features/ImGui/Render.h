@@ -16,14 +16,16 @@ public:
 	int Cursor = 2;
 
 	// Colors
-	ImColor Accent = { 255, 101, 101 };
-	ImColor AccentLight = { 255, 111, 111 };
-	ImColor Background = { 23, 23, 23, 250 };
-	ImColor Foreground = { 11, 11, 11, 250 };
-	ImColor Foremost = { 23, 23, 23, 250 };
-	ImColor ForemostLight = { 25, 25, 25, 250 };
-	ImColor Inactive = { 150, 150, 150 };
-	ImColor Active = { 255, 255, 255 };
+	ImColor Accent = {};
+	ImColor AccentL = {};
+	ImColor Background0 = {};
+	ImColor Background0p5 = {};
+	ImColor Background1 = {};
+	ImColor Background1p5 = {};
+	ImColor Background1p5L = {};
+	ImColor Background2 = {};
+	ImColor Inactive = {};
+	ImColor Active = {};
 
 	// Fonts
 	ImFont* FontSmall = nullptr;

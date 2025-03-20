@@ -10,7 +10,7 @@
 #include "../Features/Visuals/SpectatorList/SpectatorList.h"
 #include "../Features/Visuals/Visuals.h"
 
-static void Paint()
+static inline void Paint()
 {
 	H::Draw.UpdateW2SMatrix();
 	H::Draw.UpdateScreenSize();
@@ -44,6 +44,7 @@ static void Paint()
 			F::SpectatorList.Draw(pLocal);
 			F::CritHack.Draw(pLocal);
 			F::Visuals.DrawTicks(pLocal);
+			F::Visuals.DrawNavBot(pLocal);
 			F::Visuals.DrawDebugInfo(pLocal);
 		}
 
@@ -55,6 +56,10 @@ static void Paint()
 MAKE_HOOK(IEngineVGui_Paint, U::Memory.GetVFunc(I::EngineVGui, 14), void,
 	void* rcx, int iMode)
 {
+#ifdef DEBUG_HOOKS
+	if (!Vars::Hooks::IEngineVGui_Paint.Map[DEFAULT_BIND])
+		return CALL_ORIGINAL(rcx, iMode);
+#endif
 	CALL_ORIGINAL(rcx, iMode);
 
 	if (iMode & PAINT_UIPANELS && !G::Unload)

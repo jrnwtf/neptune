@@ -18,6 +18,8 @@ struct WeaponStorage_t
 
 	std::deque<int> m_vCritCommands = {};
 	std::deque<int> m_vSkipCommands = {};
+
+	bool m_bActive = false;
 };
 
 class CCritHack
@@ -34,6 +36,8 @@ private:
 
 	void ResetWeapons(CTFPlayer* pLocal);
 	void Reset();
+		
+	int m_iFillStart = 0;
 
 	int m_iCritDamage = 0.f;
 	int m_iAllDamage = 0.f;
@@ -45,12 +49,15 @@ private:
 	int m_iWishRandomSeed = 0;
 
 public:
+	float GetCost( CTFWeaponBase* pWeapon );
 	void Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd);
 	bool CalcIsAttackCriticalHandler(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
 	void Event(IGameEvent* pEvent, uint32_t uHash, CTFPlayer* pLocal);
 	void Store();
 	void Draw(CTFPlayer* pLocal);
 	int PredictCmdNum(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd);
+	u32 uLastCritCmdNum = 0;
+	bool m_bForce = false;
 
 	std::unordered_map<int, WeaponStorage_t> m_mStorage = {};
 };

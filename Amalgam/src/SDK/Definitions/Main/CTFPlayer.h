@@ -1,7 +1,6 @@
 #pragma once
 #include "CBasePlayer.h"
 #include "CMultiPlayerAnimState.h"
-#include "CTFWeaponBase.h"
 #include "../../../Utils/Signatures/Signatures.h"
 
 MAKE_SIGNATURE(CTFPlayer_IsPlayerOnSteamFriendsList, "client.dll", "40 57 48 81 EC ? ? ? ? 48 8B FA E8", 0x0);
@@ -119,7 +118,7 @@ public:
 	NETVAR(m_nHalloweenBombHeadStage, int, "CTFPlayer", "m_nHalloweenBombHeadStage");
 	NETVAR(m_nPlayerCondEx2, int, "CTFPlayer", "m_nPlayerCondEx2");
 	NETVAR(m_nPlayerCondEx3, int, "CTFPlayer", "m_nPlayerCondEx3");
-	NETVAR(m_nStreaks, void*, "CTFPlayer", "m_nStreaks");
+	//NETVAR(m_nStreaks, void*, "CTFPlayer", "m_nStreaks");
 	NETVAR(m_unTauntSourceItemID_Low, int, "CTFPlayer", "m_unTauntSourceItemID_Low");
 	NETVAR(m_unTauntSourceItemID_High, int, "CTFPlayer", "m_unTauntSourceItemID_High");
 	NETVAR(m_flRuneCharge, float, "CTFPlayer", "m_flRuneCharge");
@@ -199,46 +198,13 @@ public:
 	NETVAR_OFF(m_bStunNeedsFadeOut, bool, "CTFPlayer", "m_hItem", -188);
 	NETVAR_OFF(m_bTauntForceMoveForward, bool, "CTFPlayer", "m_bAllowMoveDuringTaunt", 1);
 
-	VIRTUAL(GetMaxHealth, int, int(*)(void*), this, 107);
+	VIRTUAL(GetMaxHealth, int, void*, this, 107);
 
-	CONDGET(IsSlowed, m_nPlayerCond(), TFCond_Slowed);
-	CONDGET(IsScoped, m_nPlayerCond(), TFCond_Zoomed);
-	CONDGET(IsDisguised, m_nPlayerCond(), TFCond_Disguised);
-	CONDGET(IsCloaked, m_nPlayerCond(), TFCond_Stealthed);
-	CONDGET(IsUberedCond, m_nPlayerCond(), TFCond_Ubercharged);
-	CONDGET(IsTaunting, m_nPlayerCond(), TFCond_Taunting);
-	CONDGET(IsBonked, m_nPlayerCond(), TFCond_Bonked);
-	CONDGET(IsStunned, m_nPlayerCond(), TFCond_Stunned);
-	CONDGET(IsCharging, m_nPlayerCond(), TFCond_Charging);
-	CONDGET(IsOnFire, m_nPlayerCond(), TFCond_OnFire);
-	CONDGET(IsInJarate, m_nPlayerCond(), TFCond_Jarated);
-	CONDGET(IsBleeding, m_nPlayerCond(), TFCond_Bleeding);
-	CONDGET(IsInMilk, m_nPlayerCond(), TFCond_Milked);
-	CONDGET(IsMegaHealed, m_nPlayerCond(), TFCond_MegaHeal);
-	CONDGET(IsPhlogUbered, m_nPlayerCondEx(), TFCondEx_PyroCrits);
-	CONDGET(IsBulletResist, m_nPlayerCondEx(), TFCondEx_BulletCharge);
-	CONDGET(IsBlastResist, m_nPlayerCondEx(), TFCondEx_ExplosiveCharge);
-	CONDGET(IsFireResist, m_nPlayerCondEx(), TFCondEx_FireCharge);
-	CONDGET(IsBulletImmune, m_nPlayerCondEx2(), TFCondEx2_BulletImmune);
-	CONDGET(IsBlastImmune, m_nPlayerCondEx2(), TFCondEx2_BlastImmune);
-	CONDGET(IsFireImmune, m_nPlayerCondEx2(), TFCondEx2_FireImmune);
-	CONDGET(IsAGhost, m_nPlayerCondEx2(), TFCondEx2_HalloweenGhostMode);
-	CONDGET(IsInBumperKart, m_nPlayerCondEx2(), TFCondEx2_InKart);
-	CONDGET(IsStrengthRune, m_nPlayerCondEx2(), TFCondEx2_StrengthRune);
-	CONDGET(IsHasteRune, m_nPlayerCondEx2(), TFCondEx2_HasteRune);
-	CONDGET(IsRegenRune, m_nPlayerCondEx2(), TFCondEx2_RegenRune);
-	CONDGET(IsResistRune, m_nPlayerCondEx2(), TFCondEx2_ResistRune);
-	CONDGET(IsVampireRune, m_nPlayerCondEx2(), TFCondEx2_VampireRune);
-	CONDGET(IsReflectRune, m_nPlayerCondEx2(), TFCondEx2_ReflectRune);
-	CONDGET(IsPrecisionRune, m_nPlayerCondEx3(), TFCondEx3_PrecisionRune);
-	CONDGET(IsAgilityRune, m_nPlayerCondEx3(), TFCondEx3_AgilityRune);
-	CONDGET(IsKnockoutRune, m_nPlayerCondEx3(), TFCondEx3_KnockoutRune);
-	CONDGET(IsImbalanceRune, m_nPlayerCondEx3(), TFCondEx3_ImbalanceRune);
-	CONDGET(IsCritTempRune, m_nPlayerCondEx3(), TFCondEx3_CritboostedTempRune);
-	CONDGET(IsKingRune, m_nPlayerCondEx3(), TFCondEx3_KingRune);
-	CONDGET(IsPlagueRune, m_nPlayerCondEx3(), TFCondEx3_PlagueRune);
-	CONDGET(IsSupernovaRune, m_nPlayerCondEx3(), TFCondEx3_SupernovaRune);
-	CONDGET(IsBuffedByKing, m_nPlayerCondEx3(), TFCondEx3_KingBuff);
+	int& m_nStreaks( int index )
+	{
+		static int nOffset = U::NetVars.GetNetVar( "CTFPlayer", "m_nStreaks" );
+		return ( &( *reinterpret_cast< int* >( uintptr_t( this ) + nOffset ) ) )[index];
+	}
 
 	inline Vec3 GetEyeAngles()
 	{
@@ -328,12 +294,22 @@ public:
 		return false;
 	}
 
+	inline bool IsAGhost()
+	{
+		return InCond(TF_COND_HALLOWEEN_GHOST_MODE);
+	};
+
+	inline bool IsTaunting()
+	{
+		return InCond(TF_COND_TAUNTING);
+	};
+
 	inline bool IsInvisible()
 	{
-		if (this->InCond(TF_COND_BURNING)
-			|| this->InCond(TF_COND_BURNING_PYRO)
-			|| this->InCond(TF_COND_MAD_MILK)
-			|| this->InCond(TF_COND_URINE))
+		if (InCond(TF_COND_BURNING)
+			|| InCond(TF_COND_BURNING_PYRO)
+			|| InCond(TF_COND_MAD_MILK)
+			|| InCond(TF_COND_URINE))
 			return false;
 
 		return m_flInvisibility() >= 1.f;
@@ -346,11 +322,6 @@ public:
 		const float GetInvisPercent = Math::RemapValClamped(m_flInvisChangeCompleteTime() - I::GlobalVars->curtime, flInvisTime, 0.f, 0.f, 100.f);
 
 		return GetInvisPercent;
-	}
-
-	inline bool IsZoomed()
-	{
-		return InCond(TF_COND_ZOOMED);
 	}
 
 	inline bool IsInvulnerable()
@@ -386,9 +357,10 @@ public:
 
 	inline bool IsMiniCritBoosted()
 	{
-		return InCond(TF_COND_MINICRITBOOSTED_ON_KILL)
-			|| InCond(TF_COND_NOHEALINGDAMAGEBUFF)
+		return InCond(TF_COND_OFFENSEBUFF)
 			|| InCond(TF_COND_ENERGY_BUFF)
+			|| InCond(TF_COND_MINICRITBOOSTED_ON_KILL)
+			|| InCond(TF_COND_NOHEALINGDAMAGEBUFF)
 			/*|| InCond(TF_COND_CRITBOOSTED_DEMO_CHARGE)*/;
 	}
 
@@ -401,17 +373,17 @@ public:
 
 	inline bool CanAttack()
 	{
-		if (!IsAlive() || IsTaunting() || IsBonked() || IsAGhost() || IsInBumperKart() || m_fFlags() & FL_FROZEN)
+		if (!IsAlive() || IsAGhost() || IsTaunting() || InCond(TF_COND_PHASE) || InCond(TF_COND_HALLOWEEN_KART) || m_fFlags() & FL_FROZEN)
 			return false;
 
 		if (m_iClass() == TF_CLASS_SPY)
 		{
-			if (m_bFeignDeathReady() && !IsCloaked())
+			if (m_bFeignDeathReady() && !InCond(TF_COND_STEALTHED))
 				return false;
 
 			//Invis
 			static float flTimer = 0.f;
-			if (IsCloaked())
+			if (InCond(TF_COND_STEALTHED))
 			{
 				flTimer = 0.f;
 				return false;
@@ -454,7 +426,7 @@ public:
 
 	inline void ThirdPersonSwitch(/*bool bThirdperson*/)
 	{
-		return reinterpret_cast<void(*)(void*/*, bool*/)>(U::Memory.GetVFunc(this, 255))(this/*, bThirdperson*/);
+		return reinterpret_cast<void(*)(void*/*, bool*/)>(U::Memory.GetVFunc(this, 256))(this/*, bThirdperson*/);
 	};
 };
 

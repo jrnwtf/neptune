@@ -827,12 +827,15 @@
     <ClCompile Include="include\ImGui\imgui_stdlib.cpp" />
     <ClCompile Include="include\ImGui\imgui_tables.cpp" />
     <ClCompile Include="include\ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="include\ImGui\LanguageDefinitions.cpp" />
     <ClCompile Include="include\ImGui\TextEditor.cpp" />
     <ClCompile Include="include\MinHook\buffer.c" />
     <ClCompile Include="include\MinHook\hde\hde32.c" />
     <ClCompile Include="include\MinHook\hde\hde64.c" />
     <ClCompile Include="include\MinHook\hook.c" />
     <ClCompile Include="include\MinHook\trampoline.c" />
+    <ClCompile Include="src\Features\AutoJoin\AutoJoin.cpp" />
+    <ClCompile Include="src\Features\Killstreak\Killstreak.cpp" />
     <ClCompile Include="src\BytePatches\BytePatches.cpp" />
     <ClCompile Include="src\Core\Core.cpp" />
     <ClCompile Include="src\DllMain.cpp" />
@@ -857,6 +860,13 @@
     <ClCompile Include="src\Features\ImGui\Render.cpp" />
     <ClCompile Include="src\Features\ImGui\Menu\Menu.cpp" />
     <ClCompile Include="src\Features\Misc\AutoVote\AutoVote.cpp" />
+    <ClCompile Include="src\Features\NavBot\NavBot.cpp" />
+    <ClCompile Include="src\Features\NavBot\NavEngine\Controllers\Controller.cpp" />
+    <ClCompile Include="src\Features\NavBot\NavEngine\Controllers\CPController\CPController.cpp" />
+    <ClCompile Include="src\Features\NavBot\NavEngine\Controllers\FlagController\FlagController.cpp" />
+    <ClCompile Include="src\Features\NavBot\NavEngine\Controllers\PLController\PLController.cpp" />
+    <ClCompile Include="src\Features\NavBot\NavEngine\MicroPather\micropather.cpp" />
+    <ClCompile Include="src\Features\NavBot\NavEngine\NavEngine.cpp" />
     <ClCompile Include="src\Features\Records\Records.cpp" />
     <ClCompile Include="src\Features\Misc\Misc.cpp" />
     <ClCompile Include="src\Features\NetworkFix\NetworkFix.cpp" />
@@ -884,14 +894,24 @@
     <ClCompile Include="src\Features\Visuals\Radar\Radar.cpp" />
     <ClCompile Include="src\Features\Visuals\SpectatorList\SpectatorList.cpp" />
     <ClCompile Include="src\Features\Visuals\Visuals.cpp" />
+    <ClCompile Include="src\Hooks\CBaseAnimating_SetSequence.cpp" />
+    <ClCompile Include="src\Hooks\CBaseEntity_BaseInterpolatePart1.cpp" />
+    <ClCompile Include="src\Hooks\CBaseEntity_EstimateAbsVelocity.cpp" />
+    <ClCompile Include="src\Hooks\CBasePlayer_ItemPostFrame.cpp" />
+    <ClCompile Include="src\Hooks\CHudItemEffectMeter_Weapon_C_TFWeaponBase_IsEnabled.cpp" />
     <ClCompile Include="src\Hooks\CSniperDot_GetRenderingPositions.cpp" />
+    <ClCompile Include="src\Hooks\CTFGCClientSystem_BHasCompetitiveAccess.cpp" />
+    <ClCompile Include="src\Hooks\CTFGCClientSystem_BLocalPlayerInventoryHasMvmTicket.cpp" />
     <ClCompile Include="src\Hooks\CTFInput_ApplyMouse.cpp" />
+    <ClCompile Include="src\Hooks\CTFParty_BAnyMemberWithoutCompetitiveAccess.cpp" />
+    <ClCompile Include="src\Hooks\CTFParty_BAnyMemberWithoutTicket.cpp" />
+    <ClCompile Include="src\Hooks\CTFParty_GetMemberActivity.cpp" />
+    <ClCompile Include="src\Hooks\CTFPlayer_BuildTransformations.cpp" />
+    <ClCompile Include="src\Hooks\CTFPlayer_DoAnimationEvent.cpp" />
     <ClCompile Include="src\Hooks\CTFPlayer_UpdateStepSound.cpp" />
-    <ClCompile Include="src\Hooks\CBasePlayer_InFirstPersonView.cpp" />
-    <ClCompile Include="src\Hooks\CClientState_GetTime.cpp" />
+    <ClCompile Include="src\Hooks\CTFPlayer_ShouldDraw.cpp" />
     <ClCompile Include="src\Hooks\ClientModeTFNormal_BIsFriendOrPartyMember.cpp" />
     <ClCompile Include="src\Hooks\CL_ProcessPacketEntities.cpp" />
-    <ClCompile Include="src\Hooks\CBaseEntity_BaseInterpolatePart1.cpp" />
     <ClCompile Include="src\Hooks\CBaseEntity_WorldSpaceCenter.cpp" />
     <ClCompile Include="src\Hooks\CBasePlayer_CalcPlayerView.cpp" />
     <ClCompile Include="src\Hooks\CBaseViewModel_ShouldFlipViewModel.cpp" />
@@ -908,6 +928,8 @@
     <ClCompile Include="src\Hooks\CTFHudDeathNotice_AddAdditionalMsg.cpp" />
     <ClCompile Include="src\Hooks\CThirdPersonManager_Update.cpp" />
     <ClCompile Include="src\Hooks\CViewRender_PerformScreenOverlay.cpp" />
+    <ClCompile Include="src\Hooks\FuckReportShit.cpp" />
+    <ClCompile Include="src\Hooks\HostState_Shutdown.cpp" />
     <ClCompile Include="src\Hooks\IBaseClientDLL_DispatchUserMessage.cpp" />
     <ClCompile Include="src\Hooks\IBaseClientDLL_FrameStageNotify.cpp" />
     <ClCompile Include="src\Hooks\IBaseClientDLL_LevelShutdown.cpp" />
@@ -915,7 +937,7 @@
     <ClCompile Include="src\Hooks\CBaseAnimating_Interpolate.cpp" />
     <ClCompile Include="src\Hooks\CBaseAnimating_MaintainSequenceTransitions.cpp" />
     <ClCompile Include="src\Hooks\CBaseAnimating_SetupBones.cpp" />
-    <ClCompile Include="src\Hooks\CBaseAnimating_UpdateClientSideAnimations.cpp" />
+    <ClCompile Include="src\Hooks\CBaseAnimating_UpdateClientSideAnimation.cpp" />
     <ClCompile Include="src\Hooks\CBaseEntity_FireBullets.cpp" />
     <ClCompile Include="src\Hooks\CBaseEntity_ResetLatched.cpp" />
     <ClCompile Include="src\Hooks\CBaseEntity_SetAbsVelocity.cpp" />
@@ -958,6 +980,8 @@
     <ClCompile Include="src\Hooks\DoEnginePostProcessing.cpp" />
     <ClCompile Include="src\Hooks\DSP_Process.cpp" />
     <ClCompile Include="src\Hooks\IEngineTrace_TraceRay.cpp" />
+    <ClCompile Include="src\Hooks\Host_IsSecureServerAllowed.cpp" />
+    <ClCompile Include="src\Hooks\ISteamFriends_GetFriendPersonaName.cpp" />
     <ClCompile Include="src\Hooks\ISteamNetworkingUtils_GetPingToDataCenter.cpp" />
     <ClCompile Include="src\Hooks\IVEngineClient_ClientCmd_Unrestricted.cpp" />
     <ClCompile Include="src\Hooks\IEngineVGui_Paint.cpp" />
@@ -985,6 +1009,7 @@
     <ClCompile Include="src\SDK\Definitions\Main\MD5.cpp" />
     <ClCompile Include="src\SDK\Definitions\Misc\bitbuf.cpp" />
     <ClCompile Include="src\SDK\Definitions\Misc\ChecksumCRC.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\ValveRandom.cpp" />
     <ClCompile Include="src\SDK\Definitions\NullInterfaces.cpp" />
     <ClCompile Include="src\SDK\Events\Events.cpp" />
     <ClCompile Include="src\SDK\Helpers\Color\Color.cpp" />
@@ -1123,6 +1148,9 @@
     <ClInclude Include="include\MinHook\hde\table64.h" />
     <ClInclude Include="include\MinHook\MinHook.h" />
     <ClInclude Include="include\MinHook\trampoline.h" />
+    <ClInclude Include="src\Features\AutoJoin\AutoJoin.h" />
+    <ClInclude Include="src\Features\CritHack\NoPipeRot.h" />
+    <ClInclude Include="src\Features\Killstreak\Killstreak.h" />
     <ClInclude Include="src\BytePatches\BytePatches.h" />
     <ClInclude Include="src\Features\Aimbot\Aimbot.h" />
     <ClInclude Include="src\Features\Aimbot\AimbotGlobal\AimbotGlobal.h" />
@@ -1145,6 +1173,15 @@
     <ClInclude Include="src\Features\ImGui\Fonts\Roboto\RobotoMedium.h" />
     <ClInclude Include="src\Features\Misc\AutoVote\AutoVote.h" />
     <ClInclude Include="src\Features\Misc\Misc.h" />
+    <ClInclude Include="src\Features\NavBot\NavBot.h" />
+    <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\Controller.h" />
+    <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\CPController\CPController.h" />
+    <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\FlagController\FlagController.h" />
+    <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\PLController\PLController.h" />
+    <ClInclude Include="src\Features\NavBot\NavEngine\FileReader\CNavFile.h" />
+    <ClInclude Include="src\Features\NavBot\NavEngine\FileReader\nav.h" />
+    <ClInclude Include="src\Features\NavBot\NavEngine\MicroPather\micropather.h" />
+    <ClInclude Include="src\Features\NavBot\NavEngine\NavEngine.h" />
     <ClInclude Include="src\Features\NetworkFix\NetworkFix.h" />
     <ClInclude Include="src\Features\NoSpread\NoSpread.h" />
     <ClInclude Include="src\Features\NoSpread\NoSpreadHitscan\NoSpreadHitscan.h" />
@@ -1167,6 +1204,7 @@
     <ClInclude Include="src\Features\Visuals\SpectatorList\SpectatorList.h" />
     <ClInclude Include="src\Features\Visuals\Visuals.h" />
     <ClInclude Include="src\Hooks\Direct3DDevice9.h" />
+    <ClInclude Include="src\SDK\Definitions\Interfaces\CServerTools.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\CTFGameRules.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\CTFGCClientSystem.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\IBaseClientDLL.h" />
@@ -1179,23 +1217,32 @@
     <ClInclude Include="src\SDK\Definitions\Interfaces\Prediction.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\ViewRenderBeams.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CBaseObject.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\CBaseTeamObjectiveResource.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\CBaseToggle.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CBaseTrace.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\CBaseTrigger.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CCaptureFlag.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CCollisionProperty.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CEconEntity.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CEconWearable.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CEntitySphereQuery.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\CFuncRespawnRoom.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\CFuncRespawnRoomShim.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CGameTrace.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CModel.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\IEngineTrace.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CParticleProperty.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\CServerBaseEntity.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CSniperDot.h" />
     <ClInclude Include="src\SDK\Definitions\Main\IAchievementMgr.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\IServerEntity.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\IServerUnknown.h" />
     <ClInclude Include="src\SDK\Definitions\Main\MD5.h" />
     <ClInclude Include="src\SDK\Definitions\Misc\bitvec.h" />
     <ClInclude Include="src\SDK\Definitions\Misc\BSPFlags.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\IMoveHelper.h" />
     <ClInclude Include="src\SDK\Definitions\Misc\dt_send.h" />
+    <ClInclude Include="src\SDK\Definitions\Misc\IMatchGroupDescription.h" />
     <ClInclude Include="src\SDK\Definitions\Misc\IMDLCache.h" />
     <ClInclude Include="src\SDK\Definitions\Misc\IPrediction.h" />
     <ClInclude Include="src\SDK\Definitions\Misc\ISpatialPartition.h" />
@@ -1203,6 +1250,7 @@
     <ClInclude Include="src\SDK\Definitions\Misc\SmartPtr.h" />
     <ClInclude Include="src\SDK\Definitions\Misc\UtlIntrusiveList.h" />
     <ClInclude Include="src\SDK\Definitions\Misc\UtlObjectReference.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\ValveRandom.h" />
     <ClInclude Include="src\SDK\Definitions\Misc\VCollide.h" />
     <ClInclude Include="src\SDK\Definitions\Steam\ISteamAppList.h" />
     <ClInclude Include="src\SDK\Definitions\Steam\ISteamApps.h" />
@@ -1391,12 +1439,12 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\packages\boost.1.86.0\build\boost.targets" Condition="Exists('..\packages\boost.1.86.0\build\boost.targets')" />
+    <Import Project="..\packages\boost.1.87.0\build\boost.targets" Condition="Exists('..\packages\boost.1.87.0\build\boost.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+      <ErrorText>Данный проект ссылается на пакеты NuGet, отсутствующие на этом компьютере. Используйте восстановление пакетов NuGet, чтобы скачать их.  Дополнительную информацию см. по адресу: http://go.microsoft.com/fwlink/?LinkID=322105. Отсутствует следующий файл: {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\boost.1.86.0\build\boost.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\boost.1.86.0\build\boost.targets'))" />
+    <Error Condition="!Exists('..\packages\boost.1.87.0\build\boost.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\boost.1.87.0\build\boost.targets'))" />
   </Target>
 </Project>

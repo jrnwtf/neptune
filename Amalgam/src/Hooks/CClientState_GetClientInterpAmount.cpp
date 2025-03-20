@@ -5,6 +5,10 @@ MAKE_SIGNATURE(CClientState_GetClientInterpAmount, "engine.dll", "48 83 EC ? 48 
 MAKE_HOOK(CClientState_GetClientInterpAmount, S::CClientState_GetClientInterpAmount(), float,
 	CClientState* rcx)
 {
+#ifdef DEBUG_HOOKS
+	if (!Vars::Hooks::CClientState_GetClientInterpAmount.Map[DEFAULT_BIND])
+		return CALL_ORIGINAL(rcx);
+#endif
 	G::Lerp = CALL_ORIGINAL(rcx);
-	return 0.f; //Vars::Visuals::Removals::Interpolation.Value ? 0.f : G::Lerp
+	return 0.f;
 }

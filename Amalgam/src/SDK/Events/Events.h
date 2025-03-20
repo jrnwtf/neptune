@@ -4,6 +4,9 @@
 
 class CEventListener : public CGameEventListener
 {
+private:
+	bool m_bFailed = false;
+
 public:
 	bool Initialize();
 	void Unload();

@@ -34,9 +34,11 @@ void CNoSpreadProjectile::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCm
 		float flOldCurrentTime = I::GlobalVars->curtime;
 		I::GlobalVars->curtime = TICKS_TO_TIME(pLocal->m_nTickBase());
 
-		SDK::RandomSeed(SDK::SeedFileLineHash(MD5_PseudoRandom(pCmd->command_number) & 0x7FFFFFFF, "SelectWeightedSequence", 0));
+		CValve_Random* Random = new CValve_Random();
+		//SDK::RandomSeed(SDK::SeedFileLineHash(MD5_PseudoRandom(pCmd->command_number) & 0x7FFFFFFF, "SelectWeightedSequence", 0));
+		Random->SetSeed(SDK::SeedFileLineHash(MD5_PseudoRandom(pCmd->command_number) & 0x7FFFFFFF, "SelectWeightedSequence", 0));
 		for (int i = 0; i < 6; ++i)
-			SDK::RandomFloat();
+			Random->RandomFloat();//SDK::RandomFloat();
 
 		Vec3 vAngAdd = pWeapon->GetSpreadAngles() - I::EngineClient->GetViewAngles();
 		switch (pWeapon->GetWeaponID())
@@ -44,13 +46,13 @@ void CNoSpreadProjectile::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCm
 		case TF_WEAPON_COMPOUND_BOW:
 			if (pWeapon->As<CTFPipebombLauncher>()->m_flChargeBeginTime() > 0.f && I::GlobalVars->curtime - pWeapon->As<CTFPipebombLauncher>()->m_flChargeBeginTime() > 5.0f)
 			{
-				vAngAdd.x += -6.f + SDK::RandomInt() / float(0x7FFF) * 12.f;
-				vAngAdd.y += -6.f + SDK::RandomInt() / float(0x7FFF) * 12.f;
+				vAngAdd.x += -6.f + /*SDK::RandomInt()*/Random->RandomInt() / float(0x7FFF) * 12.f;
+				vAngAdd.y += -6.f + /*SDK::RandomInt()*/Random->RandomInt() / float(0x7FFF) * 12.f;
 			}
 			break;
 		case TF_WEAPON_SYRINGEGUN_MEDIC:
-			vAngAdd.x += SDK::RandomFloat(-1.5f, 1.5f);
-			vAngAdd.y += SDK::RandomFloat(-1.5f, 1.5f);
+			vAngAdd.x += Random->RandomFloat(-1.5f, 1.5f);//SDK::RandomFloat(-1.5f, 1.5f);
+			vAngAdd.y += Random->RandomFloat(-1.5f, 1.5f);//SDK::RandomFloat(-1.5f, 1.5f);
 		}
 
 		if (!vAngAdd.IsZero())

@@ -6,12 +6,6 @@
 
 MAKE_SIGNATURE(RandomSeed, "client.dll", "0F B6 1D ? ? ? ? 89 9D", 0x0);
 
-struct VelFixRecord
-{
-	Vec3 m_vecOrigin;
-	float m_flSimulationTime;
-};
-
 struct DrawLine
 {
 	std::pair<Vec3, Vec3> m_vPair;
@@ -60,25 +54,27 @@ namespace G
 	inline int Buttons = 0;
 
 	inline std::pair<int, int> Target = { 0, 0 };
-	inline Vec3 AimPosition = {};
+	inline std::pair<Vec3, int> AimPosition = {};
 
 	inline bool SilentAngles = false;
 	inline bool PSilentAngles = false;
 
 	inline bool AntiAim = false;
-	inline int AnticipatedChoke = 0;
 	inline bool Choking = false;
 
 	inline bool UpdatingAnims = false;
 	inline bool DrawingProps = false;
 	inline bool FlipViewmodels = false;
 
-	inline std::unordered_map<int, std::deque<VelFixRecord>> VelocityMap = {};
-
 	inline std::vector<DrawLine> LineStorage = {};
 	inline std::vector<DrawPath> PathStorage = {};
 	inline std::vector<DrawBox> BoxStorage = {};
 
+	inline int NavbotTargetIdx = -1;
+	inline int SavedDefIndexes[ 3 ] = { -1,-1,-1 };
+	inline int SavedWepIds[ 3 ] = { -1,-1,-1 };
+	inline int AmmoInSlot[ 2 ] = { 0, 0 };
+	
 	inline int* RandomSeed()
 	{
 		static auto dest = U::Memory.RelToAbs(S::RandomSeed());

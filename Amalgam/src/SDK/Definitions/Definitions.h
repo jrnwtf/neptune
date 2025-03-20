@@ -616,19 +616,42 @@ enum ETFHitboxes
 	HITBOX_THORAX,
 	HITBOX_CHEST,
 	HITBOX_UPPER_CHEST,
-	HITBOX_RIGHT_THIGH,
-	HITBOX_LEFT_THIGH,
-	HITBOX_RIGHT_CALF,
-	HITBOX_LEFT_CALF,
-	HITBOX_RIGHT_FOOT,
-	HITBOX_LEFT_FOOT,
-	HITBOX_RIGHT_HAND,
+	HITBOX_LEFT_UPPER_ARM,
+	HITBOX_LEFT_FOREARM,
 	HITBOX_LEFT_HAND,
 	HITBOX_RIGHT_UPPER_ARM,
 	HITBOX_RIGHT_FOREARM,
-	HITBOX_LEFT_UPPER_ARM,
-	HITBOX_LEFT_FOREARM,
+	HITBOX_RIGHT_HAND,
+	HITBOX_LEFT_THIGH,
+	HITBOX_LEFT_CALF,
+	HITBOX_LEFT_FOOT,
+	HITBOX_RIGHT_THIGH,
+	HITBOX_RIGHT_CALF,
+	HITBOX_RIGHT_FOOT,
 	HITBOX_MAX
+};
+enum ESaxtonHitboxes
+{
+	HITBOX_SAXTON_HEAD,
+	HITBOX_SAXTON_NECK,
+	HITBOX_SAXTON_LEFT_FOOT,
+	HITBOX_SAXTON_RIGHT_FOOT,
+	HITBOX_SAXTON_LEFT_CALF,
+	HITBOX_SAXTON_RIGHT_CALF,
+	HITBOX_SAXTON_LEFT_THIGH,
+	HITBOX_SAXTON_RIGHT_THIGH,
+	HITBOX_SAXTON_LEFT_HAND,
+	HITBOX_SAXTON_RIGHT_HAND,
+	HITBOX_SAXTON_LEFT_FOREARM,
+	HITBOX_SAXTON_RIGHT_FOREARM,
+	HITBOX_SAXTON_LEFT_UPPER_ARM,
+	HITBOX_SAXTON_RIGHT_UPPER_ARM,
+	HITBOX_SAXTON_PELVIS,
+	HITBOX_SAXTON_BODY,
+	HITBOX_SAXTON_THORAX,
+	HITBOX_SAXTON_CHEST,
+	HITBOX_SAXTON_UPPER_CHEST,
+	HITBOX_SAXTON_MAX
 };
 
 enum MinigunState_t
@@ -688,6 +711,14 @@ enum medigun_weapontypes_t
 	MEDIGUN_UBER,
 	MEDIGUN_QUICKFIX,
 	MEDIGUN_RESIST
+};
+
+enum RifleTypes_t
+{
+	RIFLE_NORMAL = 0,
+	RIFLE_JARATE,
+	RIFLE_MACHINA,
+	RIFLE_CLASSIC,
 };
 
 enum medigun_resist_types_t
@@ -923,6 +954,11 @@ enum
 };
 
 class CBaseEntity;
+
+struct CUtlString
+{
+	char* m_pString;
+};
 
 struct FireBulletsInfo_t
 {
@@ -2348,51 +2384,6 @@ enum ETFCond
 	TF_COND_POWERUPMODE_DOMINANT
 };
 
-enum ETFConds
-{
-	TFCond_Slowed = (1 << 0), // 0
-	TFCond_Zoomed = (1 << 1), // 1
-	TFCond_Disguised = (1 << 3), // 3
-	TFCond_Stealthed = (1 << 4), // 4
-	TFCond_Ubercharged = (1 << 5), // 5
-	TFCond_Taunting = (1 << 7), // 7
-	TFCond_Bonked = (1 << 14), // 14
-	TFCond_Stunned = (1 << 15), // 15
-	TFCond_Charging = (1 << 17), // 17
-	TFCond_OnFire = (1 << 22), // 22
-	TFCond_Jarated = (1 << 24), // 24
-	TFCond_Bleeding = (1 << 25), // 25
-	TFCond_Milked = (1 << 27), // 27
-	TFCond_MegaHeal = (1 << 28), // 28
-
-	TFCondEx_PyroCrits = (1 << 12), // 44
-	TFCondEx_BulletCharge = (1 << 26), // 58
-	TFCondEx_ExplosiveCharge = (1 << 27), // 59
-	TFCondEx_FireCharge = (1 << 28), // 60
-
-	TFCondEx2_BulletImmune = (1 << 3), // 67
-	TFCondEx2_BlastImmune = (1 << 4), // 68
-	TFCondEx2_FireImmune = (1 << 5), // 69
-	TFCondEx2_HalloweenGhostMode = (1 << 13), // 77
-	TFCondEx2_InKart = (1 << 18), // 82
-	TFCondEx2_StrengthRune = (1 << 26), // 90
-	TFCondEx2_HasteRune = (1 << 27), // 91
-	TFCondEx2_RegenRune = (1 << 28), // 92
-	TFCondEx2_ResistRune = (1 << 29), // 93
-	TFCondEx2_VampireRune = (1 << 30), // 94
-	TFCondEx2_ReflectRune = (1 << 31), // 95
-
-	TFCondEx3_PrecisionRune = (1 << 0), // 96
-	TFCondEx3_AgilityRune = (1 << 1), // 97
-	TFCondEx3_KnockoutRune = (1 << 7), // 103
-	TFCondEx3_ImbalanceRune = (1 << 8), // 104
-	TFCondEx3_CritboostedTempRune = (1 << 9), // 105
-	TFCondEx3_KingRune = (1 << 13), // 109
-	TFCondEx3_PlagueRune = (1 << 14), // 110
-	TFCondEx3_SupernovaRune = (1 << 15), // 111
-	TFCondEx3_KingBuff = (1 << 17), // 113
-};
-
 enum ETFDmgCustom
 {
 	TF_DMG_CUSTOM_NONE = 0,
@@ -2846,7 +2837,7 @@ enum ETFMatchGroup
 	k_eTFMatchGroup_Event_Placeholder = 8,
 	k_eTFMatchGroup_Event_Default = 8,
 	k_eTFMatchGroup_Event_First = 8,
-	k_eTFMatchGroup_Event_Last = 8,
+	k_eTFMatchGroup_Event_Last = 8
 };
 
 enum
@@ -2948,4 +2939,35 @@ struct StartSoundParams_t
 	int				speakerentity;
 	bool			suppressrecording;
 	int				initialStreamPosition;
+};
+
+class CParticleSubTexture;
+struct Particle
+{
+	Particle *m_pPrev, *m_pNext;
+
+	// Which sub texture this particle uses (so we can get at the tcoord mins and maxs).
+	CParticleSubTexture *m_pSubTexture;
+
+	// If m_Pos isn't used to store the world position, then implement IParticleEffect::GetParticlePosition()
+	Vector m_Pos;			// Position of the particle in world space
+};
+
+class SimpleParticle : public Particle
+{
+public:
+	SimpleParticle() : m_iFlags(0) {}
+
+	// AddSimpleParticle automatically initializes these fields.
+	Vector		m_vecVelocity;
+	float		m_flRoll;
+	float		m_flDieTime;	// How long it lives for.
+	float		m_flLifetime;	// How long it has been alive for so far.
+	unsigned char	m_uchColor[3];
+	unsigned char	m_uchStartAlpha;
+	unsigned char	m_uchEndAlpha;
+	unsigned char	m_uchStartSize;
+	unsigned char	m_uchEndSize;
+	unsigned char 	m_iFlags;
+	float		m_flRollDelta;
 };

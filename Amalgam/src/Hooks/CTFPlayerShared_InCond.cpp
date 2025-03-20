@@ -1,8 +1,8 @@
 #include "../SDK/SDK.h"
 
 MAKE_SIGNATURE(CTFPlayerShared_InCond, "client.dll", "48 89 5C 24 ? 57 48 83 EC ? 8B DA 48 8B F9 83 FA ? 7D", 0x0);
-MAKE_SIGNATURE(CTFPlayer_ShouldDraw_InCond_Call, "client.dll", "E8 ? ? ? ? 84 C0 74 ? 32 C0 48 8B 74 24", 0x5);
-MAKE_SIGNATURE(CTFWearable_ShouldDraw_InCond_Call, "client.dll", "E8 ? ? ? ? 84 C0 0F 85 ? ? ? ? 41 BF", 0x5);
+MAKE_SIGNATURE(CTFPlayer_ShouldDraw_InCond_Call, "client.dll", "84 C0 74 ? 32 C0 48 8B 74 24", 0x0);
+MAKE_SIGNATURE(CTFWearable_ShouldDraw_InCond_Call, "client.dll", "84 C0 0F 85 ? ? ? ? 41 BF", 0x0);
 MAKE_SIGNATURE(CHudScope_ShouldDraw_InCond_Call, "client.dll", "84 C0 74 ? 48 8B CB E8 ? ? ? ? 48 85 C0 74 ? 48 8B CB E8 ? ? ? ? 48 8B C8 48 8B 10 FF 92 ? ? ? ? 83 F8 ? 0F 94 C0", 0x0);
 MAKE_SIGNATURE(CTFPlayer_CreateMove_InCond_Call, "client.dll", "84 C0 74 ? 4C 8B C3", 0x0);
 MAKE_SIGNATURE(CTFInput_ApplyMouse_InCond_Call, "client.dll", "84 C0 74 ? F3 0F 10 9B", 0x0);
@@ -10,6 +10,10 @@ MAKE_SIGNATURE(CTFInput_ApplyMouse_InCond_Call, "client.dll", "84 C0 74 ? F3 0F 
 MAKE_HOOK(CTFPlayerShared_InCond, S::CTFPlayerShared_InCond(), bool,
 	void* rcx, ETFCond nCond)
 {
+#ifdef DEBUG_HOOKS
+	if (!Vars::Hooks::CTFPlayerShared_InCond.Map[DEFAULT_BIND])
+		return CALL_ORIGINAL(rcx, nCond);
+#endif
 	static const auto dwPlayer = S::CTFPlayer_ShouldDraw_InCond_Call();
 	static const auto dwWearable = S::CTFWearable_ShouldDraw_InCond_Call();
 	static const auto dwHudScope = S::CHudScope_ShouldDraw_InCond_Call();
@@ -50,7 +54,8 @@ MAKE_HOOK(CTFPlayerShared_InCond, S::CTFPlayerShared_InCond(), bool,
 			return false;
 		break;
 	case TF_COND_FREEZE_INPUT:
-		return false;
+		if (CALL_ORIGINAL(rcx, TF_COND_HALLOWEEN_KART) ? Vars::Misc::Automation::KartControl.Value : true)
+			return false;
 	}
 
 	return CALL_ORIGINAL(rcx, nCond);

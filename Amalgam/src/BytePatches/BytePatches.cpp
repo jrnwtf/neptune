@@ -1,5 +1,7 @@
 #include "BytePatches.h"
 
+#include "../Core/Core.h"
+
 BytePatch::BytePatch(const char* sModule, const char* sSignature, int iOffset, const char* sPatch)
 {
 	m_sModule = sModule;
@@ -28,7 +30,7 @@ bool BytePatch::Initialize()
 	m_pAddress = LPVOID(U::Memory.FindSignature(m_sModule, m_sSignature));
 	if (!m_pAddress)
 	{
-		OutputDebugStringA(std::format("BytePatch::Initialize() failed to initialize:\n  {}\n  {}\n", m_sModule, m_sSignature).c_str());
+		U::Core.AppendFailText(std::format("BytePatch::Initialize() failed to initialize:\n  {}\n  {}", m_sModule, m_sSignature).c_str());
 		return false;
 	}
 
@@ -58,7 +60,8 @@ bool CBytePatches::Initialize()
 {
 	m_vPatches = {
 		BytePatch("engine.dll", "0F 82 ? ? ? ? 4A 63 84 2F", 0x0, "90 90 90 90 90 90"), // skybox fix
-		BytePatch("server.dll", "75 ? 44 38 A7 ? ? ? ? 75 ? 41 3B DD", 0x0, "EB") // listen server speedhack
+		//BytePatch("server.dll", "75 ? 44 38 A7 ? ? ? ? 75 ? 41 3B DD", 0x0, "EB"), // listen server speedhack
+		//BytePatch("engine.dll", "48 83 EC ? FF 15 ? ? ? ? 48 8D 15 ? ? ? ? 48 8B C8 4C 8B 00 41 FF 50 ? 85 C0 75", 0x3a, "10") // ban bypass
 	};
 
 	bool bFail{false};

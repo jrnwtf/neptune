@@ -43,6 +43,7 @@ void CEnginePrediction::Simulate(CTFPlayer* pLocal, CUserCmd* pCmd)
 	const bool bOldIsFirstPrediction = I::Prediction->m_bFirstTimePredicted;
 	const bool bOldInPrediction = I::Prediction->m_bInPrediction;
 
+	I::MoveHelper->SetHost(pLocal);
 	pLocal->SetCurrentCmd(pCmd);
 	*G::RandomSeed() = MD5_PseudoRandom(pCmd->command_number) & std::numeric_limits<int>::max();
 
@@ -55,7 +56,7 @@ void CEnginePrediction::Simulate(CTFPlayer* pLocal, CUserCmd* pCmd)
 		m_vOriginalOrigin = pLocal->m_vecOrigin();
 		m_vOriginalVelocity = pLocal->m_vecVelocity();
 
-		Vec3 vOriginalMove = { pCmd->forwardmove, pCmd->sidemove };
+		Vec2 vOriginalMove = { pCmd->forwardmove, pCmd->sidemove };
 		int iOriginalButtons = pCmd->buttons;
 
 		bool bOriginalWarp = F::Ticks.m_bAntiWarp;
@@ -68,7 +69,7 @@ void CEnginePrediction::Simulate(CTFPlayer* pLocal, CUserCmd* pCmd)
 		I::GameMovement->ProcessMovement(pLocal, &m_MoveData);
 		RestorePlayers();
 		I::Prediction->FinishMove(pLocal, pCmd, &m_MoveData);
-
+		
 		pCmd->forwardmove = vOriginalMove.x, pCmd->sidemove = vOriginalMove.y;
 		pCmd->buttons = iOriginalButtons;
 	}
@@ -80,7 +81,9 @@ void CEnginePrediction::Simulate(CTFPlayer* pLocal, CUserCmd* pCmd)
 		RestorePlayers();
 		I::Prediction->FinishMove(pLocal, pCmd, &m_MoveData);
 	}
+	I::MoveHelper->ProcessImpacts();
 
+	I::MoveHelper->SetHost(nullptr);
 	pLocal->SetCurrentCmd(nullptr);
 	*G::RandomSeed() = -1;
 
@@ -92,6 +95,8 @@ void CEnginePrediction::Simulate(CTFPlayer* pLocal, CUserCmd* pCmd)
 	m_vVelocity = pLocal->m_vecVelocity();
 	m_vDirection = { m_MoveData.m_flForwardMove, -m_MoveData.m_flSideMove, m_MoveData.m_flUpMove };
 	m_vAngles = m_MoveData.m_vecViewAngles;
+	m_iButtons = pCmd->buttons;
+	m_iFlags = pLocal->m_fFlags();
 }
 
 
@@ -109,12 +114,6 @@ void CEnginePrediction::Start(CTFPlayer* pLocal, CUserCmd* pCmd)
 	I::GlobalVars->tickcount = pLocal->m_nTickBase();
 	I::GlobalVars->curtime = TICKS_TO_TIME(I::GlobalVars->tickcount);
 	I::GlobalVars->frametime = I::Prediction->m_bEnginePaused ? 0.f : TICK_INTERVAL;
-
-	// fix
-	if (pLocal->m_hGroundEntity())
-		pLocal->m_fFlags() |= FL_ONGROUND;
-	else
-		pLocal->m_fFlags() &= ~FL_ONGROUND;
 
 	Simulate(pLocal, pCmd);
 
@@ -135,6 +134,7 @@ void CEnginePrediction::End(CTFPlayer* pLocal, CUserCmd* pCmd)
 	{
 		pLocal->m_vecOrigin() = m_vOriginalOrigin;
 		pLocal->m_vecVelocity() = m_vOriginalVelocity;
+		pLocal->SetAbsVelocity(m_vOriginalVelocity);
 
 		Simulate(pLocal, pCmd);
 	}

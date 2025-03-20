@@ -32,12 +32,15 @@
 #include "Interfaces/SteamInterfaces.h"
 #include "Interfaces/ViewRenderBeams.h"
 #include "Interfaces/VPhysics.h"
+#include "Interfaces/CServerTools.h"
 
 #include <d3d9.h>
 MAKE_INTERFACE_SIGNATURE_SEARCH(IDirect3DDevice9, DirectXDevice, "shaderapi", "48 8B 0D ? ? ? ? 48 8B 01 FF 50 ? 8B F8", 0x0, 1)
 
 class CNullInterfaces
 {
+private:
+	bool m_bFailed = false;
 public:
 	bool Initialize();
 };

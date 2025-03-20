@@ -3,7 +3,7 @@
 #include "../PacketManip/FakeLag/FakeLag.h"
 #include "../TickHandler/TickHandler.h"
 
-void CBacktrack::Restart()
+void CBacktrack::Reset()
 {
 	m_mRecords.clear();
 	m_dSequences.clear();
@@ -17,6 +17,9 @@ float CBacktrack::GetLerp()
 {
 	if (!Vars::Backtrack::Enabled.Value)
 		return G::Lerp;
+
+	if (Vars::Misc::Game::AntiCheatCompatibility.Value)
+		return std::clamp(Vars::Backtrack::Interp.Value / 1000.f, G::Lerp, 0.1f);
 
 	return std::clamp(Vars::Backtrack::Interp.Value / 1000.f, G::Lerp, m_flMaxUnlag);
 }
@@ -37,31 +40,51 @@ float CBacktrack::GetReal(int iFlow, bool bNoFake)
 	if (!pNetChan)
 		return 0.f;
 
-	if (iFlow != -1)
+	if (iFlow != MAX_FLOWS)
 		return pNetChan->GetLatency(iFlow) - (bNoFake && iFlow == FLOW_INCOMING ? m_flFakeLatency : 0.f);
 	return pNetChan->GetLatency(FLOW_INCOMING) + pNetChan->GetLatency(FLOW_OUTGOING) - (bNoFake ? m_flFakeLatency : 0.f);
 }
 
+// Returns the current fake interp
+float CBacktrack::GetFakeInterp()
+{
+	if (Vars::Misc::Game::AntiCheatCompatibility.Value)
+		return std::min(m_flFakeInterp, 0.1f);
+
+	return m_flFakeInterp;
+}
+
+// Returns the current anticipated choke
+int CBacktrack::GetAnticipatedChoke(int iMethod)
+{
+	int iAnticipatedChoke = 0;
+	if (F::Ticks.CanChoke() && G::PrimaryWeaponType != EWeaponType::HITSCAN && Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
+		iAnticipatedChoke = 1;
+	if (F::FakeLag.m_iGoal && !Vars::CL_Move::Fakelag::UnchokeOnAttack.Value && F::Ticks.m_iShiftedTicks == F::Ticks.m_iShiftedGoal && !F::Ticks.m_bDoubletap && !F::Ticks.m_bSpeedhack)
+		iAnticipatedChoke = F::FakeLag.m_iGoal - I::ClientState->chokedcommands; // iffy, unsure if there is a good way to get it to work well without unchoking
+	return iAnticipatedChoke;
+}
+
 void CBacktrack::SendLerp()
 {
+	static Timer tTimer = {};
+	if (!tTimer.Run(0.1f))
+		return;
+
 	auto pNetChan = reinterpret_cast<CNetChannel*>(I::EngineClient->GetNetChannelInfo());
 	if (!pNetChan || !I::EngineClient->IsConnected())
 		return;
 
-	static Timer interpTimer{};
-	if (interpTimer.Run(100))
-	{
-		float flTarget = GetLerp();
-		if (flTarget == m_flWishInterp)
-			return;
+	float flTarget = GetLerp();
+	if (flTarget == m_flWishInterp)
+		return;
 
-		NET_SetConVar cl_interp("cl_interp", std::to_string(m_flWishInterp = flTarget).c_str());
-		pNetChan->SendNetMsg(cl_interp);
-		NET_SetConVar cl_interp_ratio("cl_interp_ratio", "1.0");
-		pNetChan->SendNetMsg(cl_interp_ratio);
-		NET_SetConVar cl_interpolate("cl_interpolate", "1");
-		pNetChan->SendNetMsg(cl_interpolate);
-	}
+	NET_SetConVar cl_interp("cl_interp", std::to_string(m_flWishInterp = flTarget).c_str());
+	pNetChan->SendNetMsg(cl_interp);
+	NET_SetConVar cl_interp_ratio("cl_interp_ratio", "1");
+	pNetChan->SendNetMsg(cl_interp_ratio);
+	NET_SetConVar cl_interpolate("cl_interpolate", "1");
+	pNetChan->SendNetMsg(cl_interpolate);
 }
 
 // Manages cl_interp client value
@@ -83,27 +106,11 @@ void CBacktrack::UpdateDatagram()
 	if (pNetChan->m_nInSequenceNr > m_iLastInSequence)
 	{
 		m_iLastInSequence = pNetChan->m_nInSequenceNr;
-		m_dSequences.push_front(CIncomingSequence(pNetChan->m_nInReliableState, pNetChan->m_nInSequenceNr, I::GlobalVars->realtime));
+		m_dSequences.emplace_front(pNetChan->m_nInReliableState, pNetChan->m_nInSequenceNr, I::GlobalVars->realtime);
 	}
 
 	if (m_dSequences.size() > 67)
 		m_dSequences.pop_back();
-}
-
-
-
-bool CBacktrack::WithinRewind(const TickRecord& record)
-{
-	auto pNetChan = I::EngineClient->GetNetChannelInfo();
-	if (!pNetChan)
-		return false;
-
-	const float flCorrect = std::clamp(pNetChan->GetLatency(FLOW_OUTGOING) + ROUND_TO_TICKS(m_flFakeInterp) + ROUND_TO_TICKS(m_flFakeLatency), 0.f, m_flMaxUnlag) - pNetChan->GetLatency(FLOW_OUTGOING);
-	const int iServerTick = m_iTickCount + G::AnticipatedChoke + Vars::Backtrack::Offset.Value;
-
-	const float flDelta = flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(record.m_flSimTime));
-
-	return fabsf(flDelta) < float(Vars::Backtrack::Window.Value) / 1000;
 }
 
 std::deque<TickRecord>* CBacktrack::GetRecords(CBaseEntity* pEntity)
@@ -116,22 +123,42 @@ std::deque<TickRecord>* CBacktrack::GetRecords(CBaseEntity* pEntity)
 
 std::deque<TickRecord> CBacktrack::GetValidRecords(std::deque<TickRecord>* pRecords, CTFPlayer* pLocal, bool bDistance)
 {
-	std::deque<TickRecord> validRecords = {};
-	if (!pRecords)
-		return validRecords;
+	std::deque<TickRecord> vRecords = {};
+	if (!pRecords || pRecords->empty())
+		return vRecords;
 
-	for (auto& pTick : *pRecords)
+	auto pNetChan = I::EngineClient->GetNetChannelInfo();
+	if (!pNetChan)
+		return vRecords;
+	float flCorrect = std::clamp(F::Backtrack.GetReal(MAX_FLOWS, false) + ROUND_TO_TICKS(GetFakeInterp()), 0.f, m_flMaxUnlag);
+	int iServerTick = m_iTickCount + GetAnticipatedChoke() + Vars::Backtrack::Offset.Value + TIME_TO_TICKS(F::Backtrack.GetReal(FLOW_OUTGOING));
+
+	for (auto& tRecord : *pRecords)
 	{
-		if (!WithinRewind(pTick))
+		float flDelta = fabsf(flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(tRecord.m_flSimTime)));
+		float flWindow = Vars::Misc::Game::AntiCheatCompatibility.Value ? 0 : Vars::Backtrack::Window.Value;
+		if (flDelta > flWindow / 1000)
 			continue;
 
-		validRecords.push_back(pTick);
+		vRecords.push_back(tRecord);
 	}
 
-	if (pLocal)
+	if (vRecords.empty())
+	{	// make sure there is at least 1 record
+		float flMinDelta = 0.2f;
+		for (auto& tRecord : *pRecords)
+		{
+			float flDelta = fabsf(flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(tRecord.m_flSimTime)));
+			if (flDelta > flMinDelta)
+				continue;
+			flMinDelta = flDelta;
+			vRecords = { tRecord };
+		}
+	}
+	else if (pLocal && vRecords.size() > 1)
 	{
 		if (bDistance)
-			std::sort(validRecords.begin(), validRecords.end(), [&](const TickRecord& a, const TickRecord& b) -> bool
+			std::sort(vRecords.begin(), vRecords.end(), [&](const TickRecord& a, const TickRecord& b) -> bool
 				{
 					if (Vars::Backtrack::PreferOnShot.Value && a.m_bOnShot != b.m_bOnShot)
 						return a.m_bOnShot > b.m_bOnShot;
@@ -140,26 +167,19 @@ std::deque<TickRecord> CBacktrack::GetValidRecords(std::deque<TickRecord>* pReco
 				});
 		else
 		{
-			auto pNetChan = I::EngineClient->GetNetChannelInfo();
-			if (!pNetChan)
-				return validRecords;
-
-			const float flCorrect = std::clamp(pNetChan->GetLatency(FLOW_OUTGOING) + ROUND_TO_TICKS(m_flFakeInterp) + ROUND_TO_TICKS(m_flFakeLatency), 0.f, m_flMaxUnlag) - pNetChan->GetLatency(FLOW_OUTGOING);
-			const int iServerTick = m_iTickCount + G::AnticipatedChoke + Vars::Backtrack::Offset.Value;
-
-			std::sort(validRecords.begin(), validRecords.end(), [&](const TickRecord& a, const TickRecord& b) -> bool
+			std::sort(vRecords.begin(), vRecords.end(), [&](const TickRecord& a, const TickRecord& b) -> bool
 				{
 					if (Vars::Backtrack::PreferOnShot.Value && a.m_bOnShot != b.m_bOnShot)
 						return a.m_bOnShot > b.m_bOnShot;
 
-					const float flADelta = flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(a.m_flSimTime));
-					const float flBDelta = flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(b.m_flSimTime));
+					const float flADelta = flCorrect - ( TICKS_TO_TIME( iServerTick ) - a.m_flSimTime );
+					const float flBDelta = flCorrect - ( TICKS_TO_TIME( iServerTick ) - b.m_flSimTime );
 					return fabsf(flADelta) < fabsf(flBDelta);
 				});
 		}
 	}
 
-	return validRecords;
+	return vRecords;
 }
 
 
@@ -173,41 +193,68 @@ void CBacktrack::MakeRecords()
 			|| !H::Entities.GetBones(pPlayer->entindex()) || !H::Entities.GetDeltaTime(pPlayer->entindex()))
 			continue;
 
-		const TickRecord curRecord = {
+		auto pModel = pPlayer->GetModel();
+		if ( !pModel ) continue;
+		auto pHDR = I::ModelInfoClient->GetStudiomodel(pModel);
+		if (!pHDR) continue;
+		auto pSet = pHDR->pHitboxSet(pEntity->As<CBaseAnimating>()->m_nHitboxSet());
+		if (!pSet) continue;
+
+		std::vector<HitboxInfo> vHitboxInfos{};
+		const auto mBoneMatrix = *reinterpret_cast<BoneMatrix*>(H::Entities.GetBones(pPlayer->entindex()));
+
+		for ( int nHitbox = 0; nHitbox < pPlayer->GetNumOfHitboxes( ); nHitbox++ )
+		{
+			auto pBox = pSet->pHitbox( nHitbox );
+			if ( !pBox ) continue;
+
+			const Vec3 iMin = pBox->bbmin, iMax = pBox->bbmax;
+			const int iBone = pBox->bone;
+			Vec3 vCenter{};
+			Math::VectorTransform((iMin + iMax) / 2, mBoneMatrix.m_aBones[iBone], vCenter );
+			vHitboxInfos.push_back( { iBone, nHitbox, vCenter, iMin, iMax } );
+		}
+
+		auto& vRecords = m_mRecords[pPlayer];
+
+		const TickRecord* pLastRecord = !vRecords.empty() ? &vRecords.front() : nullptr;
+		vRecords.emplace_front(
 			pPlayer->m_flSimulationTime(),
-			*reinterpret_cast<BoneMatrix*>(H::Entities.GetBones(pPlayer->entindex())),
+			mBoneMatrix,
+			vHitboxInfos,
 			pPlayer->m_vecOrigin(),
+			pPlayer->m_vecMins(),
+			pPlayer->m_vecMaxs(),
 			m_mDidShoot[pPlayer->entindex()]
-		};
+			);
+		const TickRecord& tCurRecord = vRecords.front();
 
 		bool bLagComp = false;
-		if (!m_mRecords[pPlayer].empty())
+		if (pLastRecord)
 		{
-			const Vec3 vDelta = curRecord.m_vOrigin - m_mRecords[pPlayer].front().m_vOrigin;
+			const Vec3 vDelta = tCurRecord.m_vOrigin - pLastRecord->m_vOrigin;
 			
 			static auto sv_lagcompensation_teleport_dist = U::ConVars.FindVar("sv_lagcompensation_teleport_dist");
 			const float flDist = powf(sv_lagcompensation_teleport_dist ? sv_lagcompensation_teleport_dist->GetFloat() : 64.f, 2.f);
 			if (vDelta.Length2DSqr() > flDist)
 			{
 				bLagComp = true;
-				for (auto& pRecord : m_mRecords[pPlayer])
-					pRecord.m_bInvalid = true;
+				for (size_t i = 1; i < vRecords.size(); i++)
+					vRecords[i].m_bInvalid = true;
 			}
 
-			for (auto& pRecord : m_mRecords[pPlayer])
+			for (auto& pRecord : vRecords)
 			{
 				if (!pRecord.m_bInvalid)
 					continue;
 
-				pRecord.m_BoneMatrix = curRecord.m_BoneMatrix;
-				pRecord.m_vOrigin = curRecord.m_vOrigin;
-				pRecord.m_bOnShot = curRecord.m_bOnShot;
+				pRecord.m_BoneMatrix = tCurRecord.m_BoneMatrix;
+				pRecord.m_vOrigin = tCurRecord.m_vOrigin;
+				pRecord.m_bOnShot = tCurRecord.m_bOnShot;
 			}
 		}
 
-		m_mRecords[pPlayer].push_front(curRecord);
 		H::Entities.SetLagCompensation(pPlayer->entindex(), bLagComp);
-
 		m_mDidShoot[pPlayer->entindex()] = false;
 	}
 }
@@ -220,21 +267,23 @@ void CBacktrack::CleanRecords()
 		if (pPlayer->entindex() == I::EngineClient->GetLocalPlayer())
 			continue;
 
-		if (pPlayer->IsDormant() || !pPlayer->IsAlive() || pPlayer->IsAGhost())
+		auto& vRecords = m_mRecords[pPlayer];
+
+		if (!pPlayer->IsAlive() || pPlayer->IsAGhost())
 		{
-			m_mRecords[pPlayer].clear();
+			vRecords.clear();
 			continue;
 		}
 
 		//const int iOldSize = pRecords.size();
 
 		const int flDeadtime = I::GlobalVars->curtime + GetReal() - m_flMaxUnlag; // int ???
-		while (!m_mRecords[pPlayer].empty())
+		while (!vRecords.empty())
 		{
-			if (m_mRecords[pPlayer].back().m_flSimTime >= flDeadtime)
+			if (vRecords.back().m_flSimTime >= flDeadtime)
 				break;
 
-			m_mRecords[pPlayer].pop_back();
+			vRecords.pop_back();
 		}
 
 		//const int iNewSize = pRecords.size();
@@ -245,11 +294,11 @@ void CBacktrack::CleanRecords()
 
 
 
-void CBacktrack::FrameStageNotify()
+void CBacktrack::Store()
 {
 	UpdateDatagram();
 	if (!I::EngineClient->IsInGame())
-		return Restart();
+		return;
 
 	static auto sv_maxunlag = U::ConVars.FindVar("sv_maxunlag");
 	m_flMaxUnlag = sv_maxunlag ? sv_maxunlag->GetFloat() : 1.f;
@@ -261,18 +310,17 @@ void CBacktrack::FrameStageNotify()
 void CBacktrack::Run(CUserCmd* pCmd)
 {
 	SendLerp();
-
-	// might not even be necessary
-	G::AnticipatedChoke = 0;
-	if (F::Ticks.m_iShiftedTicks != F::Ticks.m_iMaxShift && G::PrimaryWeaponType != EWeaponType::HITSCAN && Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
-		G::AnticipatedChoke = 1;
-	if (F::FakeLag.m_iGoal && !Vars::CL_Move::Fakelag::UnchokeOnAttack.Value && F::Ticks.m_iShiftedTicks == F::Ticks.m_iShiftedGoal && !F::Ticks.m_bDoubletap && !F::Ticks.m_bSpeedhack)
-		G::AnticipatedChoke = F::FakeLag.m_iGoal - I::ClientState->chokedcommands; // iffy, unsure if there is a good way to get it to work well without unchoking
+	BacktrackToCrosshair(pCmd);
 }
 
 void CBacktrack::ResolverUpdate(CBaseEntity* pEntity)
 {
-	m_mRecords[pEntity].clear();	//	TODO: eventually remake records and rotate them or smthn idk, maybe just rotate them
+	/*
+	if (!pEntity)
+		return;
+
+	m_mRecords[pEntity].clear();
+	*/
 }
 
 void CBacktrack::ReportShot(int iIndex)
@@ -337,4 +385,106 @@ void CBacktrack::AdjustPing(CNetChannel* pNetChan)
 void CBacktrack::RestorePing(CNetChannel* pNetChan)
 {
 	pNetChan->m_nInSequenceNr = m_nOldInSequenceNr, pNetChan->m_nInReliableState = m_nOldInReliableState;
+}
+
+std::optional<TickRecord> CBacktrack::GetHitRecord(CBaseEntity* pEntity, CTFWeaponBase* pWeapon, CUserCmd* pCmd, CrosshairRecordInfo_t& InfoOut, const Vec3 vAngles, const Vec3 vPos)
+{
+	std::optional<TickRecord> pReturnRecord{};
+	float flMinFov{45.f};
+	float flMinDist{50.f};
+	bool bInsideRecord{false};
+
+	if (auto pRecords = GetRecords(pEntity))
+	{
+		for (auto pRecord : GetValidRecords(pRecords))
+		{
+			if (!pRecord.m_BoneMatrix.m_aBones)
+				continue;
+
+			for (int n = 0; n < pRecord.m_vHitboxInfos.size(); n++ )
+			{
+				auto sHitboxInfo = pRecord.m_vHitboxInfos[ n ];
+
+				// pSet->pHitbox failed, this hitbox cannot be used
+				if ( sHitboxInfo.m_iBone == -1 )
+					continue;
+
+				const auto vAngleTo = Math::CalcAngle(vPos, sHitboxInfo.m_vCenter);
+				const float flFOVTo = Math::CalcFov(vAngles, vAngleTo);
+				const float flDistTo = vPos.DistTo(sHitboxInfo.m_vCenter);
+
+				// We are inside this record (probably)
+				if (flDistTo < flMinDist)
+				{
+					pReturnRecord = pRecord;
+					flMinDist = flDistTo;
+					bInsideRecord = true;
+				}
+				else if (!bInsideRecord && flFOVTo < flMinFov)
+				{
+					pReturnRecord = pRecord;
+					flMinFov = flFOVTo;
+				}
+			}
+		}
+	}
+
+	InfoOut = {flMinDist, flMinFov, bInsideRecord};
+	return pReturnRecord;
+}
+
+void CBacktrack::BacktrackToCrosshair(CUserCmd* pCmd)
+{
+	auto pLocal = H::Entities.GetLocal();
+	if (!pCmd || !pLocal || !pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->InCond(TF_COND_HALLOWEEN_KART))
+		return;
+
+	auto pWeapon = H::Entities.GetWeapon();
+	if (!pWeapon)
+		return;
+
+	if (G::Attacking == 1 && G::CanPrimaryAttack)
+	{
+		const Vec3 vShootPos = pLocal->GetShootPos();
+		const Vec3 vAngles = pCmd->viewangles;
+		
+		std::vector<std::pair<TickRecord, CrosshairRecordInfo_t>> vValidRecords;
+		for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
+		{
+			if (!pEntity)
+				continue;
+
+			if (/*pEntity->IsDormant() || */!pEntity->As<CTFPlayer>()->IsAlive( ) || pEntity->As<CTFPlayer>()->IsAGhost( ) || pEntity->As<CTFPlayer>()->IsInvulnerable( ) )
+				continue;
+
+			CrosshairRecordInfo_t sRecordInfo{};
+			if (auto pCheckRec = GetHitRecord(pEntity, pWeapon, pCmd, sRecordInfo, vAngles, vShootPos))
+				vValidRecords.push_back({*pCheckRec, sRecordInfo});
+		}
+
+		std::optional<TickRecord> pReturnTick{};
+		if (!vValidRecords.empty())
+		{
+			auto pFinalTick = std::ranges::min_element(vValidRecords,
+			[&](const std::pair<TickRecord, CrosshairRecordInfo_t>& a, const std::pair<TickRecord, CrosshairRecordInfo_t>& b)
+			{
+				const bool bInsideBoth = a.second.bInsideThisRecord && b.second.bInsideThisRecord;
+				const bool bNotInsideRecords = !a.second.bInsideThisRecord && !b.second.bInsideThisRecord;
+
+				const bool bResult =
+				{
+						bInsideBoth ? a.second.flMinDist < b.second.flMinDist :
+						bNotInsideRecords ? a.second.flFov < b.second.flFov :
+						a.second.bInsideThisRecord
+				};
+				return bResult;
+			});
+			pReturnTick = pFinalTick->first;
+		}
+
+		if (pReturnTick)
+		{
+			pCmd->tick_count = TIME_TO_TICKS(pReturnTick->m_flSimTime + m_flFakeInterp);
+		}
+	}
 }
