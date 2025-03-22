@@ -741,57 +741,59 @@ void SDK::GetProjectileFireSetupAirblast(CTFPlayer* pPlayer, const Vec3& vAngIn,
 }
 
 //Pasted from somewhere in the valves tf2 server code
-float SDK::CalculateSplashRadiusDamageFalloff( CTFWeaponBase* pWeapon, CTFPlayer* pAttacker, CTFWeaponBaseGrenadeProj* pProjectile, float flRadius )
+float SDK::CalculateSplashRadiusDamageFalloff(CTFWeaponBase* pWeapon, CTFPlayer* pAttacker, CTFWeaponBaseGrenadeProj* pProjectile, float flRadius)
 {
 	float flFalloff{ 0.0f };
-	const int dmgType = pProjectile->GetDamageType( );
+	const int dmgType = pProjectile->GetDamageType();
 
-	if ( dmgType & DMG_RADIUS_MAX )
+	if (dmgType & DMG_RADIUS_MAX)
 		flFalloff = 0.0f;
-	else if ( dmgType & DMG_HALF_FALLOFF )
+	else if (dmgType & DMG_HALF_FALLOFF)
 		flFalloff = 0.5f;
-	else if ( flRadius )
-		flFalloff = pProjectile->m_flDamage( ) / flRadius;
+	else if (flRadius)
+		flFalloff = pProjectile->m_flDamage() / flRadius;
 	else
 		flFalloff = 1.0f;
 
-	if ( pWeapon )
+	if (pWeapon)
 	{
 		float flFalloffMod = 1.f;
-		AttribHookValue( flFalloffMod, "mult_dmg_falloff", pWeapon );
-		if ( flFalloffMod != 1.f )
+		AttribHookValue(flFalloffMod, "mult_dmg_falloff", pWeapon);
+		if (flFalloffMod != 1.f)
 			flFalloff += flFalloffMod;
 	}
 
-	if ( pAttacker && pAttacker->InCond( TF_COND_RUNE_PRECISION ) )
+	if (pAttacker && pAttacker->InCond(TF_COND_RUNE_PRECISION))
 		flFalloff = 1.0f;
 	return flFalloff;
 }
 
-float SDK::CalculateSplashRadiusDamage( CTFWeaponBase* pWeapon, CTFPlayer* pAttacker, CTFWeaponBaseGrenadeProj* pProjectile, float flRadius, float flDist, float& flDamageNoBuffs, bool bSelf )
+float SDK::CalculateSplashRadiusDamage(CTFWeaponBase* pWeapon, CTFPlayer* pAttacker, CTFWeaponBaseGrenadeProj* pProjectile, float flRadius, float flDist, float& flDamageNoBuffs, bool bSelf)
 {
-	float flFalloff{ CalculateSplashRadiusDamageFalloff( pWeapon, pAttacker, pProjectile, flRadius ) };
-	float flDamage{ Math::RemapValClamped( flDist, 0.f, flRadius, pProjectile->m_flDamage( ), pProjectile->m_flDamage( ) * flFalloff ) };
+	float flFalloff{ CalculateSplashRadiusDamageFalloff(pWeapon, pAttacker, pProjectile, flRadius) };
+	float flDamage{ Math::RemapValClamped(flDist, 0.f, flRadius, pProjectile->m_flDamage(), pProjectile->m_flDamage() * flFalloff) };
 	flDamageNoBuffs = flDamage;
 
-	bool bCrit{ ( pProjectile->GetDamageType( ) & DMG_CRITICAL ) > 0 };
-	if ( bCrit || pAttacker->IsMiniCritBoosted( ) )
+	bool bCrit{ (pProjectile->GetDamageType() & DMG_CRITICAL) > 0 };
+	if (bCrit || pAttacker->IsMiniCritBoosted())
 	{
 		float flDamageBonus{ 0.f };
-		if ( bCrit ) {
-			flDamageBonus = ( TF_DAMAGE_CRIT_MULTIPLIER - 1.f ) * flDamage;
+		if (bCrit)
+		{
+			flDamageBonus = (TF_DAMAGE_CRIT_MULTIPLIER - 1.f) * flDamage;
 		}
-		else {
-			flDamageBonus = ( TF_DAMAGE_MINICRIT_MULTIPLIER - 1.f ) * flDamage;
+		else
+		{
+			flDamageBonus = (TF_DAMAGE_MINICRIT_MULTIPLIER - 1.f) * flDamage;
 		}
 
 		flDamage += flDamageBonus;
 	}
 
 	// Grenades & Pipebombs do less damage to ourselves.
-	if ( bSelf && pWeapon )
+	if (bSelf && pWeapon)
 	{
-		switch ( pWeapon->GetWeaponID( ) )
+		switch (pWeapon->GetWeaponID())
 		{
 		case TF_WEAPON_PIPEBOMBLAUNCHER:
 		case TF_WEAPON_GRENADELAUNCHER:
@@ -805,15 +807,16 @@ float SDK::CalculateSplashRadiusDamage( CTFWeaponBase* pWeapon, CTFPlayer* pAtta
 	return flDamage;
 }
 
-bool SDK::WeaponDoesNotUseAmmo( CTFWeaponBase* pWeapon, bool bIncludeInfiniteAmmo )
+bool SDK::WeaponDoesNotUseAmmo(CTFWeaponBase* pWeapon, bool bIncludeInfiniteAmmo)
 {
-	if ( !pWeapon )
+	if (!pWeapon)
 		return false;
 
-	if ( pWeapon->GetSlot( ) == SLOT_MELEE )
+	if (pWeapon->GetSlot() == SLOT_MELEE)
 		return false;
 
-	switch ( pWeapon->m_iItemDefinitionIndex( ) ) {
+	switch (pWeapon->m_iItemDefinitionIndex())
+	{
 	case Soldier_s_TheBuffBanner:
 	case Soldier_s_FestiveBuffBanner:
 	case Soldier_s_TheBattalionsBackup:
@@ -830,8 +833,10 @@ bool SDK::WeaponDoesNotUseAmmo( CTFWeaponBase* pWeapon, bool bIncludeInfiniteAmm
 	case Sniper_s_DarwinsDangerShield:
 	case Sniper_s_TheRazorback:
 	case Pyro_s_ThermalThruster: return true;
-	default: {
-		switch ( pWeapon->GetWeaponID( ) ) {
+	default:
+	{
+		switch (pWeapon->GetWeaponID())
+		{
 		case TF_WEAPON_PARTICLE_CANNON:
 		case TF_WEAPON_RAYGUN:
 		case TF_WEAPON_DRG_POMSON: return bIncludeInfiniteAmmo;
@@ -856,9 +861,10 @@ bool SDK::WeaponDoesNotUseAmmo( CTFWeaponBase* pWeapon, bool bIncludeInfiniteAmm
 	}
 }
 
-bool SDK::WeaponDoesNotUseAmmo( int WeaponID, int DefIdx, bool bIncludeInfiniteAmmo )
+bool SDK::WeaponDoesNotUseAmmo(int WeaponID, int DefIdx, bool bIncludeInfiniteAmmo)
 {
-	switch ( DefIdx ) {
+	switch (DefIdx)
+	{
 	case Soldier_s_TheBuffBanner:
 	case Soldier_s_FestiveBuffBanner:
 	case Soldier_s_TheBattalionsBackup:
@@ -875,8 +881,10 @@ bool SDK::WeaponDoesNotUseAmmo( int WeaponID, int DefIdx, bool bIncludeInfiniteA
 	case Sniper_s_DarwinsDangerShield:
 	case Sniper_s_TheRazorback:
 	case Pyro_s_ThermalThruster: return true;
-	default: {
-		switch ( WeaponID ) {
+	default:
+	{
+		switch (WeaponID)
+		{
 		case TF_WEAPON_PARTICLE_CANNON:
 		case TF_WEAPON_RAYGUN:
 		case TF_WEAPON_DRG_POMSON: return bIncludeInfiniteAmmo;
@@ -903,13 +911,13 @@ bool SDK::WeaponDoesNotUseAmmo( int WeaponID, int DefIdx, bool bIncludeInfiniteA
 
 
 // Is there a way of doing this without hardcoded numbers???
-int SDK::GetWeaponMaxReserveAmmo( int WeaponID, int DefIdx )
+int SDK::GetWeaponMaxReserveAmmo(int WeaponID, int DefIdx)
 {
-	switch ( DefIdx )
+	switch (DefIdx)
 	{
 	case Engi_m_TheWidowmaker:
 	case Engi_s_TheShortCircuit:
-		return 200;	
+		return 200;
 	case Scout_m_ForceANature:
 	case Scout_m_FestiveForceANature:
 	case Scout_m_BackcountryBlaster:
@@ -924,7 +932,7 @@ int SDK::GetWeaponMaxReserveAmmo( int WeaponID, int DefIdx )
 		return 60;
 	default:
 	{
-		switch ( WeaponID )
+		switch (WeaponID)
 		{
 		case TF_WEAPON_MINIGUN:
 		case TF_WEAPON_PISTOL:
@@ -978,22 +986,22 @@ int SDK::GetWeaponMaxReserveAmmo( int WeaponID, int DefIdx )
 	return 32;
 }
 
-std::string SDK::GetLevelName( )
+std::string SDK::GetLevelName()
 {
-	const std::string name = I::EngineClient->GetLevelName( );
-	const char* data = name.data( );
-	const size_t length = name.length( );
+	const std::string name = I::EngineClient->GetLevelName();
+	const char* data = name.data();
+	const size_t length = name.length();
 	size_t slash = 0;
 	size_t bsp = length;
 
-	for ( size_t i = length - 1; i != std::string::npos; --i )
+	for (size_t i = length - 1; i != std::string::npos; --i)
 	{
-		if ( data[ i ] == '/' )
+		if (data[i] == '/')
 		{
 			slash = i + 1;
 			break;
 		}
-		if ( data[ i ] == '.' )
+		if (data[i] == '.')
 			bsp = i;
 	}
 

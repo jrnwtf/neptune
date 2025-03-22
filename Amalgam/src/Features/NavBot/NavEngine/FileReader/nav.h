@@ -7,7 +7,7 @@ struct SpotEncounter;
 class CNavPlace
 {
 public:
-    char m_name[256];
+	char m_name[256];
 	unsigned short m_len;
 };
 
@@ -17,34 +17,34 @@ public:
 class HidingSpot
 {
 public:
-    enum
-    {
-        IN_COVER          = 0x01, // in a corner with good hard cover nearby
-        GOOD_SNIPER_SPOT  = 0x02, // had at least one decent sniping corridor
-        IDEAL_SNIPER_SPOT = 0x04, // can see either very far, or a large area, or both
-        EXPOSED           = 0x08  // spot in the open, usually on a ledge or cliff
-    };
+	enum
+	{
+		IN_COVER          = 0x01, // in a corner with good hard cover nearby
+		GOOD_SNIPER_SPOT  = 0x02, // had at least one decent sniping corridor
+		IDEAL_SNIPER_SPOT = 0x04, // can see either very far, or a large area, or both
+		EXPOSED           = 0x08  // spot in the open, usually on a ledge or cliff
+	};
 
-    bool HasGoodCover() const
-    {
-        return (m_flags & IN_COVER) != 0;
-    } // return true if hiding spot is in cover
-    bool IsGoodSniperSpot() const
-    {
-        return (m_flags & GOOD_SNIPER_SPOT) != 0;
-    }
-    bool IsIdealSniperSpot() const
-    {
-        return (m_flags & IDEAL_SNIPER_SPOT) != 0;
-    }
-    bool IsExposed() const
-    {
-        return (m_flags & EXPOSED) != 0;
-    }
+	bool HasGoodCover() const
+	{
+		return (m_flags & IN_COVER) != 0;
+	} // return true if hiding spot is in cover
+	bool IsGoodSniperSpot() const
+	{
+		return (m_flags & GOOD_SNIPER_SPOT) != 0;
+	}
+	bool IsIdealSniperSpot() const
+	{
+		return (m_flags & IDEAL_SNIPER_SPOT) != 0;
+	}
+	bool IsExposed() const
+	{
+		return (m_flags & EXPOSED) != 0;
+	}
 
-    Vector m_pos;          // world coordinates of the spot
-    unsigned int m_id;     // this spot's unique ID
-    unsigned char m_flags; // bit flags
+	Vector m_pos;          // world coordinates of the spot
+	unsigned int m_id;     // this spot's unique ID
+	unsigned char m_flags; // bit flags
 };
 
 class CNavArea;
@@ -53,13 +53,13 @@ struct NavConnect;
 
 struct AreaBindInfo
 {
-    union
-    {
-        CNavArea *area;
-        unsigned int id = 0;
-    };
+	union
+	{
+		CNavArea* area;
+		unsigned int id = 0;
+	};
 
-    unsigned char attributes{}; // VisibilityType
+	unsigned char attributes{}; // VisibilityType
 };
 
 enum NavAttributeType
@@ -141,155 +141,155 @@ enum TFNavAttributeType
 class CNavArea
 {
 public:
-    uint32_t m_id;
-    int32_t m_attributeFlags;
-    int32_t m_TFattributeFlags;
-    Vector m_nwCorner;
-    Vector m_seCorner;
-    Vector m_center;
-    float m_invDxCorners;
-    float m_invDyCorners;
-    float m_neZ;
-    float m_swZ;
-    float m_minZ;
-    float m_maxZ;
-    std::vector<NavConnect> m_connections;
+	uint32_t m_id;
+	int32_t m_attributeFlags;
+	int32_t m_TFattributeFlags;
+	Vector m_nwCorner;
+	Vector m_seCorner;
+	Vector m_center;
+	float m_invDxCorners;
+	float m_invDyCorners;
+	float m_neZ;
+	float m_swZ;
+	float m_minZ;
+	float m_maxZ;
+	std::vector<NavConnect> m_connections;
 	std::vector<NavConnect> m_connectionsDir[4];
 	unsigned int m_connectionCount;
-    std::vector<HidingSpot> m_hidingSpots;
+	std::vector<HidingSpot> m_hidingSpots;
 	unsigned char m_hidingSpotCount;
-    std::vector<SpotEncounter> m_spotEncounters;
-    uint32_t m_encounterSpotCount;
-    uint16_t m_indexType;
+	std::vector<SpotEncounter> m_spotEncounters;
+	uint32_t m_encounterSpotCount;
+	uint16_t m_indexType;
 	std::vector<uint32_t> m_ladders[2];
 	unsigned int m_ladderCount;
-    float m_earliestOccupyTime[2]; // MAX_NAV_TEAMS
-    float m_lightIntensity[4];// NUM_CORNERS
-    uint32_t m_visibleAreaCount;
-    uint32_t m_inheritVisibilityFrom;
-    std::vector<AreaBindInfo> m_potentiallyVisibleAreas;
+	float m_earliestOccupyTime[2]; // MAX_NAV_TEAMS
+	float m_lightIntensity[4];// NUM_CORNERS
+	uint32_t m_visibleAreaCount;
+	uint32_t m_inheritVisibilityFrom;
+	std::vector<AreaBindInfo> m_potentiallyVisibleAreas;
 
-    // Check if the given point is overlapping the area
-    // @return True if 'pos' is within 2D extents of area.
-    bool IsOverlapping(const Vector &vecPos, float flTolerance = 0) const
-    {
-        if (vecPos.x + flTolerance < this->m_nwCorner.x)
-            return false;
+	// Check if the given point is overlapping the area
+	// @return True if 'pos' is within 2D extents of area.
+	bool IsOverlapping(const Vector& vecPos, float flTolerance = 0) const
+	{
+		if (vecPos.x + flTolerance < this->m_nwCorner.x)
+			return false;
 
-        if (vecPos.x - flTolerance > this->m_seCorner.x)
-            return false;
+		if (vecPos.x - flTolerance > this->m_seCorner.x)
+			return false;
 
-        if (vecPos.y + flTolerance < this->m_nwCorner.y)
-            return false;
+		if (vecPos.y + flTolerance < this->m_nwCorner.y)
+			return false;
 
-        if (vecPos.y - flTolerance > this->m_seCorner.y)
-            return false;
+		if (vecPos.y - flTolerance > this->m_seCorner.y)
+			return false;
 
-        return true;
-    }
+		return true;
+	}
 
-    // Check if the point is within the 3D bounds of this area
-    bool Contains(Vector &vecPoint) const
-    {
-        if (!IsOverlapping(vecPoint))
-            return false;
+	// Check if the point is within the 3D bounds of this area
+	bool Contains(Vector& vecPoint) const
+	{
+		if (!IsOverlapping(vecPoint))
+			return false;
 
-        if (vecPoint.z > m_maxZ)
-            return false;
+		if (vecPoint.z > m_maxZ)
+			return false;
 
-        if (vecPoint.z < m_minZ)
-            return false;
+		if (vecPoint.z < m_minZ)
+			return false;
 
-        return true;
-    }
+		return true;
+	}
 
-    inline Vector getSwCorner() const
-    {
-        return { m_nwCorner.x, m_seCorner.y, m_swZ };
-    }
-    inline Vector getNeCorner() const
-    {
-        return { m_seCorner.x, m_nwCorner.y, m_neZ };
-    }
+	inline Vector getSwCorner() const
+	{
+		return { m_nwCorner.x, m_seCorner.y, m_swZ };
+	}
+	inline Vector getNeCorner() const
+	{
+		return { m_seCorner.x, m_nwCorner.y, m_neZ };
+	}
 
-	static float fsel( float fComparand, float fValGE, float fLT )
+	static float fsel(float fComparand, float fValGE, float fLT)
 	{
 		return fComparand >= 0 ? fValGE : fLT;
 	}
 
-    float GetZ(float x, float y) const
-    {   
-        if (m_invDxCorners == 0.0f || m_invDyCorners == 0.0f)
-            return m_neZ;
+	float GetZ(float x, float y) const
+	{
+		if (m_invDxCorners == 0.0f || m_invDyCorners == 0.0f)
+			return m_neZ;
 
-        float u = (x - m_nwCorner.x) * m_invDxCorners;
-        float v = (y - m_nwCorner.y) * m_invDyCorners;
-	
-        u = fsel(u, u, 0);           // u >= 0 ? u : 0
-        u = fsel(u - 1.0f, 1.0f, u); // u >= 1 ? 1 : u
+		float u = (x - m_nwCorner.x) * m_invDxCorners;
+		float v = (y - m_nwCorner.y) * m_invDyCorners;
 
-        v = fsel(v, v, 0);           // v >= 0 ? v : 0
-        v = fsel(v - 1.0f, 1.0f, v); // v >= 1 ? 1 : v
+		u = fsel(u, u, 0);           // u >= 0 ? u : 0
+		u = fsel(u - 1.0f, 1.0f, u); // u >= 1 ? 1 : u
 
-        float northZ = m_nwCorner.z + u * (m_neZ - m_nwCorner.z);
-        float southZ = m_swZ + u * (m_seCorner.z - m_swZ);
+		v = fsel(v, v, 0);           // v >= 0 ? v : 0
+		v = fsel(v - 1.0f, 1.0f, v); // v >= 1 ? 1 : v
 
-        return northZ + v * (southZ - northZ);
-    }
+		float northZ = m_nwCorner.z + u * (m_neZ - m_nwCorner.z);
+		float southZ = m_swZ + u * (m_seCorner.z - m_swZ);
 
-    Vector getNearestPoint(const Vector2D point) const
-    {
-        Vector close;
-        float x, y, z;
+		return northZ + v * (southZ - northZ);
+	}
 
-        assert(point.x >= 0 && point.y >= 0);
-        assert(m_nwCorner.x >= 0 && m_nwCorner.y >= 0);
-        assert(m_seCorner.x >= 0 && m_seCorner.y >= 0);
+	Vector getNearestPoint(const Vector2D point) const
+	{
+		Vector close;
+		float x, y, z;
 
-        x = fsel(point.x - m_nwCorner.x, point.x, m_nwCorner.x);
-        x = fsel(x - m_seCorner.x, m_seCorner.x, x);
+		assert(point.x >= 0 && point.y >= 0);
+		assert(m_nwCorner.x >= 0 && m_nwCorner.y >= 0);
+		assert(m_seCorner.x >= 0 && m_seCorner.y >= 0);
 
-        y = fsel(point.y - m_nwCorner.y, point.y, m_nwCorner.y);
-        y = fsel(y - m_seCorner.y, m_seCorner.y, y);
+		x = fsel(point.x - m_nwCorner.x, point.x, m_nwCorner.x);
+		x = fsel(x - m_seCorner.x, m_seCorner.x, x);
 
-        z = GetZ(x, y);
+		y = fsel(point.y - m_nwCorner.y, point.y, m_nwCorner.y);
+		y = fsel(y - m_seCorner.y, m_seCorner.y, y);
 
-        close.Init(x, y, z);
-        return close;
-    }
+		z = GetZ(x, y);
+
+		close.Init(x, y, z);
+		return close;
+	}
 };
 
 struct NavConnect
 {
-    NavConnect()
-    {
-        id     = 0;
-        length = -1;
-    }
+	NavConnect()
+	{
+		id = 0;
+		length = -1;
+	}
 
-    union
-    {
-        unsigned int id;
-        CNavArea *area{};
-    };
+	union
+	{
+		unsigned int id;
+		CNavArea* area{};
+	};
 
-    mutable float length;
+	mutable float length;
 
-    bool operator==(const NavConnect &other) const
-    {
-        return area == other.area;
-    }
+	bool operator==(const NavConnect& other) const
+	{
+		return area == other.area;
+	}
 };
 
 struct SpotOrder
 {
-    float t; // parametric distance along ray where this spot first has LOS to our path
+	float t; // parametric distance along ray where this spot first has LOS to our path
 
-    union
-    {
-        HidingSpot *spot; // the spot to look at
-        unsigned int id;  // spot ID for save/load
-    };
+	union
+	{
+		HidingSpot* spot; // the spot to look at
+		unsigned int id;  // spot ID for save/load
+	};
 };
 
 /**
@@ -298,11 +298,11 @@ struct SpotOrder
  */
 struct SpotEncounter
 {
-    NavConnect from;
-    int fromDir;
-    NavConnect to;
-    int toDir;
-    // Ray path;                  // the path segment
-    std::vector<SpotOrder> spots; // list of spots to look at, in order of occurrence
+	NavConnect from;
+	int fromDir;
+	NavConnect to;
+	int toDir;
+	// Ray path;                  // the path segment
+	std::vector<SpotOrder> spots; // list of spots to look at, in order of occurrence
 	unsigned char spotCount;
 };

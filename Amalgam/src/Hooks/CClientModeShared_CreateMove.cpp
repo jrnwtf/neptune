@@ -34,7 +34,7 @@ struct CmdHistory_t
 MAKE_SIGNATURE(IHasGenericMeter_GetMeterMultiplier, "client.dll", "F3 0F 10 81 ? ? ? ? C3 CC CC CC CC CC CC CC 48 85 D2", 0x0);
 
 MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 21), bool,
-	CClientModeShared* rcx, float flInputSampleTime, CUserCmd* pCmd)
+		  CClientModeShared* rcx, float flInputSampleTime, CUserCmd* pCmd)
 {
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CClientModeShared_CreateMove.Map[DEFAULT_BIND])
@@ -53,7 +53,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	G::CurrentUserCmd = pCmd;
 
 	I::Prediction->Update(I::ClientState->m_nDeltaTick, I::ClientState->m_nDeltaTick > 0, I::ClientState->last_command_ack, I::ClientState->lastoutgoingcommand + I::ClientState->chokedcommands);
-	
+
 	// correct tick_count for fakeinterp / nointerp
 	// 	pCmd->tick_count += TICKS_TO_TIME(F::Backtrack.GetFakeInterp()) - (Vars::Visuals::Removals::Interpolation.Value ? 0 : TICKS_TO_TIME(G::Lerp));
 	if (G::Buttons & IN_DUCK) // lol
@@ -72,15 +72,15 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 				F::Ticks.m_iWait = 1;
 		}
 
-		for ( int i = 0; i <= SLOT_MELEE; i++ )
+		for (int i = 0; i <= SLOT_MELEE; i++)
 		{
-			auto pWeaponInSlot = pLocal->GetWeaponFromSlot( i );
-			if ( pWeaponInSlot )
+			auto pWeaponInSlot = pLocal->GetWeaponFromSlot(i);
+			if (pWeaponInSlot)
 			{
-				G::SavedDefIndexes[ i ] = pWeaponInSlot->m_iItemDefinitionIndex( );
-				G::SavedWepIds[ i ] = pWeaponInSlot->GetWeaponID( );
-				if ( i != SLOT_MELEE )
-					G::AmmoInSlot[ i ] = pWeaponInSlot->m_iClip1( );
+				G::SavedDefIndexes[i] = pWeaponInSlot->m_iItemDefinitionIndex();
+				G::SavedWepIds[i] = pWeaponInSlot->GetWeaponID();
+				if (i != SLOT_MELEE)
+					G::AmmoInSlot[i] = pWeaponInSlot->m_iClip1();
 			}
 		}
 
@@ -180,14 +180,14 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	F::Spectate.CreateMove(pLocal, pCmd);
 	F::Misc.RunPre(pLocal, pCmd);
 	F::AutoJoin.Run(pLocal);
-	F::GameObjectiveController.Update( );
+	F::GameObjectiveController.Update();
 
 	F::Backtrack.Run(pCmd);
 
 	F::EnginePrediction.Start(pLocal, pCmd);
 	F::Aimbot.Run(pLocal, pWeapon, pCmd);
-	F::NavBot.CreateMove( pLocal, pWeapon, pCmd );
-	F::NavEngine.CreateMove( pCmd );
+	F::NavBot.Run(pLocal, pWeapon, pCmd);
+	F::NavEngine.Run(pCmd);
 	F::EnginePrediction.End(pLocal, pCmd);
 
 	F::PacketManip.Run(pLocal, pWeapon, pCmd, pSendPacket);
@@ -257,7 +257,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 			pCmd->buttons |= IN_ATTACK;
 		if (!vHistory[0].m_bAttack2 && vHistory[1].m_bAttack2 && !vHistory[2].m_bAttack2)
 			pCmd->buttons |= IN_ATTACK2;
-		
+
 		// don't care if we are actually attacking or not, a miss is less important than a detection
 		if (vHistory[0].m_bAttack1 || vHistory[1].m_bAttack1 || vHistory[2].m_bAttack1)
 		{
@@ -282,8 +282,8 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 				float flDelta34 = Math::CalcFov(vHistory[3].m_vAngle, vHistory[4].m_vAngle);
 
 				if ((
-						flDelta12 > SNAP_SIZE_EPSILON && flDelta23 < SNAP_NOISE_EPSILON && vHistory[2].m_vAngle != vHistory[3].m_vAngle
-					 || flDelta23 > SNAP_SIZE_EPSILON && flDelta12 < SNAP_NOISE_EPSILON && vHistory[1].m_vAngle != vHistory[2].m_vAngle
+					flDelta12 > SNAP_SIZE_EPSILON && flDelta23 < SNAP_NOISE_EPSILON && vHistory[2].m_vAngle != vHistory[3].m_vAngle
+					|| flDelta23 > SNAP_SIZE_EPSILON && flDelta12 < SNAP_NOISE_EPSILON && vHistory[1].m_vAngle != vHistory[2].m_vAngle
 					)
 					&& flDelta01 < SNAP_NOISE_EPSILON && vHistory[0].m_vAngle != vHistory[1].m_vAngle
 					&& flDelta34 < SNAP_NOISE_EPSILON && vHistory[3].m_vAngle != vHistory[4].m_vAngle)

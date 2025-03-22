@@ -144,17 +144,17 @@ void CAimbotMelee::SimulatePlayers(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, st
 			}
 			if (i < iSwingTicks - iDoubletapTicks)
 			{
-				for ( auto& tTarget : vTargets )
+				for (auto& tTarget : vTargets)
 				{
-					auto& tStorage = targetStorage[ tTarget.m_pEntity->entindex( ) ];
+					auto& tStorage = targetStorage[tTarget.m_pEntity->entindex()];
 
-					F::MoveSim.RunTick( tStorage );
-					if ( !tStorage.m_bFailed )
-						pRecordMap[ tTarget.m_pEntity->entindex( ) ].emplace_front(
-							!Vars::Aimbot::Melee::SwingPredictLag.Value || tStorage.m_bPredictNetworked ? tTarget.m_pEntity->m_flSimulationTime( ) + TICKS_TO_TIME( i + 1 ) : 0.f,
-							BoneMatrix(),
-							std::vector{HitboxInfo()},
-							Vars::Aimbot::Melee::SwingPredictLag.Value ? tStorage.m_vPredictedOrigin : tStorage.m_MoveData.m_vecAbsOrigin
+					F::MoveSim.RunTick(tStorage);
+					if (!tStorage.m_bFailed)
+						pRecordMap[tTarget.m_pEntity->entindex()].emplace_front(
+						!Vars::Aimbot::Melee::SwingPredictLag.Value || tStorage.m_bPredictNetworked ? tTarget.m_pEntity->m_flSimulationTime() + TICKS_TO_TIME(i + 1) : 0.f,
+						BoneMatrix(),
+						std::vector{ HitboxInfo() },
+						Vars::Aimbot::Melee::SwingPredictLag.Value ? tStorage.m_vPredictedOrigin : tStorage.m_MoveData.m_vecAbsOrigin
 						);
 				}
 			}
@@ -294,15 +294,15 @@ int CAimbotMelee::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* pW
 		}
 		if (!pRecords || vRecords.empty())
 		{
-			if ( auto pBones = H::Entities.GetBones( tTarget.m_pEntity->entindex( ) ) )
-				vRecords.emplace_front( tTarget.m_pEntity->m_flSimulationTime( ), *reinterpret_cast< BoneMatrix* >( pBones ), std::vector{ HitboxInfo( ) }, tTarget.m_pEntity->m_vecOrigin( ) );
+			if (auto pBones = H::Entities.GetBones(tTarget.m_pEntity->entindex()))
+				vRecords.emplace_front(tTarget.m_pEntity->m_flSimulationTime(), *reinterpret_cast<BoneMatrix*>(pBones), std::vector{ HitboxInfo() }, tTarget.m_pEntity->m_vecOrigin());
 			else
 			{
 				matrix3x4 aBones[MAXSTUDIOBONES];
 				if (!tTarget.m_pEntity->SetupBones(aBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, tTarget.m_pEntity->m_flSimulationTime()))
 					return false;
 
-				vRecords.emplace_front( tTarget.m_pEntity->m_flSimulationTime( ), *reinterpret_cast< BoneMatrix* >( &aBones ), std::vector{ HitboxInfo( ) }, tTarget.m_pEntity->m_vecOrigin( ) );
+				vRecords.emplace_front(tTarget.m_pEntity->m_flSimulationTime(), *reinterpret_cast<BoneMatrix*>(&aBones), std::vector{ HitboxInfo() }, tTarget.m_pEntity->m_vecOrigin());
 			}
 		}
 	}
@@ -311,7 +311,7 @@ int CAimbotMelee::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* pW
 		for (TickRecord& tRecord : vSimRecords)
 		{
 			vRecords.pop_back();
-			vRecords.emplace_front( tRecord.m_flSimTime, BoneMatrix( ), std::vector{ HitboxInfo( ) }, tRecord.m_vOrigin );
+			vRecords.emplace_front(tRecord.m_flSimTime, BoneMatrix(), std::vector{ HitboxInfo() }, tRecord.m_vOrigin);
 		}
 		for (TickRecord& tRecord : vRecords)
 			tRecord.m_flSimTime -= TICKS_TO_TIME(vSimRecords.size());
@@ -367,7 +367,7 @@ int CAimbotMelee::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* pW
 			return true;
 		}
 		else if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Smooth
-			|| Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Assistive)
+				 || Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Assistive)
 		{
 			auto vAngle = Math::CalcAngle(vEyePos, tTarget.m_vPos);
 
@@ -455,7 +455,7 @@ void CAimbotMelee::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd
 	if (!Vars::Aimbot::General::AimType.Value || Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent && !G::CanPrimaryAttack && pWeapon->m_flSmackTime() < 0.f)
 		return;
 
-	if (AutoEngie( pLocal, pWeapon, pCmd ))
+	if (AutoEngie(pLocal, pWeapon, pCmd))
 		return;
 
 	if (RunSapper(pLocal, pWeapon, pCmd))
@@ -567,6 +567,7 @@ static inline int GetAttachment(CBaseObject* pBuilding, int i)
 		iAttachment = 3;
 	return iAttachment;
 }
+
 bool CAimbotMelee::FindNearestBuildPoint(CBaseObject* pBuilding, CTFPlayer* pLocal, Vec3& vPoint)
 {
 	bool bFoundPoint = false;
@@ -649,59 +650,53 @@ bool CAimbotMelee::RunSapper(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd
 	return true;
 }
 
-bool CAimbotMelee::AimFriendlyBuilding( CTFPlayer* pLocal, CBaseObject* pBuilding )
+bool CAimbotMelee::AimFriendlyBuilding(CTFPlayer* pLocal, CBaseObject* pBuilding)
 {
 	// Current Metal
-	const int iCurAmmo = pLocal->m_iMetalCount();
+	int iCurrMetal = pLocal->m_iMetalCount();
 
 	// Autorepair is on
-	bool shouldRepair = false;
-	switch ( pBuilding->GetClassID( ) )
+	bool bShouldRepair = false;
+	switch (pBuilding->GetClassID())
 	{
 	case ETFClassID::CObjectSentrygun:
 	{
-		if ( Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Sentry )
+		if (Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Sentry)
 		{
-			// Special Sentry logic
-
 			// Current sentry ammo
-			const int sentry_ammo = pBuilding->As<CObjectSentrygun>( )->m_iAmmoShells( );
+			int iSentryAmmo = pBuilding->As<CObjectSentrygun>()->m_iAmmoShells();
 			// Max Sentry ammo
-			int max_ammo = 0;
+			int iMaxAmmo = 0;
 
 			// Set Ammo depending on level
-			switch ( pBuilding->m_iUpgradeLevel( ) )
+			switch (pBuilding->m_iUpgradeLevel())
 			{
 			case 1:
-				max_ammo = 150;
+				iMaxAmmo = 150;
 				break;
 			case 2:
 			case 3:
-				max_ammo = 200;
+				iMaxAmmo = 200;
 			}
 
 			// Sentry needs ammo
-			if ( sentry_ammo < max_ammo )
+			if (iSentryAmmo < iMaxAmmo)
 				return true;
 
-			shouldRepair = true;
+			bShouldRepair = true;
 			break;
 		}
 	}
 	case ETFClassID::CObjectDispenser:
 	{
-		if ( Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Dispenser )
-		{
-			shouldRepair = true;
-		}
+		if (Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Dispenser)
+			bShouldRepair = true;
 		break;
 	}
 	case ETFClassID::CObjectTeleporter:
 	{
-		if ( Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Teleporter )
-		{
-			shouldRepair = true;
-		}
+		if (Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Teleporter)
+			bShouldRepair = true;
 		break;
 	}
 	default:
@@ -709,178 +704,169 @@ bool CAimbotMelee::AimFriendlyBuilding( CTFPlayer* pLocal, CBaseObject* pBuildin
 	}
 
 	// Buildings needs to be repaired
-	if ( iCurAmmo && shouldRepair && pBuilding->m_iHealth( ) != pBuilding->m_iMaxHealth( ) )
+	if (iCurrMetal && bShouldRepair && pBuilding->m_iHealth() != pBuilding->m_iMaxHealth())
 		return true;
 
 	// Autoupgrade is on
-	if ( Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value )
+	if (Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value)
 	{
 		// Upgrade lvel
-		const int upgrade_level = pBuilding->m_iUpgradeLevel( );
+		int iUpgradeLevel = pBuilding->m_iUpgradeLevel();
 
 		// Don't upgrade mini sentries
-		if ( pBuilding->m_bMiniBuilding( ) )
+		if (pBuilding->m_bMiniBuilding())
 			return false;
 
-		// Rvar to check
-		int level = 0;
-
+		int iLevel = 0;
 		// Pick The right rvar to check depending on building type
-		switch ( pBuilding->GetClassID( ) )
+		switch (pBuilding->GetClassID())
 		{
 
 		case ETFClassID::CObjectSentrygun:
 			// Enabled check
-			if ( !( Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Sentry ) )
+			if (!(Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Sentry))
 				return false;
-			level = Vars::Aimbot::Melee::AutoEngie::AutoUpgradeSentryLVL.Value;
+			iLevel = Vars::Aimbot::Melee::AutoEngie::AutoUpgradeSentryLVL.Value;
 			break;
 
 		case ETFClassID::CObjectDispenser:
 			// Enabled check
-			if ( !( Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Dispenser ) )
+			if (!(Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Dispenser))
 				return false;
-			level = Vars::Aimbot::Melee::AutoEngie::AutoUpgradeDispenserLVL.Value;
+			iLevel = Vars::Aimbot::Melee::AutoEngie::AutoUpgradeDispenserLVL.Value;
 			break;
 
 		case ETFClassID::CObjectTeleporter:
 			// Enabled check
-			if ( !( Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Teleporter ) )
+			if (!(Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Teleporter))
 				return false;
-			level = Vars::Aimbot::Melee::AutoEngie::AutoUpgradeTeleporterLVL.Value;
+			iLevel = Vars::Aimbot::Melee::AutoEngie::AutoUpgradeTeleporterLVL.Value;
 			break;
 		}
 
 		// Can be upgraded
-		if ( upgrade_level < level && iCurAmmo )
+		if (iUpgradeLevel < iLevel && iCurrMetal)
 			return true;
 	}
 	return false;
 }
 
-bool ShouldWrenchBuilding( ETFClassID id )
+bool ShouldWrenchBuilding(ETFClassID id)
 {
-	switch ( id )
-		{
-		case ETFClassID::CObjectSentrygun:
-		{
-			// Repair sentries check
-			if ( !( Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Sentry ) && !( Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Sentry ) )
-				return false;
-			break;
-		}
-
-		case ETFClassID::CObjectDispenser:
-		{
-			// Repair Dispensers check
-			if ( !( Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Dispenser ) && !( Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Dispenser ) )
-				return false;
-			break;
-		}
-
-		case ETFClassID::CObjectTeleporter:
-		{
-			// Repair Teleporters check
-			if ( !( Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Teleporter ) && !( Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Teleporter ) )
-				return false;
-			break;
-		}
-		default:
+	switch (id)
+	{
+	case ETFClassID::CObjectSentrygun:
+		// Repair sentries check
+		if (!(Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Sentry) && !(Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Sentry))
 			return false;
-		}
-
+		break;
+	case ETFClassID::CObjectDispenser:
+		// Repair Dispensers check
+		if (!(Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Dispenser) && !(Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Dispenser))
+			return false;
+		break;
+	case ETFClassID::CObjectTeleporter:
+		// Repair Teleporters check
+		if (!(Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value & Vars::Aimbot::Melee::AutoEngie::AutoRepairEnum::Teleporter) && !(Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value & Vars::Aimbot::Melee::AutoEngie::AutoUpgradeEnum::Teleporter))
+			return false;
+		break;
+	default:
+		return false;
+	}
 	return true;
 }
 
-std::vector<Target_t> CAimbotMelee::GetTargetBuilding( CTFPlayer* pLocal, CTFWeaponBase* pWeapon )
+std::vector<Target_t> CAimbotMelee::GetTargetBuilding(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
-	std::vector<Target_t> validTargets;
+	std::vector<Target_t> vValidTargets;
 
-	const Vec3 vLocalPos = pLocal->GetShootPos( );
-	const Vec3 vLocalAngles = I::EngineClient->GetViewAngles( );
+	const Vec3 vLocalPos = pLocal->GetShootPos();
+	const Vec3 vLocalAngles = I::EngineClient->GetViewAngles();
 
-	for ( const auto& pEntity : H::Entities.GetGroup( EGroupType::BUILDINGS_TEAMMATES ) )
+	for (auto pEntity : H::Entities.GetGroup(EGroupType::BUILDINGS_TEAMMATES))
 	{
-		if ( !pEntity || !pEntity->IsBuilding( ) )
+		if (!pEntity->IsBuilding())
 			continue;
 
-		const auto& pBuilding = pEntity->As<CBaseObject>( );
-
-		if ( !ShouldWrenchBuilding( pBuilding->GetClassID( ) ) )
+		if (!ShouldWrenchBuilding(pEntity->GetClassID()))
 			continue;
 
-		Vec3 vPos = pBuilding->GetCenter( );
-		Vec3 vAngleTo = Math::CalcAngle( vLocalPos, vPos );
-		const float flFOVTo = Math::CalcFov( vLocalAngles, vAngleTo );
-		const float flDistTo = vLocalPos.DistTo( vPos );
+		Vec3 vPos = pEntity->GetCenter();
+		Vec3 vAngleTo = Math::CalcAngle(vLocalPos, vPos);
+		const float flFOVTo = Math::CalcFov(vLocalAngles, vAngleTo);
+		const float flDistTo = vLocalPos.DistTo(vPos);
 
-		if ( flFOVTo > Vars::Aimbot::General::AimFOV.Value )
+		if (flFOVTo > Vars::Aimbot::General::AimFOV.Value)
 			continue;
 
-		validTargets.push_back( { pBuilding, TargetEnum::Dispenser, vPos, vAngleTo, flFOVTo, flDistTo } );
+		vValidTargets.push_back({ pEntity, TargetEnum::Dispenser, vPos, vAngleTo, flFOVTo, flDistTo });
 	}
 
+	std::sort(vValidTargets.begin(), vValidTargets.end(), [&](const Target_t& a, const Target_t& b) -> bool
+			  {
+				  const auto a_iClassID = a.m_pEntity->GetClassID();
+				  const auto b_iClassID = b.m_pEntity->GetClassID();
+				  switch (a_iClassID)
+				  {
+				  case ETFClassID::CObjectSentrygun:
+				  {
+					  if (Vars::Aimbot::Melee::AutoEngie::AutoRepairPrio.Value == Vars::Aimbot::Melee::AutoEngie::AutoRepairPrioEnum::Sentry)
+						  return a_iClassID != b_iClassID;
+					  break;
+				  }
+				  case ETFClassID::CObjectDispenser:
+				  {
+					  if (Vars::Aimbot::Melee::AutoEngie::AutoRepairPrio.Value == Vars::Aimbot::Melee::AutoEngie::AutoRepairPrioEnum::Dispenser)
+						  return a_iClassID != b_iClassID;
+					  break;
+				  }
+				  case ETFClassID::CObjectTeleporter:
+				  {
+					  if (Vars::Aimbot::Melee::AutoEngie::AutoRepairPrio.Value == Vars::Aimbot::Melee::AutoEngie::AutoRepairPrioEnum::Teleporter)
+						  return a_iClassID != b_iClassID;
+					  break;
+				  }
+				  default: break;
+				  }
+				  return false;
+			  });
 
-	std::sort( validTargets.begin( ), validTargets.end( ), [&]( const Target_t& a, const Target_t& b ) -> bool
-		{
-			const auto a_ClassID = a.m_pEntity->GetClassID( );
-			const auto b_ClassID = b.m_pEntity->GetClassID( );
-			switch ( a_ClassID )
-			{
-			case ETFClassID::CObjectSentrygun:
-			{
-				if ( Vars::Aimbot::Melee::AutoEngie::AutoRepairPrio.Value == Vars::Aimbot::Melee::AutoEngie::AutoRepairPrioEnum::Sentry )
-					return a_ClassID != b_ClassID;
-			}
-			case ETFClassID::CObjectDispenser:
-			{
-				if ( Vars::Aimbot::Melee::AutoEngie::AutoRepairPrio.Value == Vars::Aimbot::Melee::AutoEngie::AutoRepairPrioEnum::Dispenser )
-					return a_ClassID != b_ClassID;
-			}
-			case ETFClassID::CObjectTeleporter:
-			{
-				if ( Vars::Aimbot::Melee::AutoEngie::AutoRepairPrio.Value == Vars::Aimbot::Melee::AutoEngie::AutoRepairPrioEnum::Teleporter )
-					return a_ClassID != b_ClassID;
-			}
-			default: return false;
-			}
-		} );
-
-	return validTargets;
+	return vValidTargets;
 }
 
-bool CAimbotMelee::AutoEngie( CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd )
+bool CAimbotMelee::AutoEngie(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
-	if ( pLocal->m_iClass() != TF_CLASS_ENGINEER || !Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value && !Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value )
+	if (pLocal->m_iClass() != TF_CLASS_ENGINEER || !Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value && !Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value)
 		return false;
 
-	auto targets = GetTargetBuilding( pLocal, pWeapon );
-	if ( targets.empty() )
+	auto vTargets = GetTargetBuilding(pLocal, pWeapon);
+	if (vTargets.empty())
 		return false;
-	
+
 	iDoubletapTicks = F::Ticks.GetTicks(pWeapon);
 	const bool bShouldSwing = iDoubletapTicks <= (GetSwingTime(pWeapon) ? 14 : 0) || Vars::CL_Move::Doubletap::AntiWarp.Value && pLocal->m_hGroundEntity();
 
 	Vec3 vEyePos = pLocal->GetShootPos();
 	std::unordered_map<int, std::deque<TickRecord>> pRecordMap;
 	std::unordered_map<int, std::deque<Vec3>> mPaths;
-	SimulatePlayers(pLocal, pWeapon, targets, vEyePos, pRecordMap, mPaths);
+	SimulatePlayers(pLocal, pWeapon, vTargets, vEyePos, pRecordMap, mPaths);
 
-	for ( auto& target : targets )
+	for (auto& tTarget : vTargets)
 	{
-		if ( !AimFriendlyBuilding( pLocal, target.m_pEntity->As<CBaseObject>( ) ) )
+		if (!AimFriendlyBuilding(pLocal, tTarget.m_pEntity->As<CBaseObject>()))
 			continue;
 
-		const auto iResult = CanHit(target, pLocal, pWeapon, vEyePos, pRecordMap[target.m_pEntity->entindex()]);
+		const auto iResult = CanHit(tTarget, pLocal, pWeapon, vEyePos, pRecordMap[tTarget.m_pEntity->entindex()]);
 		if (!iResult) continue;
 		if (iResult == 2)
 		{
-			Aim(pCmd, target.m_vAngleTo);
+			G::Target = { tTarget.m_pEntity->entindex(), I::GlobalVars->tickcount };
+			Aim(pCmd, tTarget.m_vAngleTo);
 			return true;
 		}
 
-		G::Target = { target.m_pEntity->entindex(), I::GlobalVars->tickcount };
-		G::AimPosition = { target.m_vPos, I::GlobalVars->tickcount };
+		G::Target = { tTarget.m_pEntity->entindex(), I::GlobalVars->tickcount };
+		G::AimPosition = { tTarget.m_vPos, I::GlobalVars->tickcount };
 
 		if (Vars::Aimbot::General::AutoShoot.Value && pWeapon->m_flSmackTime() < 0.f)
 		{
@@ -921,8 +907,8 @@ bool CAimbotMelee::AutoEngie( CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCm
 			if (bLine)
 			{
 				Vec3 vEyePos = pLocal->GetShootPos();
-				float flDist = vEyePos.DistTo(target.m_vPos);
-				Vec3 vForward; Math::AngleVectors(target.m_vAngleTo + pLocal->m_vecPunchAngle(), &vForward);
+				float flDist = vEyePos.DistTo(tTarget.m_vPos);
+				Vec3 vForward; Math::AngleVectors(tTarget.m_vAngleTo + pLocal->m_vecPunchAngle(), &vForward);
 				if (Vars::Colors::Line.Value.a)
 					G::LineStorage.push_back({ { vEyePos, vEyePos + vForward * flDist }, I::GlobalVars->curtime + Vars::Visuals::Simulation::DrawDuration.Value, Vars::Colors::Line.Value });
 				if (Vars::Colors::LineClipped.Value.a)
@@ -930,18 +916,18 @@ bool CAimbotMelee::AutoEngie( CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCm
 			}
 			if (bBoxes)
 			{
-				auto vBoxes = F::Visuals.GetHitboxes(target.m_tRecord.m_BoneMatrix.m_aBones, target.m_pEntity->As<CBaseAnimating>());
+				auto vBoxes = F::Visuals.GetHitboxes(tTarget.m_tRecord.m_BoneMatrix.m_aBones, tTarget.m_pEntity->As<CBaseAnimating>());
 				G::BoxStorage.insert(G::BoxStorage.end(), vBoxes.begin(), vBoxes.end());
 			}
 		}
 
-		if ( G::Attacking != 1 )
+		if (G::Attacking != 1)
 		{
-			Vec3 vEyePos = pLocal->GetShootPos( );
-			target.m_vAngleTo = Aim( G::CurrentUserCmd->viewangles, Math::CalcAngle( vEyePos, target.m_vPos ) );
+			Vec3 vEyePos = pLocal->GetShootPos();
+			tTarget.m_vAngleTo = Aim(G::CurrentUserCmd->viewangles, Math::CalcAngle(vEyePos, tTarget.m_vPos));
 		}
 
-		Aim(pCmd, target.m_vAngleTo);
+		Aim(pCmd, tTarget.m_vAngleTo);
 		return true;
 	}
 	return false;

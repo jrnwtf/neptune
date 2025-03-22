@@ -17,7 +17,7 @@ static inline bool GetPlayerGlow(CBaseEntity* pEntity, CTFPlayer* pLocal, Glow_t
 		*pColor = H::Color.GetEntityDrawColor(pLocal, pEntity, Vars::Colors::Relative.Value);
 		return true;
 	}
-	if ( pEntity == pLocal )
+	if (pEntity == pLocal)
 		return false;
 
 	const bool bTeam = pEntity->m_iTeamNum() == pLocal->m_iTeamNum();
@@ -28,44 +28,44 @@ static inline bool GetPlayerGlow(CBaseEntity* pEntity, CTFPlayer* pLocal, Glow_t
 	*pColor = H::Color.GetEntityDrawColor(pLocal, pEntity, Vars::Colors::Relative.Value, &iType);
 
 	// distance things
-	const Vec3 vDelta = !flActualDistance ? pEntity->m_vecOrigin( ) - pLocal->m_vecOrigin( ) : Vec3();
-	const float flDistance = ( flActualDistance ? flActualDistance : vDelta.Length2D( ) );
-	if ( flDistance >= ( bTeam ? Vars::Glow::Friendly::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value ) ||
-		flDistance <= ( bTeam ? Vars::Glow::Friendly::MinDist.Value : Vars::Glow::Enemy::MinDist.Value ) )
+	const Vec3 vDelta = !flActualDistance ? pEntity->m_vecOrigin() - pLocal->m_vecOrigin() : Vec3();
+	const float flDistance = (flActualDistance ? flActualDistance : vDelta.Length2D());
+	if (flDistance >= (bTeam ? Vars::Glow::Friendly::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value) ||
+		flDistance <= (bTeam ? Vars::Glow::Friendly::MinDist.Value : Vars::Glow::Enemy::MinDist.Value))
 		return false;
 
-	if ( bTeam ? Vars::Glow::Friendly::Dist2Alpha.Value : Vars::Glow::Enemy::Dist2Alpha.Value )
+	if (bTeam ? Vars::Glow::Friendly::Dist2Alpha.Value : Vars::Glow::Enemy::Dist2Alpha.Value)
 	{
-		pColor->a = Math::RemapValClamped( flDistance, ( bTeam ? Vars::Glow::Friendly::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value ) - 256.f, ( bTeam ? Vars::Glow::Friendly::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value ), pColor->a, 0.f );
-		pColor->a = Math::RemapValClamped( flDistance, ( bTeam ? Vars::Glow::Friendly::MinDist.Value : Vars::Glow::Enemy::MinDist.Value ) + 256.f, ( bTeam ? Vars::Glow::Friendly::MinDist.Value : Vars::Glow::Enemy::MinDist.Value ), pColor->a, 0.f );
+		pColor->a = Math::RemapValClamped(flDistance, (bTeam ? Vars::Glow::Friendly::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value) - 256.f, (bTeam ? Vars::Glow::Friendly::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value), pColor->a, 0.f);
+		pColor->a = Math::RemapValClamped(flDistance, (bTeam ? Vars::Glow::Friendly::MinDist.Value : Vars::Glow::Enemy::MinDist.Value) + 256.f, (bTeam ? Vars::Glow::Friendly::MinDist.Value : Vars::Glow::Enemy::MinDist.Value), pColor->a, 0.f);
 	}
 
 	return bTeam ? bFriendly : bEnemy;
 }
 
-static inline void ApplyDistanceAlphaMod( byte* pAlpha, float flDistance, float flMinDistance, float flMaxDistance, bool bActive )
+static inline void ApplyDistanceAlphaMod(byte* pAlpha, float flDistance, float flMinDistance, float flMaxDistance, bool bActive)
 {
-	if ( !bActive )
+	if (!bActive)
 		return;
 
-	*pAlpha = Math::RemapValClamped( flDistance, flMaxDistance - 256.f, flMaxDistance, *pAlpha, 0.f );
-	*pAlpha = Math::RemapValClamped( flDistance, flMinDistance + 256.f, flMinDistance, *pAlpha, 0.f );
+	*pAlpha = Math::RemapValClamped(flDistance, flMaxDistance - 256.f, flMaxDistance, *pAlpha, 0.f);
+	*pAlpha = Math::RemapValClamped(flDistance, flMinDistance + 256.f, flMinDistance, *pAlpha, 0.f);
 }
 
 bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Color_t* pColor)
 {
 	if (pEntity->IsDormant() || !pEntity->ShouldDraw())
 		return false;
-	
+
 	// distance things
 	Vec3 vDelta{};
 	float flDistance{};
 	switch (pEntity->GetClassID())
 	{
-	// player glow
+		// player glow
 	case ETFClassID::CTFPlayer:
 	{
-		return GetPlayerGlow( pEntity, pLocal, pGlow, pColor, Vars::Glow::Friendly::Players.Value, Vars::Glow::Enemy::Players.Value );
+		return GetPlayerGlow(pEntity, pLocal, pGlow, pColor, Vars::Glow::Friendly::Players.Value, Vars::Glow::Enemy::Players.Value);
 	}
 	// building glow
 	case ETFClassID::CObjectSentrygun:
@@ -130,7 +130,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	case ETFClassID::CTFProjectile_GrapplingHook:
 	case ETFClassID::CTFProjectile_HealingBolt:
 	case ETFClassID::CTFProjectile_Rocket:
-	//case ETFClassID::CTFProjectile_BallOfFire: // lifetime too short
+		//case ETFClassID::CTFProjectile_BallOfFire: // lifetime too short
 	case ETFClassID::CTFProjectile_MechanicalArmOrb:
 	case ETFClassID::CTFProjectile_SentryRocket:
 	case ETFClassID::CTFProjectile_SpellFireball:
@@ -149,7 +149,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	}
 	case ETFClassID::CTFBaseProjectile:
 	case ETFClassID::CTFProjectile_EnergyRing: // not drawn, shoulddraw check, small anyways
-	//case ETFClassID::CTFProjectile_Syringe: // not drawn
+		//case ETFClassID::CTFProjectile_Syringe: // not drawn
 	{
 		auto pWeapon = pEntity->As<CTFBaseProjectile>()->m_hLauncher().Get();
 		auto pOwner = pWeapon ? pWeapon->As<CTFWeaponBase>()->m_hOwner().Get() : pEntity;
@@ -162,14 +162,14 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	// objective glow
 	case ETFClassID::CCaptureFlag:
 	{
-		vDelta = pEntity->m_vecOrigin( ) - pLocal->m_vecOrigin( );
-		flDistance = vDelta.Length2D( );
-		if ( flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value )
+		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
+		flDistance = vDelta.Length2D();
+		if (flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value)
 			return false;
 
-		*pGlow = Glow_t( Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value );
-		*pColor = H::Color.GetEntityDrawColor( pLocal, pEntity, Vars::Colors::Relative.Value );
-		ApplyDistanceAlphaMod( &pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value );
+		*pGlow = Glow_t(Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value);
+		*pColor = H::Color.GetEntityDrawColor(pLocal, pEntity, Vars::Colors::Relative.Value);
+		ApplyDistanceAlphaMod(&pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value);
 
 		return Vars::Glow::World::Objective.Value;
 	}
@@ -181,66 +181,66 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	case ETFClassID::CTFTankBoss:
 	case ETFClassID::CZombie:
 	{
-		vDelta = pEntity->m_vecOrigin( ) - pLocal->m_vecOrigin( );
-		flDistance = vDelta.Length2D( );
+		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
+		flDistance = vDelta.Length2D();
 
-		if ( pEntity->m_iTeamNum( ) == TF_TEAM_BLUE || pEntity->m_iTeamNum( ) == TF_TEAM_RED )
+		if (pEntity->m_iTeamNum() == TF_TEAM_BLUE || pEntity->m_iTeamNum() == TF_TEAM_RED)
 		{
-			if ( auto pOwner = pEntity->m_hOwnerEntity( ).Get( ) )
+			if (auto pOwner = pEntity->m_hOwnerEntity().Get())
 			{
-				return GetPlayerGlow( pOwner, pLocal, pGlow, pColor, Vars::Glow::World::NPCs.Value, Vars::Glow::World::NPCs.Value, flDistance );
+				return GetPlayerGlow(pOwner, pLocal, pGlow, pColor, Vars::Glow::World::NPCs.Value, Vars::Glow::World::NPCs.Value, flDistance);
 			}
 			else
-				*pColor = H::Color.GetEntityDrawColor( pLocal, pEntity, Vars::Colors::Relative.Value );
+				*pColor = H::Color.GetEntityDrawColor(pLocal, pEntity, Vars::Colors::Relative.Value);
 		}
 		else
 			*pColor = Vars::Colors::NPC.Value;
 
-		if ( flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value )
+		if (flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value)
 			return false;
 
-		ApplyDistanceAlphaMod( &pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value );
+		ApplyDistanceAlphaMod(&pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value);
 
-		*pGlow = Glow_t( Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value );
+		*pGlow = Glow_t(Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value);
 		return Vars::Glow::World::NPCs.Value;
 	}
 	// pickup glow
 	case ETFClassID::CTFAmmoPack:
 	{
-		vDelta = pEntity->m_vecOrigin( ) - pLocal->m_vecOrigin( );
-		flDistance = vDelta.Length2D( );
-		if ( flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value )
+		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
+		flDistance = vDelta.Length2D();
+		if (flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value)
 			return false;
 
-		*pGlow = Glow_t( Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value );
+		*pGlow = Glow_t(Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value);
 		*pColor = Vars::Colors::Ammo.Value;
-		ApplyDistanceAlphaMod( &pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value );
+		ApplyDistanceAlphaMod(&pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value);
 
 		return Vars::Glow::World::Pickups.Value;
 	}
 	case ETFClassID::CCurrencyPack:
 	{
-		vDelta = pEntity->m_vecOrigin( ) - pLocal->m_vecOrigin( );
-		flDistance = vDelta.Length2D( );
-		if ( flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value )
+		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
+		flDistance = vDelta.Length2D();
+		if (flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value)
 			return false;
 
-		*pGlow = Glow_t( Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value );
+		*pGlow = Glow_t(Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value);
 		*pColor = Vars::Colors::Money.Value;
-		ApplyDistanceAlphaMod( &pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value );
+		ApplyDistanceAlphaMod(&pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value);
 
 		return Vars::Glow::World::Pickups.Value;
 	}
 	case ETFClassID::CHalloweenGiftPickup:
 	{
-		vDelta = pEntity->m_vecOrigin( ) - pLocal->m_vecOrigin( );
-		flDistance = vDelta.Length2D( );
-		if ( flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value )
+		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
+		flDistance = vDelta.Length2D();
+		if (flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value)
 			return false;
 
-		*pGlow = Glow_t( Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value );
+		*pGlow = Glow_t(Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value);
 		*pColor = Vars::Colors::Halloween.Value;
-		ApplyDistanceAlphaMod( &pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value );
+		ApplyDistanceAlphaMod(&pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value);
 
 		return Vars::Glow::World::Halloween.Value;
 	}
@@ -254,7 +254,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		{
 			*pGlow = Glow_t(Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value);
 			*pColor = Vars::Colors::Ammo.Value;
-			ApplyDistanceAlphaMod( &pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value );
+			ApplyDistanceAlphaMod(&pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value);
 
 			return bWithinDist && Vars::Glow::World::Pickups.Value;
 		}
@@ -262,7 +262,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		{
 			*pGlow = Glow_t(Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value);
 			*pColor = Vars::Colors::Health.Value;
-			ApplyDistanceAlphaMod( &pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value );
+			ApplyDistanceAlphaMod(&pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value);
 
 			return bWithinDist && Vars::Glow::World::Pickups.Value;
 		}
@@ -270,7 +270,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		{
 			*pGlow = Glow_t(Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value);
 			*pColor = Vars::Colors::Powerup.Value;
-			ApplyDistanceAlphaMod( &pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value );
+			ApplyDistanceAlphaMod(&pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value);
 
 			return bWithinDist && Vars::Glow::World::Powerups.Value;
 		}
@@ -278,7 +278,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		{
 			*pGlow = Glow_t(Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value);
 			*pColor = Vars::Colors::Halloween.Value;
-			ApplyDistanceAlphaMod( &pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value );
+			ApplyDistanceAlphaMod(&pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value);
 
 			return bWithinDist && Vars::Glow::World::Halloween.Value;
 		}
@@ -288,14 +288,14 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	case ETFClassID::CTFPumpkinBomb:
 	case ETFClassID::CTFGenericBomb:
 	{
-		vDelta = pEntity->m_vecOrigin( ) - pLocal->m_vecOrigin( );
-		flDistance = vDelta.Length2D( );
-		if ( flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value )
+		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
+		flDistance = vDelta.Length2D();
+		if (flDistance >= Vars::Glow::World::MaxDist.Value || flDistance <= Vars::Glow::World::MinDist.Value)
 			return false;
 
-		*pGlow = Glow_t( Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value );
+		*pGlow = Glow_t(Vars::Glow::World::Stencil.Value, Vars::Glow::World::Blur.Value);
 		*pColor = Vars::Colors::Halloween.Value;
-		ApplyDistanceAlphaMod( &pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value );
+		ApplyDistanceAlphaMod(&pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value);
 
 		return Vars::Glow::World::Bombs.Value;
 	}

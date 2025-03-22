@@ -6,6 +6,6 @@ MAKE_SIGNATURE(ReportAbuseShit, "client.dll", "48 8B 0D ? ? ? ? 48 85 C9 75 ? 48
 // I COULDN'T FIGURE OUT HOW TO UNBIND IT FROM MY THIRDPERSON KEY AND IT KEPT MAKING SCREENSHOTS SO I DECIDED TO DO THIS
 MAKE_HOOK(ReportAbuseShit, S::ReportAbuseShit(), void*)
 {
-	*reinterpret_cast< void** >( U::Memory.RelToAbs( S::AbuseReportManager( ) ) ) = nullptr; // report manager is dead tf2 is now saved.
-	return CALL_ORIGINAL( );
+	*reinterpret_cast<void**>(U::Memory.RelToAbs(S::AbuseReportManager())) = nullptr; // report manager is dead tf2 is now saved.
+	return CALL_ORIGINAL();
 }

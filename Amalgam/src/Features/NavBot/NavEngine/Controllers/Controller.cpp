@@ -18,8 +18,12 @@ ETFGameType GetGameType( )
 
 void CGameObjectiveController::Update( )
 {
-	if ( !m_eGameMode )
-		m_eGameMode = GetGameType( );
+	static Timer tUpdateGameType;
+	if ( tUpdateGameType.Run(1.f) )
+	{
+		m_eGameMode = GetGameType();
+		SDK::Output( "CGameObjectiveController", std::format( "Current game mode: {}", (int)m_eGameMode ).c_str( ), { 60, 255, 60, 255 }, Vars::Debug::Logging.Value );
+	}
 	
 	switch ( m_eGameMode )
 	{
@@ -45,7 +49,6 @@ void CGameObjectiveController::Update( )
 void CGameObjectiveController::Reset( )
 {
 	m_eGameMode = GetGameType( );
-	SDK::Output( "CGameObjectiveController", std::format( "Current game mode: {}", (int)m_eGameMode ).c_str( ), { 60, 255, 60, 255 }, Vars::Debug::Logging.Value );
 	F::FlagController.Init( );
 	F::PLController.Init( );
 	F::CPController.Init( );

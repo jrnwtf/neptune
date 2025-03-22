@@ -26,9 +26,9 @@ MAKE_HOOK(CViewRender_LevelInit, U::Memory.GetVFunc(I::ViewRender, 1), void,
 	F::Ticks.Reset();
 	F::NoSpreadHitscan.Reset();
 	F::CheaterDetection.Reset();
-	F::GameObjectiveController.Reset( );
-	F::NavEngine.OnLevelInit( );
-	F::NavBot.OnLevelInit( );
+	F::GameObjectiveController.Reset();
+	F::NavEngine.Reset();
+	F::NavBot.Reset();
 
 	CALL_ORIGINAL(rcx);
 }

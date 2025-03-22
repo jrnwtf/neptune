@@ -2,80 +2,77 @@
 
 //TODO: fix
 
-void CCPController::UpdateObjectiveResource( )
+void CCPController::UpdateObjectiveResource()
 {
 	// Get ObjectiveResource
-	pObjectiveResource = H::Entities.GetOR( );
+	m_pObjectiveResource = H::Entities.GetOR();
 }
 
 // Don't constantly update the cap status
-static Timer capstatus_update{};
-void CCPController::UpdateControlPoints( )
+static Timer tCapStatusUpdate{};
+void CCPController::UpdateControlPoints()
 {
 	// No objective resource, can't run
-	if ( !pObjectiveResource )
+	if (!m_pObjectiveResource)
 		return;
 
-	const int num_cp = pObjectiveResource->m_iNumControlPoints( );
-
+	const int iNumControlPoints = m_pObjectiveResource->m_iNumControlPoints();
 	// No control points
-	if ( !num_cp )
+	if (!iNumControlPoints)
 		return;
 
 	// Clear the invalid controlpoints
-	if ( num_cp <= MAX_CONTROL_POINTS )
+	if (iNumControlPoints <= MAX_CONTROL_POINTS)
 	{
-		for ( int i = num_cp; i < MAX_CONTROL_POINTS; ++i )
-			ControlPointData[ i ] = CPInfo( );
+		for (int i = iNumControlPoints; i < MAX_CONTROL_POINTS; ++i)
+			m_aControlPointData[i] = CPInfo();
 	}
 
-	for ( int i = 0; i < num_cp; ++i )
+	for (int i = 0; i < iNumControlPoints; ++i)
 	{
-		auto& data = ControlPointData[ i ];
-		data.Idx = i;
+		auto& tData = m_aControlPointData[i];
+		tData.m_iIdx = i;
 
 		// Update position
-		data.vPos = pObjectiveResource->CPPositions( i );
+		tData.m_vPos = m_pObjectiveResource->CPPositions(i);
 	}
 
-	if ( capstatus_update.Run( 1.f ) )
+	if (tCapStatusUpdate.Run(1.f))
 	{
-		for ( int i = 0; i < num_cp; ++i )
+		for (int i = 0; i < iNumControlPoints; ++i)
 		{
-			auto& data = ControlPointData[ i ];
-			
+			auto& tData = m_aControlPointData[i];
+
 			// Check accessibility for both teams, requires alot of checks
-			const bool CanCapRED = IsPointUseable( i, TF_TEAM_RED );
-			const bool CanCapBLU = IsPointUseable( i, TF_TEAM_BLUE );
-			
-			data.bCanCap.at( 0 ) = CanCapRED;
-			data.bCanCap.at( 1 ) = CanCapBLU;
+			const bool bCanCapRED = IsPointUseable(i, TF_TEAM_RED);
+			const bool bCanCapBLU = IsPointUseable(i, TF_TEAM_BLUE);
+
+			tData.m_bCanCap.at(0) = bCanCapRED;
+			tData.m_bCanCap.at(1) = bCanCapBLU;
 		}
 	}
 }
 
-bool CCPController::TeamCanCapPoint( int index, int team )
+bool CCPController::TeamCanCapPoint(int iIndex, int iTeam)
 {
-	const int arr_index = index + team * MAX_CONTROL_POINTS;
-	return pObjectiveResource->TeamCanCap( arr_index );
+	return m_pObjectiveResource->TeamCanCap(iIndex + iTeam * MAX_CONTROL_POINTS);
 }
 
-int CCPController::GetPreviousPointForPoint( int index, int team, int previndex )
+int CCPController::GetPreviousPointForPoint(int iIndex, int iTeam, int iPrevIdx)
 {
-	const int iIntIndex = previndex + ( index * MAX_PREVIOUS_POINTS ) + ( team * MAX_CONTROL_POINTS * MAX_PREVIOUS_POINTS );
-	return pObjectiveResource->PreviousPoints( iIntIndex );
+	return m_pObjectiveResource->PreviousPoints(iPrevIdx + (iIndex * MAX_PREVIOUS_POINTS) + (iTeam * MAX_CONTROL_POINTS * MAX_PREVIOUS_POINTS));
 }
 
-int CCPController::GetFarthestOwnedControlPoint( int team )
+int CCPController::GetFarthestOwnedControlPoint(int iTeam)
 {
-	const int iOwnedEnd = pObjectiveResource->BaseControlPoints( team );
-	if ( iOwnedEnd == -1 )
+	int iOwnedEnd = m_pObjectiveResource->BaseControlPoints(iTeam);
+	if (iOwnedEnd == -1)
 		return -1;
 
-	const int iNumControlPoints = pObjectiveResource->m_iNumControlPoints( );
+	int iNumControlPoints = m_pObjectiveResource->m_iNumControlPoints();
 	int iWalk = 1;
 	int iEnemyEnd = iNumControlPoints - 1;
-	if ( iOwnedEnd != 0 )
+	if (iOwnedEnd != 0)
 	{
 		iWalk = -1;
 		iEnemyEnd = 0;
@@ -83,10 +80,10 @@ int CCPController::GetFarthestOwnedControlPoint( int team )
 
 	// Walk towards the other side, and find the farthest owned point
 	int iFarthestPoint = iOwnedEnd;
-	for ( int iPoint = iOwnedEnd; iPoint != iEnemyEnd; iPoint += iWalk )
+	for (int iPoint = iOwnedEnd; iPoint != iEnemyEnd; iPoint += iWalk)
 	{
 		// If we've hit a point we don't own, we're done
-		if ( pObjectiveResource->OwningTeam( iPoint ) != team )
+		if (m_pObjectiveResource->OwningTeam(iPoint) != iTeam)
 			break;
 
 		iFarthestPoint = iPoint;
@@ -95,45 +92,45 @@ int CCPController::GetFarthestOwnedControlPoint( int team )
 	return iFarthestPoint;
 }
 
-bool CCPController::IsPointUseable( int index, int team )
+bool CCPController::IsPointUseable(int iIndex, int iTeam)
 {
 	// We Own it, can't cap it
-	if ( pObjectiveResource->OwningTeam( index ) == team )
+	if (m_pObjectiveResource->OwningTeam(iIndex) == iTeam)
 		return false;
 
 	// Can we cap the point?
-	if ( !TeamCanCapPoint( index, team ) )
+	if (!TeamCanCapPoint(iIndex, iTeam))
 		return false;
 
 	// We are playing a sectioned map, check if the CP is in it
-	if ( pObjectiveResource->m_bPlayingMiniRounds( ) && !pObjectiveResource->InMiniRound( index) )
+	if (m_pObjectiveResource->m_bPlayingMiniRounds() && !m_pObjectiveResource->InMiniRound(iIndex))
 		return false;
 
 	// Is the point locked?
-	if ( pObjectiveResource->CPLocked( index ) )
+	if (m_pObjectiveResource->CPLocked(iIndex))
 		return false;
 
 	// Linear cap means that it won't require previous points, bail
-	static auto tf_caplinear = U::ConVars.FindVar( "tf_caplinear" );
-	if ( tf_caplinear && !tf_caplinear->GetBool( ) )
+	static auto tf_caplinear = U::ConVars.FindVar("tf_caplinear");
+	if (!tf_caplinear || tf_caplinear->GetBool())
 		return true;
 
 	// Any previous points necessary?
-	int iPointNeeded = GetPreviousPointForPoint( index, team, 0 );
+	int iPointNeeded = GetPreviousPointForPoint(iIndex, iTeam, 0);
 
 	// Points set to require themselves are always cappable
-	if ( iPointNeeded == index )
+	if (iPointNeeded == iIndex)
 		return true;
 
 	// No required points specified? Require all previous points.
-	if ( iPointNeeded == -1 )
+	if (iPointNeeded == -1)
 	{
 		// No Mini rounds
-		if ( !pObjectiveResource->m_bPlayingMiniRounds( ) )
+		if (!m_pObjectiveResource->m_bPlayingMiniRounds())
 		{
 			// No custom previous point, team must own all previous points
-			const int iFarthestPoint = GetFarthestOwnedControlPoint( team );
-			return ( abs( iFarthestPoint - index ) <= 1 );
+			int iFarthestPoint = GetFarthestOwnedControlPoint(iTeam);
+			return (abs(iFarthestPoint - iIndex) <= 1);
 		}
 		// We got a section map
 		else
@@ -142,73 +139,62 @@ bool CCPController::IsPointUseable( int index, int team )
 	}
 
 	// Loop through each previous point and see if the team owns it
-	for ( int iPrevPoint = 0; iPrevPoint < MAX_PREVIOUS_POINTS; iPrevPoint++ )
+	for (int iPrevPoint = 0; iPrevPoint < MAX_PREVIOUS_POINTS; iPrevPoint++)
 	{
-		iPointNeeded = GetPreviousPointForPoint( index, team, iPrevPoint );
-		if ( iPointNeeded != -1 )
+		iPointNeeded = GetPreviousPointForPoint(iIndex, iTeam, iPrevPoint);
+		if (iPointNeeded != -1)
 		{
 			// We don't own the needed points
-			if ( pObjectiveResource->OwningTeam( iPointNeeded ) != team )
+			if (m_pObjectiveResource->OwningTeam(iPointNeeded) != iTeam)
 				return false;
 		}
 	}
 	return true;
 }
 
-std::optional<Vector> CCPController::GetClosestControlPoint( Vector source, int team )
+std::optional<Vector> CCPController::GetClosestControlPoint(Vector vPos, int iTeam)
 {
 	// No resource for it
-	if ( !pObjectiveResource )
+	if (!m_pObjectiveResource)
 		return std::nullopt;
 
-	// Check if it's a cp map
-	//static auto tf_gamemode_cp = U::ConVars.FindVar( "tf_gamemode_cp" );
-	//if ( !tf_gamemode_cp )
-	//{
-	//	tf_gamemode_cp = U::ConVars.FindVar( "tf_gamemode_cp" );
-	//	return std::nullopt;
-	//}
-
-	//if ( !tf_gamemode_cp->GetBool( ) )
-	//	return std::nullopt;
-
 	// Map team to 0-1 and check If Valid
-	int team_idx = team - TF_TEAM_RED;
-	if ( team_idx < 0 || team_idx > 1 )
+	int iTeamIdx = iTeam - TF_TEAM_RED;
+	if (iTeamIdx < 0 || iTeamIdx > 1)
 		return std::nullopt;
 
 	// No controlpoints
-	if ( !pObjectiveResource->m_iNumControlPoints( ) )
+	if (!m_pObjectiveResource->m_iNumControlPoints())
 		return std::nullopt;
 
 	int IgnoreIdx = -1;
 	// Do the points need checking because of the map?
-	const auto& levelname = SDK::GetLevelName( );
-	for ( const auto& ignore : IgnorePoints )
+	auto sLevelName = SDK::GetLevelName();
+	for (auto tIgnore : m_aIgnorePoints)
 	{
 		// Try to find map name in bad point array
-		if ( levelname.find( ignore.szMapName ) != std::string::npos )
-			IgnoreIdx = ignore.PointIdx;
+		if (sLevelName.find(tIgnore.m_sMapName) != std::string::npos)
+			IgnoreIdx = tIgnore.m_iPointIdx;
 	}
 
 	// Find the best and closest control point
 	std::optional<Vector> BestControlPoint;
 	float flBestDist = FLT_MAX;
-	for ( const auto& ControlPoint : ControlPointData )
+	for (auto tControlPoint : m_aControlPointData)
 	{
 		// Ignore this point
-		if ( ControlPoint.Idx == IgnoreIdx )
+		if (tControlPoint.m_iIdx == IgnoreIdx)
 			continue;
 
 		// They can cap
-		if ( ControlPoint.bCanCap.at( team_idx ) )
+		if (tControlPoint.m_bCanCap.at(iTeamIdx))
 		{
-			const auto flDist = ( *ControlPoint.vPos ).DistToSqr( source );
+			const auto flDist = (*tControlPoint.m_vPos).DistToSqr(vPos);
 			// Is it closer?
-			if ( ControlPoint.vPos && flDist < flBestDist )
+			if (tControlPoint.m_vPos && flDist < flBestDist)
 			{
 				flBestDist = flDist;
-				BestControlPoint = ControlPoint.vPos;
+				BestControlPoint = tControlPoint.m_vPos;
 			}
 		}
 	}
@@ -216,16 +202,16 @@ std::optional<Vector> CCPController::GetClosestControlPoint( Vector source, int 
 	return BestControlPoint;
 }
 
-void CCPController::Init( )
+void CCPController::Init()
 {
-	for ( auto& cp : ControlPointData )
-		cp = CPInfo( );
+	for (auto& cp : m_aControlPointData)
+		cp = CPInfo();
 
-	pObjectiveResource = nullptr;
+	m_pObjectiveResource = nullptr;
 }
 
-void CCPController::Update( )
+void CCPController::Update()
 {
-	UpdateObjectiveResource( );
-	UpdateControlPoints( );
+	UpdateObjectiveResource();
+	UpdateControlPoints();
 }

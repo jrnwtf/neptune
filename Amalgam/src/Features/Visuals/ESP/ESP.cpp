@@ -70,17 +70,17 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 
 		int iClassNum = pPlayer->m_iClass();
 		auto pWeapon = pPlayer->m_hActiveWeapon().Get()->As<CTFWeaponBase>();
-		
+
 		// distance things
 		const Vec3 vDelta = pPlayer->m_vecOrigin() - pLocal->m_vecOrigin();
 		const float flDistance = vDelta.Length2D();
 		if (flDistance >= Vars::ESP::MaxDist.Value) { continue; }
 
-		const bool bDormant = pPlayer->IsDormant( );
+		const bool bDormant = pPlayer->IsDormant();
 		float flAlpha = bDormant ? Vars::ESP::DormantAlpha.Value : Vars::ESP::ActiveAlpha.Value;
 		if (Vars::ESP::Dist2Alpha.Value)
-			flAlpha = Math::RemapValClamped( flDistance, Vars::ESP::MaxDist.Value - 256.f, Vars::ESP::MaxDist.Value, flAlpha / 255.f, 0.f );
-		
+			flAlpha = Math::RemapValClamped(flDistance, Vars::ESP::MaxDist.Value - 256.f, Vars::ESP::MaxDist.Value, flAlpha / 255.f, 0.f);
+
 		PlayerCache& tCache = m_mPlayerCache[pEntity];
 		tCache.m_flAlpha = flAlpha;
 		tCache.m_tColor = GetColor(pLocal, pPlayer);
@@ -135,13 +135,13 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				if (vTags.size())
 				{
 					std::sort(vTags.begin(), vTags.end(), [&](const auto a, const auto b) -> bool
-						{
-							// sort by priority if unequal
-							if (a->Priority != b->Priority)
-								return a->Priority > b->Priority;
+							  {
+								  // sort by priority if unequal
+								  if (a->Priority != b->Priority)
+									  return a->Priority > b->Priority;
 
-							return a->Name < b->Name;
-						});
+								  return a->Name < b->Name;
+							  });
 
 					for (auto& pTag : vTags) // 50 alpha as white outline tends to be more apparent
 						tCache.m_vText.emplace_back(ESPTextEnum::Right, pTag->Name, pTag->Color, H::Draw.IsColorDark(pTag->Color) ? Color_t(255, 255, 255, 50) : Color_t(0, 0, 0, 255));
@@ -253,9 +253,9 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 			{
 				bool bCrits = false, bMiniCrits = false;
 				if (pPlayer->IsCritBoosted())
-					pWeapon && pWeapon->GetWeaponID() == TF_WEAPON_PARTICLE_CANNON ? bMiniCrits = true : bCrits = true;
+					pWeapon&& pWeapon->GetWeaponID() == TF_WEAPON_PARTICLE_CANNON ? bMiniCrits = true : bCrits = true;
 				if (pPlayer->IsMiniCritBoosted())
-					pWeapon && pWeapon->m_iItemDefinitionIndex() == Sniper_t_TheBushwacka ? bCrits = true : bMiniCrits = true;
+					pWeapon&& pWeapon->m_iItemDefinitionIndex() == Sniper_t_TheBushwacka ? bCrits = true : bMiniCrits = true;
 				if (pWeapon && pWeapon->m_iItemDefinitionIndex() == Soldier_t_TheMarketGardener && pPlayer->InCond(TF_COND_BLASTJUMPING))
 					bCrits = true, bMiniCrits = false;
 
@@ -466,7 +466,7 @@ void CESP::StoreBuildings(CTFPlayer* pLocal)
 
 		float flAlpha = Vars::ESP::ActiveAlpha.Value;
 		if (Vars::ESP::Dist2Alpha.Value)
-			flAlpha = Math::RemapValClamped( flDistance, Vars::ESP::MaxDist.Value - 256.f, Vars::ESP::MaxDist.Value, flAlpha / 255.f, 0.f );
+			flAlpha = Math::RemapValClamped(flDistance, Vars::ESP::MaxDist.Value - 256.f, Vars::ESP::MaxDist.Value, flAlpha / 255.f, 0.f);
 
 		BuildingCache& tCache = m_mBuildingCache[pEntity];
 		tCache.m_flAlpha = flAlpha;
@@ -592,7 +592,7 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 		}
 		case ETFClassID::CTFBaseProjectile:
 		case ETFClassID::CTFProjectile_EnergyRing:
-		//case ETFClassID::CTFProjectile_Syringe:
+			//case ETFClassID::CTFProjectile_Syringe:
 		{
 			auto pWeapon = pEntity->As<CTFBaseProjectile>()->m_hLauncher().Get();
 			pOwner = pWeapon ? pWeapon->As<CTFWeaponBase>()->m_hOwner().Get() : nullptr;
@@ -628,7 +628,7 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 
 		float flAlpha = Vars::ESP::ActiveAlpha.Value;
 		if (Vars::ESP::Dist2Alpha.Value)
-			flAlpha = Math::RemapValClamped( flDistance, Vars::ESP::MaxDist.Value - 256.f, Vars::ESP::MaxDist.Value, flAlpha / 255.f, 0.f );
+			flAlpha = Math::RemapValClamped(flDistance, Vars::ESP::MaxDist.Value - 256.f, Vars::ESP::MaxDist.Value, flAlpha / 255.f, 0.f);
 
 		WorldCache& tCache = m_mWorldCache[pEntity];
 		tCache.m_flAlpha = flAlpha;
@@ -645,9 +645,9 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			const char* szName = "Projectile";
 			switch (pEntity->GetClassID())
 			{
-			//case ETFClassID::CBaseProjectile:
-			//case ETFClassID::CBaseGrenade:
-			//case ETFClassID::CTFWeaponBaseGrenadeProj:
+				//case ETFClassID::CBaseProjectile:
+				//case ETFClassID::CBaseGrenade:
+				//case ETFClassID::CTFWeaponBaseGrenadeProj:
 			case ETFClassID::CTFWeaponBaseMerasmusGrenade: szName = "Bomb"; break;
 			case ETFClassID::CTFGrenadePipebombProjectile: szName = pEntity->As<CTFGrenadePipebombProjectile>()->HasStickyEffects() ? "Sticky" : "Pipe"; break;
 			case ETFClassID::CTFStunBall: szName = "Baseball"; break;
@@ -666,14 +666,14 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_SpellSpawnHorde:
 			case ETFClassID::CTFProjectile_SpellSpawnZombie: szName = "Skeleton"; break;
 			case ETFClassID::CTFProjectile_SpellTransposeTeleport: szName = "Teleport"; break;
-			//case ETFClassID::CTFProjectile_Throwable:
-			//case ETFClassID::CTFProjectile_ThrowableBrick:
-			//case ETFClassID::CTFProjectile_ThrowableRepel: szName = "Throwable"; break;
+				//case ETFClassID::CTFProjectile_Throwable:
+				//case ETFClassID::CTFProjectile_ThrowableBrick:
+				//case ETFClassID::CTFProjectile_ThrowableRepel: szName = "Throwable"; break;
 			case ETFClassID::CTFProjectile_Arrow: szName = "Arrow"; break;
 			case ETFClassID::CTFProjectile_GrapplingHook: szName = "Grapple"; break;
 			case ETFClassID::CTFProjectile_HealingBolt: szName = "Heal"; break;
-			//case ETFClassID::CTFBaseRocket:
-			//case ETFClassID::CTFFlameRocket:
+				//case ETFClassID::CTFBaseRocket:
+				//case ETFClassID::CTFFlameRocket:
 			case ETFClassID::CTFProjectile_Rocket:
 			case ETFClassID::CTFProjectile_EnergyBall:
 			case ETFClassID::CTFProjectile_SentryRocket: szName = "Rocket"; break;
@@ -683,9 +683,9 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_SpellLightningOrb: szName = "Lightning"; break;
 			case ETFClassID::CTFProjectile_SpellKartOrb: szName = "Fist"; break;
 			case ETFClassID::CTFProjectile_Flare: szName = "Flare"; break;
-			//case ETFClassID::CTFBaseProjectile:
+				//case ETFClassID::CTFBaseProjectile:
 			case ETFClassID::CTFProjectile_EnergyRing: szName = "Energy"; break;
-			//case ETFClassID::CTFProjectile_Syringe: szName = "Syringe";
+				//case ETFClassID::CTFProjectile_Syringe: szName = "Syringe";
 			}
 			tCache.m_vText.emplace_back(ESPTextEnum::Top, szName, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 		}
@@ -765,7 +765,7 @@ void CESP::StoreObjective(CTFPlayer* pLocal)
 
 		float flAlpha = Vars::ESP::ActiveAlpha.Value;
 		if (Vars::ESP::Dist2Alpha.Value)
-			flAlpha = Math::RemapValClamped( flDistance, Vars::ESP::MaxDist.Value - 256.f, Vars::ESP::MaxDist.Value, flAlpha / 255.f, 0.f );
+			flAlpha = Math::RemapValClamped(flDistance, Vars::ESP::MaxDist.Value - 256.f, Vars::ESP::MaxDist.Value, flAlpha / 255.f, 0.f);
 
 		WorldCache& tCache = m_mWorldCache[pEntity];
 		tCache.m_flAlpha = flAlpha;
@@ -886,12 +886,12 @@ void CESP::StoreWorld()
 			case FNV1A::Hash32Const("models/pickups/pickup_powerup_precision.mdl"): szName = "Precision"; break;
 			case FNV1A::Hash32Const("models/pickups/pickup_powerup_reflect.mdl"): szName = "Reflect"; break;
 			case FNV1A::Hash32Const("models/pickups/pickup_powerup_regen.mdl"): szName = "Regeneration"; break;
-			//case FNV1A::Hash32Const("models/pickups/pickup_powerup_resistance.mdl"): szName = "11"; break;
+				//case FNV1A::Hash32Const("models/pickups/pickup_powerup_resistance.mdl"): szName = "11"; break;
 			case FNV1A::Hash32Const("models/pickups/pickup_powerup_strength.mdl"): szName = "Strength"; break;
-			//case FNV1A::Hash32Const("models/pickups/pickup_powerup_strength_arm.mdl"): szName = "13"; break;
+				//case FNV1A::Hash32Const("models/pickups/pickup_powerup_strength_arm.mdl"): szName = "13"; break;
 			case FNV1A::Hash32Const("models/pickups/pickup_powerup_supernova.mdl"): szName = "Supernova"; break;
-			//case FNV1A::Hash32Const("models/pickups/pickup_powerup_thorns.mdl"): szName = "15"; break;
-			//case FNV1A::Hash32Const("models/pickups/pickup_powerup_uber.mdl"): szName = "16"; break;
+				//case FNV1A::Hash32Const("models/pickups/pickup_powerup_thorns.mdl"): szName = "15"; break;
+				//case FNV1A::Hash32Const("models/pickups/pickup_powerup_uber.mdl"): szName = "16"; break;
 			case FNV1A::Hash32Const("models/pickups/pickup_powerup_vampire.mdl"): szName = "Vampire";
 			}
 			tCache.m_vText.emplace_back(ESPTextEnum::Top, szName, Vars::Colors::Powerup.Value, Vars::Menu::Theme::Background.Value);

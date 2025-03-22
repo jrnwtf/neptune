@@ -6,8 +6,8 @@ class CGameObjectiveController
 public:
 	ETFGameType m_eGameMode = TF_GAMETYPE_UNDEFINED;
 	bool m_bDoomsday = false;
-	void Update( );
-	void Reset( );
+	void Update();
+	void Reset();
 };
 
-ADD_FEATURE( CGameObjectiveController, GameObjectiveController );
+ADD_FEATURE(CGameObjectiveController, GameObjectiveController)

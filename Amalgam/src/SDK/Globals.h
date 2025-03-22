@@ -70,7 +70,6 @@ namespace G
 	inline std::vector<DrawPath> PathStorage = {};
 	inline std::vector<DrawBox> BoxStorage = {};
 
-	inline int NavbotTargetIdx = -1;
 	inline int SavedDefIndexes[ 3 ] = { -1,-1,-1 };
 	inline int SavedWepIds[ 3 ] = { -1,-1,-1 };
 	inline int AmmoInSlot[ 2 ] = { 0, 0 };

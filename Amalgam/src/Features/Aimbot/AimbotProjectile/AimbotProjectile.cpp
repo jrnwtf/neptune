@@ -5,6 +5,7 @@
 #include "../../Simulation/ProjectileSimulation/ProjectileSimulation.h"
 #include "../../TickHandler/TickHandler.h"
 #include "../../Visuals/Visuals.h"
+#include "../../NavBot/NavBot.h"
 
 //#define SPLASH_DEBUG1 // normal splash visualization
 //#define SPLASH_DEBUG2 // obstructed splash visualization
@@ -128,21 +129,19 @@ std::vector<Target_t> CAimbotProjectile::SortTargets(CTFPlayer* pLocal, CTFWeapo
 	F::AimbotGlobal.SortTargets(&vTargets, Vars::Aimbot::General::TargetSelection.Value);
 
 	// Prioritize navbot target
-	if ( Vars::Aimbot::General::PrioritizeNavbot.Value && G::NavbotTargetIdx )
+	if (Vars::Aimbot::General::PrioritizeNavbot.Value && F::NavBot.m_iStayNearTargetIdx)
 	{
-		std::sort( ( vTargets ).begin( ), ( vTargets ).end( ), [&]( const Target_t& a, const Target_t& b ) -> bool
-			{
-				return a.m_pEntity->entindex( ) == G::NavbotTargetIdx && b.m_pEntity->entindex( ) != G::NavbotTargetIdx;
-			} );
+		std::sort((vTargets).begin(), (vTargets).end(), [&](const Target_t& a, const Target_t& b) -> bool
+				  {
+					  return a.m_pEntity->entindex() == F::NavBot.m_iStayNearTargetIdx && b.m_pEntity->entindex() != F::NavBot.m_iStayNearTargetIdx;
+				  });
 	}
 
 	vTargets.resize(std::min(size_t(Vars::Aimbot::General::MaxTargets.Value), vTargets.size()));
-	if ( !Vars::Aimbot::General::PrioritizeNavbot.Value || !G::NavbotTargetIdx )
-		F::AimbotGlobal.SortPriority( &vTargets );
+	if (!Vars::Aimbot::General::PrioritizeNavbot.Value || !F::NavBot.m_iStayNearTargetIdx)
+		F::AimbotGlobal.SortPriority(&vTargets);
 	return vTargets;
 }
-
-
 
 static inline float GetSplashRadius(CTFWeaponBase* pWeapon, CTFPlayer* pLocal = nullptr)
 {

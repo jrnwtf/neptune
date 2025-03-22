@@ -56,24 +56,24 @@ class BlacklistReason
 public:
 	BlacklistReason_enum value;
 	int time = 0;
-	void operator=( BlacklistReason_enum const& reason )
+	void operator=(BlacklistReason_enum const& reason)
 	{
 		this->value = reason;
 	}
 
-	BlacklistReason( )
+	BlacklistReason()
 	{
-		this->value = ( BlacklistReason_enum )-1;
+		this->value = (BlacklistReason_enum)-1;
 		this->time = 0;
 	}
 
-	explicit BlacklistReason( BlacklistReason_enum reason )
+	explicit BlacklistReason(BlacklistReason_enum reason)
 	{
 		this->value = reason;
 		this->time = 0;
 	}
 
-	BlacklistReason( BlacklistReason_enum reason, int time )
+	BlacklistReason(BlacklistReason_enum reason, int time)
 	{
 		this->value = reason;
 		this->time = time;
@@ -83,11 +83,11 @@ public:
 class CNavParser
 {
 public:
-	std::optional<Vector> GetDormantOrigin( int index );
-	bool IsVectorVisibleNavigation( Vector from, Vector to, unsigned int mask = MASK_SHOT_HULL );
-	static bool IsSetupTime( );
-	void DoSlowAim( Vector& input_angle, float speed, Vector viewangles);
-	Vector GetForwardVector( Vector origin, Vector viewangles, float distance );
+	std::optional<Vector> GetDormantOrigin(int iIndex);
+	bool IsVectorVisibleNavigation(Vector from, Vector to, unsigned int mask = MASK_SHOT_HULL);
+	static bool IsSetupTime();
+	void DoSlowAim(Vector& input_angle, float speed, Vector viewangles);
+	Vector GetForwardVector(Vector origin, Vector viewangles, float distance);
 
 	struct Crumb
 	{
@@ -124,11 +124,11 @@ public:
 		State state;
 	};
 
-	bool CastRay( Vector origin, Vector endpos, unsigned mask, ITraceFilter* filter );
-	bool IsPlayerPassableNavigation( Vector origin, Vector target, unsigned int mask = MASK_PLAYERSOLID );
+	bool CastRay(Vector origin, Vector endpos, unsigned mask, ITraceFilter* filter);
+	bool IsPlayerPassableNavigation(Vector origin, Vector target, unsigned int mask = MASK_PLAYERSOLID);
 
-	Vector handleDropdown( Vector current_pos, Vector next_pos );
-	NavPoints determinePoints( CNavArea* current, CNavArea* next );
+	Vector handleDropdown(Vector current_pos, Vector next_pos);
+	NavPoints determinePoints(CNavArea* current, CNavArea* next);
 	class Map : public micropather::Graph
 	{
 	public:
@@ -145,62 +145,51 @@ public:
 		// When the local player stands on one of the nav squares the free blacklist should NOT run
 		bool free_blacklist_blocked = false;
 
-		explicit Map( const char* mapname ) : navfile( mapname ), mapname( mapname )
-		{
-			if ( !navfile.m_isOK )
-				state = NavState::Unavailable;
-			else
-				state = NavState::Active;
-		}
+		explicit Map(const char* mapname) : navfile(mapname), mapname(mapname) { state = navfile.m_isOK ? NavState::Active : NavState::Unavailable; }
 
-		float LeastCostEstimate( void* start, void* end ) override
-		{
-			return reinterpret_cast< CNavArea* >( start )->m_center.DistToSqr( reinterpret_cast< CNavArea* >( end )->m_center );
-		}
+		float LeastCostEstimate(void* start, void* end) override { return reinterpret_cast<CNavArea*>(start)->m_center.DistToSqr(reinterpret_cast<CNavArea*>(end)->m_center); }
 
-		void AdjacentCost( void* main, std::vector<micropather::StateCost>* adjacent ) override;
+		void AdjacentCost(void* main, std::vector<micropather::StateCost>* adjacent) override;
 
 		// Function for getting the closest area to the player, aka "LocalNav"
-		CNavArea* findClosestNavSquare( const Vector& vec );
+		CNavArea* findClosestNavSquare(const Vector& vec);
 
-		std::vector<void*> findPath( CNavArea* local, CNavArea* dest )
+		std::vector<void*> findPath(CNavArea* local, CNavArea* dest)
 		{
-			if ( state != NavState::Active )
+			if (state != NavState::Active)
 				return {};
 
 			std::vector<void*> path;
 			float cost;
 
 			//auto begin_pathing = std::chrono::high_resolution_clock::now( );
-			int result = pather.Solve( reinterpret_cast< void* >( local ), reinterpret_cast< void* >( dest ), &path, &cost );
+			int result = pather.Solve(reinterpret_cast<void*>(local), reinterpret_cast<void*>(dest), &path, &cost);
 			//auto timetaken = std::chrono::duration_cast< std::chrono::nanoseconds >( std::chrono::high_resolution_clock::now( ) - begin_pathing ).count( );
 
-			if ( result == micropather::MicroPather::START_END_SAME )
-				return { reinterpret_cast< void* >( local ) };
+			if (result == micropather::MicroPather::START_END_SAME)
+				return { reinterpret_cast<void*>(local) };
 
 			return path;
 		}
-		
-		void updateIgnores( );
 
-		void UpdateRespawnRooms( );
+		void updateIgnores();
 
-		void Reset( )
+		void UpdateRespawnRooms();
+
+		void Reset()
 		{
-			vischeck_cache.clear( );
-			connection_stuck_time.clear( );
-			free_blacklist.clear( );
-			pather.Reset( );
+			vischeck_cache.clear();
+			connection_stuck_time.clear();
+			free_blacklist.clear();
+			pather.Reset();
 		}
 
 		// Unnecessary thing that is sadly necessary
-		void PrintStateInfo( void* )
-		{
-		}
+		void PrintStateInfo(void*) {}
 	};
 };
 
-ADD_FEATURE( CNavParser, NavParser );
+ADD_FEATURE(CNavParser, NavParser)
 
 class CNavEngine
 {
@@ -215,72 +204,55 @@ public:
 	bool m_bPathing = false;
 
 	// Is the Nav engine ready to run?
-	bool isReady( bool roundCheck = false );
+	bool isReady(bool bRoundCheck = false);
 
 	// Are we currently pathing?
-	bool isPathing( )
-	{
-		return !crumbs.empty( );
-	}
+	bool isPathing() { return !crumbs.empty(); }
 
-	CNavFile* getNavFile( )
-	{
-		return &map->navfile;
-	}
+	CNavFile* getNavFile() { return &map->navfile; }
+
 	// Get closest nav square to target vector
-	CNavArea* findClosestNavSquare( const Vector origin )
-	{
-		return map->findClosestNavSquare( origin );
-	}
-	// Get the path nodes
-	std::vector<CNavParser::Crumb>* getCrumbs( )
-	{
-		return &crumbs;
-	}
+	CNavArea* findClosestNavSquare(const Vector origin) { return map->findClosestNavSquare(origin); }
 
-	bool navTo( const Vector& destination, int priority = patrol, bool should_repath = true, bool nav_to_local = true, bool is_repath = true );
+	// Get the path nodes
+	std::vector<CNavParser::Crumb>* getCrumbs() { return &crumbs; }
+
+	bool navTo(const Vector& destination, int priority = patrol, bool should_repath = true, bool nav_to_local = true, bool is_repath = true);
 	// Use when something unexpected happens, e.g. vischeck fails
-	void abandonPath( );
+	void abandonPath();
 
 	// Use to cancel pathing completely
-	void cancelPath( );
+	void cancelPath();
 
 	// Return the whole thing
-	std::unordered_map<CNavArea*, BlacklistReason>* getFreeBlacklist( )
-	{
-		return &map->free_blacklist;
-	}
+	std::unordered_map<CNavArea*, BlacklistReason>* getFreeBlacklist() { return &map->free_blacklist; }
 
 	// Return a specific category, we keep the same indexes to provide single element erasing
-	std::unordered_map<CNavArea*, BlacklistReason> getFreeBlacklist( BlacklistReason reason )
+	std::unordered_map<CNavArea*, BlacklistReason> getFreeBlacklist(BlacklistReason reason)
 	{
 		std::unordered_map<CNavArea*, BlacklistReason> return_map;
-		for ( const auto& entry : map->free_blacklist )
+		for (const auto& entry : map->free_blacklist)
 		{
 			// Category matches
-			if ( entry.second.value == reason.value )
-				return_map[ entry.first ] = entry.second;
+			if (entry.second.value == reason.value)
+				return_map[entry.first] = entry.second;
 		}
 		return return_map;
 	}
 
 	// Clear whole blacklist
-	void clearFreeBlacklist( ) const;
-
+	void clearFreeBlacklist() const { map->free_blacklist.clear(); }
 	// Clear by category
-	void clearFreeBlacklist( BlacklistReason reason )
-	{
-		std::erase_if( map->free_blacklist, [&reason]( const auto& entry ) { return entry.second.value == reason.value; } );
-	}
+	void clearFreeBlacklist(BlacklistReason reason) { std::erase_if(map->free_blacklist, [&reason](const auto& entry) { return entry.second.value == reason.value; }); }
 
 	CNavParser::Crumb current_crumb;
-	void followCrumbs( CTFPlayer* pLocal, CUserCmd* pCmd );
+	void followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd);
 
-	void vischeckPath( );
-	void checkBlacklist( );
-	void updateStuckTime( );
-	void CreateMove( CUserCmd* pCmd );
-	void OnLevelInit( );
+	void vischeckPath();
+	void checkBlacklist();
+	void updateStuckTime();
+	void Run(CUserCmd* pCmd);
+	void Reset(bool bForced = false);
 };
 
-ADD_FEATURE( CNavEngine, NavEngine );
+ADD_FEATURE(CNavEngine, NavEngine)

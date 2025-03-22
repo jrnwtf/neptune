@@ -135,7 +135,7 @@ std::deque<TickRecord> CBacktrack::GetValidRecords(std::deque<TickRecord>* pReco
 
 	for (auto& tRecord : *pRecords)
 	{
-		float flDelta = fabsf(flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(tRecord.m_flSimTime)));
+		float flDelta = fabsf(flCorrect - (TICKS_TO_TIME(iServerTick) - tRecord.m_flSimTime));
 		float flWindow = Vars::Misc::Game::AntiCheatCompatibility.Value ? 0 : Vars::Backtrack::Window.Value;
 		if (flDelta > flWindow / 1000)
 			continue;
@@ -148,7 +148,7 @@ std::deque<TickRecord> CBacktrack::GetValidRecords(std::deque<TickRecord>* pReco
 		float flMinDelta = 0.2f;
 		for (auto& tRecord : *pRecords)
 		{
-			float flDelta = fabsf(flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(tRecord.m_flSimTime)));
+			float flDelta = fabsf(flCorrect - (TICKS_TO_TIME(iServerTick) - tRecord.m_flSimTime));
 			if (flDelta > flMinDelta)
 				continue;
 			flMinDelta = flDelta;
@@ -194,7 +194,7 @@ void CBacktrack::MakeRecords()
 			continue;
 
 		auto pModel = pPlayer->GetModel();
-		if ( !pModel ) continue;
+		if (!pModel) continue;
 		auto pHDR = I::ModelInfoClient->GetStudiomodel(pModel);
 		if (!pHDR) continue;
 		auto pSet = pHDR->pHitboxSet(pEntity->As<CBaseAnimating>()->m_nHitboxSet());
@@ -203,16 +203,16 @@ void CBacktrack::MakeRecords()
 		std::vector<HitboxInfo> vHitboxInfos{};
 		const auto mBoneMatrix = *reinterpret_cast<BoneMatrix*>(H::Entities.GetBones(pPlayer->entindex()));
 
-		for ( int nHitbox = 0; nHitbox < pPlayer->GetNumOfHitboxes( ); nHitbox++ )
+		for (int nHitbox = 0; nHitbox < pPlayer->GetNumOfHitboxes(); nHitbox++)
 		{
-			auto pBox = pSet->pHitbox( nHitbox );
-			if ( !pBox ) continue;
+			auto pBox = pSet->pHitbox(nHitbox);
+			if (!pBox) continue;
 
 			const Vec3 iMin = pBox->bbmin, iMax = pBox->bbmax;
 			const int iBone = pBox->bone;
 			Vec3 vCenter{};
-			Math::VectorTransform((iMin + iMax) / 2, mBoneMatrix.m_aBones[iBone], vCenter );
-			vHitboxInfos.push_back( { iBone, nHitbox, vCenter, iMin, iMax } );
+			Math::VectorTransform((iMin + iMax) / 2, mBoneMatrix.m_aBones[iBone], vCenter);
+			vHitboxInfos.push_back({ iBone, nHitbox, vCenter, iMin, iMax });
 		}
 
 		auto& vRecords = m_mRecords[pPlayer];
@@ -226,14 +226,14 @@ void CBacktrack::MakeRecords()
 			pPlayer->m_vecMins(),
 			pPlayer->m_vecMaxs(),
 			m_mDidShoot[pPlayer->entindex()]
-			);
+		);
 		const TickRecord& tCurRecord = vRecords.front();
 
 		bool bLagComp = false;
 		if (pLastRecord)
 		{
 			const Vec3 vDelta = tCurRecord.m_vOrigin - pLastRecord->m_vOrigin;
-			
+
 			static auto sv_lagcompensation_teleport_dist = U::ConVars.FindVar("sv_lagcompensation_teleport_dist");
 			const float flDist = powf(sv_lagcompensation_teleport_dist ? sv_lagcompensation_teleport_dist->GetFloat() : 64.f, 2.f);
 			if (vDelta.Length2DSqr() > flDist)
@@ -390,9 +390,9 @@ void CBacktrack::RestorePing(CNetChannel* pNetChan)
 std::optional<TickRecord> CBacktrack::GetHitRecord(CBaseEntity* pEntity, CTFWeaponBase* pWeapon, CUserCmd* pCmd, CrosshairRecordInfo_t& InfoOut, const Vec3 vAngles, const Vec3 vPos)
 {
 	std::optional<TickRecord> pReturnRecord{};
-	float flMinFov{45.f};
-	float flMinDist{50.f};
-	bool bInsideRecord{false};
+	float flMinFov = 45.f;
+	float flMinDist = 50.f;
+	bool bInsideRecord = false;
 
 	if (auto pRecords = GetRecords(pEntity))
 	{
@@ -401,12 +401,12 @@ std::optional<TickRecord> CBacktrack::GetHitRecord(CBaseEntity* pEntity, CTFWeap
 			if (!pRecord.m_BoneMatrix.m_aBones)
 				continue;
 
-			for (int n = 0; n < pRecord.m_vHitboxInfos.size(); n++ )
+			for (int n = 0; n < pRecord.m_vHitboxInfos.size(); n++)
 			{
-				auto sHitboxInfo = pRecord.m_vHitboxInfos[ n ];
+				auto sHitboxInfo = pRecord.m_vHitboxInfos[n];
 
 				// pSet->pHitbox failed, this hitbox cannot be used
-				if ( sHitboxInfo.m_iBone == -1 )
+				if (sHitboxInfo.m_iBone == -1)
 					continue;
 
 				const auto vAngleTo = Math::CalcAngle(vPos, sHitboxInfo.m_vCenter);
@@ -429,7 +429,7 @@ std::optional<TickRecord> CBacktrack::GetHitRecord(CBaseEntity* pEntity, CTFWeap
 		}
 	}
 
-	InfoOut = {flMinDist, flMinFov, bInsideRecord};
+	InfoOut = { flMinDist, flMinFov, bInsideRecord };
 	return pReturnRecord;
 }
 
@@ -447,38 +447,38 @@ void CBacktrack::BacktrackToCrosshair(CUserCmd* pCmd)
 	{
 		const Vec3 vShootPos = pLocal->GetShootPos();
 		const Vec3 vAngles = pCmd->viewangles;
-		
+
 		std::vector<std::pair<TickRecord, CrosshairRecordInfo_t>> vValidRecords;
 		for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
 		{
 			if (!pEntity)
 				continue;
 
-			if (/*pEntity->IsDormant() || */!pEntity->As<CTFPlayer>()->IsAlive( ) || pEntity->As<CTFPlayer>()->IsAGhost( ) || pEntity->As<CTFPlayer>()->IsInvulnerable( ) )
+			if (/*pEntity->IsDormant() || */!pEntity->As<CTFPlayer>()->IsAlive() || pEntity->As<CTFPlayer>()->IsAGhost() || pEntity->As<CTFPlayer>()->IsInvulnerable())
 				continue;
 
 			CrosshairRecordInfo_t sRecordInfo{};
 			if (auto pCheckRec = GetHitRecord(pEntity, pWeapon, pCmd, sRecordInfo, vAngles, vShootPos))
-				vValidRecords.push_back({*pCheckRec, sRecordInfo});
+				vValidRecords.push_back({ *pCheckRec, sRecordInfo });
 		}
 
 		std::optional<TickRecord> pReturnTick{};
 		if (!vValidRecords.empty())
 		{
 			auto pFinalTick = std::ranges::min_element(vValidRecords,
-			[&](const std::pair<TickRecord, CrosshairRecordInfo_t>& a, const std::pair<TickRecord, CrosshairRecordInfo_t>& b)
-			{
-				const bool bInsideBoth = a.second.bInsideThisRecord && b.second.bInsideThisRecord;
-				const bool bNotInsideRecords = !a.second.bInsideThisRecord && !b.second.bInsideThisRecord;
-
-				const bool bResult =
+				[&](const std::pair<TickRecord, CrosshairRecordInfo_t>& a, const std::pair<TickRecord, CrosshairRecordInfo_t>& b)
 				{
-						bInsideBoth ? a.second.flMinDist < b.second.flMinDist :
-						bNotInsideRecords ? a.second.flFov < b.second.flFov :
-						a.second.bInsideThisRecord
-				};
-				return bResult;
-			});
+					const bool bInsideBoth = a.second.bInsideThisRecord && b.second.bInsideThisRecord;
+					const bool bNotInsideRecords = !a.second.bInsideThisRecord && !b.second.bInsideThisRecord;
+
+					const bool bResult =
+					{
+							bInsideBoth ? a.second.flMinDist < b.second.flMinDist :
+							bNotInsideRecords ? a.second.flFov < b.second.flFov :
+							a.second.bInsideThisRecord
+					};
+					return bResult;
+				});
 			pReturnTick = pFinalTick->first;
 		}
 

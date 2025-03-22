@@ -374,7 +374,7 @@ void CCritHack::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 
 	if (pWeapon->GetWeaponID() == TF_WEAPON_MINIGUN && pCmd->buttons & IN_ATTACK)
 		pCmd->buttons &= ~IN_ATTACK2;
-	
+
 	bool bAttacking = G::Attacking /*== 1*/ || F::Ticks.m_bDoubletap || F::Ticks.m_bSpeedhack;
 	if (G::PrimaryWeaponType == EWeaponType::MELEE)
 	{
@@ -400,7 +400,7 @@ void CCritHack::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 			pCmd->command_number = closestCrit;
 			uLastCritCmdNum = closestCrit;
 			m_bForce = false;
-			SDK::Output( "CCritHack", std::format( "Using {} cmdnum for crits", closestCrit ).c_str( ), { 0, 255, 255, 255 } );
+			SDK::Output("CCritHack", std::format("Using {} cmdnum for crits", closestCrit).c_str(), { 0, 255, 255, 255 });
 		}
 		else if (Vars::CritHack::AvoidRandom.Value && closestSkip)
 			pCmd->command_number = closestSkip;
@@ -617,7 +617,7 @@ void CCritHack::Draw(CTFPlayer* pLocal)
 
 			int iCrits = tStorage.m_iAvailableCrits;
 			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, align, std::format("{}{} / {} potential crits", iCrits, iCrits == 1000 ? "+" : "", tStorage.m_iPotentialCrits).c_str());
-		
+
 			if (iCrits && tStorage.m_iNextCrit)
 			{
 				int iShots = tStorage.m_iNextCrit;
@@ -634,7 +634,7 @@ void CCritHack::Draw(CTFPlayer* pLocal)
 			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, align, std::format("Damage: {}, Cost: {}", tStorage.m_flDamage, tStorage.m_flCost).c_str());
 			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, align, std::format("CritChance: {:.2f} ({:.2f})", m_flCritChance, m_flCritChance + 0.1f).c_str());
 			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, align, std::format("Force: {}, Skip: {}", tStorage.m_vCritCommands.size(), tStorage.m_vSkipCommands.size()).c_str());
-			
+
 			/*
 			if (pCTFGameStats)
 			{

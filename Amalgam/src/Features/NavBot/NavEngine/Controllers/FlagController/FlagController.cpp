@@ -1,119 +1,117 @@
 #include "FlagController.h"
 
-FlagInfo CFlagController::GetFlag( int iTeam )
+FlagInfo CFlagController::GetFlag(int iTeam)
 {
-	for ( auto& flag : m_vFlags )
+	for (auto tFlag : m_vFlags)
 	{
-		if ( !flag.pFlag )
+		if (!tFlag.m_pFlag)
 			continue;
 
-		if ( flag.iTeam == iTeam )
-			return flag;
+		if (tFlag.m_iTeam == iTeam)
+			return tFlag;
 	}
 
 	return {};
 }
 
-Vector CFlagController::GetPosition( CCaptureFlag* pFlag )
+Vector CFlagController::GetPosition(CCaptureFlag* pFlag)
 {
-	return pFlag->GetAbsOrigin( );
+	return pFlag->GetAbsOrigin();
 }
 
-std::optional<Vector> CFlagController::GetPosition( int iTeam )
+std::optional<Vector> CFlagController::GetPosition(int iTeam)
 {
-	const auto& flag = GetFlag( iTeam );
-	if ( flag.pFlag )
-		return GetPosition( flag.pFlag );
+	auto tFlag = GetFlag(iTeam);
+	if (tFlag.m_pFlag)
+		return GetPosition(tFlag.m_pFlag);
 
 	return std::nullopt;
 }
 
-std::optional<Vector> CFlagController::GetSpawnPosition( int iTeam )
+std::optional<Vector> CFlagController::GetSpawnPosition(int iTeam)
 {
-	const auto& flag = GetFlag( iTeam );
-	if ( flag.pFlag && m_mSpawnPositions.contains( flag.pFlag->entindex() ) )
-		return m_mSpawnPositions[ flag.pFlag->entindex() ];
+	auto tFlag = GetFlag(iTeam);
+	if (tFlag.m_pFlag && m_mSpawnPositions.contains(tFlag.m_pFlag->entindex()))
+		return m_mSpawnPositions[tFlag.m_pFlag->entindex()];
 
 	return std::nullopt;
 }
 
-int CFlagController::GetCarrier( CCaptureFlag* pFlag )
+int CFlagController::GetCarrier(CCaptureFlag* pFlag)
 {
-	if ( !pFlag )
+	if (!pFlag)
 		return -1;
 
-	auto OwnerEnt = pFlag->m_hOwnerEntity( ).Get();
-	if ( !OwnerEnt )
+	auto pOwnerEnt = pFlag->m_hOwnerEntity().Get();
+	if (!pOwnerEnt)
 		return -1;
 
-	auto carrier = OwnerEnt->As<CTFPlayer>();
-	if ( !carrier || carrier->IsDormant() || !carrier->IsPlayer( ) || !carrier->IsAlive( ) )
+	auto pPlayer = pOwnerEnt->As<CTFPlayer>();
+	if (pPlayer->IsDormant() || !pPlayer->IsPlayer() || !pPlayer->IsAlive())
 		return -1;
 
-	return carrier->entindex();
+	return pPlayer->entindex();
 }
 
-int CFlagController::GetCarrier( int iTeam )
+int CFlagController::GetCarrier(int iTeam)
 {
-	const auto& flag = GetFlag( iTeam );
+	auto tFlag = GetFlag(iTeam);
+	if (tFlag.m_pFlag)
+		return GetCarrier(tFlag.m_pFlag);
 
-	if ( flag.pFlag )
-		return GetCarrier( flag.pFlag );
-
-	SDK::Output( "CFlagController", std::format( "GetCarrier: No flag entity" ).c_str( ), { 255, 131, 131, 255 }, Vars::Debug::Logging.Value );
+	SDK::Output("CFlagController", std::format("GetCarrier: No flag entity").c_str(), { 255, 131, 131, 255 }, Vars::Debug::Logging.Value);
 
 	return -1;
 }
 
-int CFlagController::GetStatus( CCaptureFlag* pFlag )
+int CFlagController::GetStatus(CCaptureFlag* pFlag)
 {
-	return pFlag->m_nFlagStatus( );
+	return pFlag->m_nFlagStatus();
 }
 
-int CFlagController::GetStatus( int iTeam )
+int CFlagController::GetStatus(int iTeam)
 {
-	const auto& flag = GetFlag( iTeam );
-	if ( flag.pFlag )
-		return GetStatus( flag.pFlag );
+	auto tFlag = GetFlag(iTeam);
+	if (tFlag.m_pFlag)
+		return GetStatus(tFlag.m_pFlag);
 
 	// Mark as home if nothing is found
 	return TF_FLAGINFO_HOME;
 }
 
-void CFlagController::Init( )
+void CFlagController::Init()
 {
 	// Reset everything
-	m_vFlags.clear( );
-	m_mSpawnPositions.clear( );
+	m_vFlags.clear();
+	m_mSpawnPositions.clear();
 }
 
-void CFlagController::Update( )
+void CFlagController::Update()
 {
-	m_vFlags.clear( );
+	m_vFlags.clear();
 
 	// Find flags and get info
-	for ( auto pEntity : H::Entities.GetGroup( EGroupType::WORLD_OBJECTIVE ) )
+	for (auto pEntity : H::Entities.GetGroup(EGroupType::WORLD_OBJECTIVE))
 	{
-		if ( !pEntity || pEntity->GetClassID() != ETFClassID::CCaptureFlag )
+		if (pEntity->GetClassID() != ETFClassID::CCaptureFlag)
 			continue;
 
-		auto pFlag = pEntity->As<CCaptureFlag>( );
-
+		auto pFlag = pEntity->As<CCaptureFlag>();
 		// Cannot use dormant flag, but it is still potentially valid
-		if ( pFlag->IsDormant( ) )
+		if (pFlag->IsDormant())
 			continue;
-		
+
 		// Only CTF support for now (and sd_doomsday)
-		if ( pFlag->m_nType( ) != TF_FLAGTYPE_CTF && pFlag->m_nType( ) != TF_FLAGTYPE_RESOURCE_CONTROL )
+		if (pFlag->m_nType() != TF_FLAGTYPE_CTF && pFlag->m_nType() != TF_FLAGTYPE_RESOURCE_CONTROL)
 			continue;
-		
-		FlagInfo info{};
-		info.pFlag = pFlag;
-		info.iTeam = pFlag->m_iTeamNum( );
 
-		if ( pFlag->m_nFlagStatus( ) == TF_FLAGINFO_HOME )
-			m_mSpawnPositions[pFlag->entindex()] = pFlag->GetAbsOrigin( );
+		FlagInfo tFlag{};
+		tFlag.m_pFlag = pFlag;
+		tFlag.m_iTeam = pFlag->m_iTeamNum();
 
-		m_vFlags.push_back(info);
+		if (pFlag->m_nFlagStatus() == TF_FLAGINFO_HOME)
+			m_mSpawnPositions[pFlag->entindex()] = pFlag->GetAbsOrigin();
+
+		m_vFlags.push_back(tFlag);
 	}
 }

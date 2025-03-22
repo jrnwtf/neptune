@@ -142,6 +142,7 @@ void CMenu::MenuAimbot(int iTab)
 				FToggle("FOV Circle", Vars::Aimbot::General::FOVCircle, FToggle_Right);
 				FToggle("Force crits", Vars::CritHack::ForceCrits, FToggle_Left);
 				FToggle("Avoid random crits", Vars::CritHack::AvoidRandom, FToggle_Right);
+				FColorPicker("No spread", Vars::Colors::NoSpread);
 				FToggle("Always melee crit", Vars::CritHack::AlwaysMeleeCrit, FToggle_Left);
 				FToggle("No spread", Vars::Aimbot::General::NoSpread, FToggle_Right);
 				FToggle("Prioritize navbot target", Vars::Aimbot::General::PrioritizeNavbot, FToggle_Left);
@@ -1073,12 +1074,12 @@ void CMenu::MenuMisc(int iTab)
 				FToggle("Enable", Vars::Misc::Movement::NavEngine::Enabled);
 				PushTransparent(!FGet(Vars::Misc::Movement::NavEngine::Enabled));
 					FToggle("Path in setup time", Vars::Misc::Movement::NavEngine::PathInSetup);
-					FDropdown( "Draw", Vars::Misc::Movement::NavEngine::Draw, { "Path", "Areas", "Blacklisted zones" }, {}, FDropdown_Multi, -50 );
+					FDropdown("Draw", Vars::Misc::Movement::NavEngine::Draw, { "Path", "Areas", "Blacklisted zones" }, {}, FDropdown_Multi, -50);
 					SameLine(); DebugDummy({ H::Draw.Scale(2), 0 });
-					FColorPicker( "Path color", Vars::Colors::NavbotPath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip, nullptr, "NavEngine path color" );
-					FColorPicker( "Area color", Vars::Colors::NavbotArea, 1, FColorPicker_Dropdown | FColorPicker_Tooltip, nullptr, "NavEngine area color" );
-					FColorPicker( "Blacklisted color", Vars::Colors::NavbotBlacklist, 2, FColorPicker_Dropdown | FColorPicker_Tooltip, nullptr, "NavEngine blacklisted color" );
-					FDropdown( "Look at path", Vars::Misc::Movement::NavEngine::LookAtPath, { "Off", "Plain", "Silent" } );
+					FColorPicker("Path color", Vars::Colors::NavbotPath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip, nullptr, "NavEngine path color");
+					FColorPicker("Area color", Vars::Colors::NavbotArea, 1, FColorPicker_Dropdown | FColorPicker_Tooltip, nullptr, "NavEngine area color");
+					FColorPicker("Blacklisted color", Vars::Colors::NavbotBlacklist, 2, FColorPicker_Dropdown | FColorPicker_Tooltip, nullptr, "NavEngine blacklisted color");
+					FDropdown("Look at path", Vars::Misc::Movement::NavEngine::LookAtPath, { "Off", "Plain", "Silent" });
 				PopTransparent();
 			} EndSection();
 			if (Vars::Debug::Options.Value)
@@ -1175,26 +1176,26 @@ void CMenu::MenuMisc(int iTab)
 				PushTransparent(!FGet(Vars::Misc::Movement::NavEngine::Enabled));
 					FToggle("Enable", Vars::Misc::Movement::NavBot::Enabled);
 					PushTransparent(!FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
-						FDropdown( "Force weapon", Vars::Misc::Movement::NavBot::WeaponSlot, { "None", "Best", "Primary", "Secondary", "Melee", "PDA"} );
-						FDropdown( "Recharge DT", Vars::Misc::Movement::NavBot::RechargeDT, { "Off", "On", "If not fakelagging" } );
-						PushTransparent( !FGet( Vars::Misc::Movement::NavBot::RechargeDT ) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled) );
-							FSlider( "Recharge DT delay", Vars::Misc::Movement::NavBot::RechargeDTDelay, 0, 10, 1, "%is" );
+						FDropdown("Force weapon", Vars::Misc::Movement::NavBot::WeaponSlot, { "None", "Best", "Primary", "Secondary", "Melee", "PDA" });
+						FDropdown("Recharge DT", Vars::Misc::Movement::NavBot::RechargeDT, { "Off", "On", "If not fakelagging" });
+						PushTransparent(!FGet(Vars::Misc::Movement::NavBot::RechargeDT) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
+							FSlider("Recharge DT delay", Vars::Misc::Movement::NavBot::RechargeDTDelay, 0, 10, 1, "%is");
 						PopTransparent();
-						FToggle( "Auto scope", Vars::Misc::Movement::NavBot::AutoScope );
-						PushTransparent( !FGet( Vars::Misc::Movement::NavBot::AutoScope ) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled) );
-							FSlider( "Auto scope cancel time", Vars::Misc::Movement::NavBot::AutoScopeCancelTime, 1, 5, 1, "%is" );
+						FToggle("Auto scope", Vars::Misc::Movement::NavBot::AutoScope);
+						PushTransparent(!FGet(Vars::Misc::Movement::NavBot::AutoScope) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
+							FSlider("Auto scope cancel time", Vars::Misc::Movement::NavBot::AutoScopeCancelTime, 1, 5, 1, "%is");
 						PopTransparent();
-						FDropdown( "Preferences", Vars::Misc::Movement::NavBot::Preferences, { "Get health", "Get ammo", "Reload weapons", "Stalk enemies", "Defend objectives", "Capture objectives", "Help capture objectives", "Escape danger", "Safe capping", "Target sentries", "Auto engie", "##Divider", "Target sentries low range", "Help capture objective friend only", "Dont escape danger with intel"}, {}, FDropdown_Multi );
-						FDropdown( "Blacklist", Vars::Misc::Movement::NavBot::Blacklist, {"Normal threats", "Dormant threats", "##Divider", "Players", "Stickies", "Projectiles", "Sentries"}, {}, FDropdown_Multi );
-						PushTransparent( !( FGet( Vars::Misc::Movement::NavBot::Blacklist ) & Vars::Misc::Movement::NavBot::BlacklistEnum::NormalThreats) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
-							FSlider( "Blacklist normal scan delay", Vars::Misc::Movement::NavBot::BlacklistDelay, 100, 1000, 100 );
+						FDropdown("Preferences", Vars::Misc::Movement::NavBot::Preferences, { "Get health", "Get ammo", "Reload weapons", "Stalk enemies", "Defend objectives", "Capture objectives", "Help capture objectives", "Escape danger", "Safe capping", "Target sentries", "Auto engie", "##Divider", "Target sentries low range", "Help capture objective friend only", "Dont escape danger with intel" }, {}, FDropdown_Multi);
+						FDropdown("Blacklist", Vars::Misc::Movement::NavBot::Blacklist, { "Normal threats", "Dormant threats", "##Divider", "Players", "Stickies", "Projectiles", "Sentries" }, {}, FDropdown_Multi);
+						PushTransparent(!(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::NormalThreats) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
+							FSlider("Blacklist normal scan delay", Vars::Misc::Movement::NavBot::BlacklistDelay, 100, 1000, 100);
 						PopTransparent();
-						PushTransparent( !( FGet( Vars::Misc::Movement::NavBot::Blacklist ) & Vars::Misc::Movement::NavBot::BlacklistEnum::DormantThreats) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
-							FSlider( "Blacklist dormant scan delay", Vars::Misc::Movement::NavBot::BlacklistDormantDelay, 500, 5000, 500 );
+						PushTransparent(!(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::DormantThreats) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
+							FSlider("Blacklist dormant scan delay", Vars::Misc::Movement::NavBot::BlacklistDormantDelay, 500, 5000, 500);
 						PopTransparent();
-						PushTransparent( !( FGet( Vars::Misc::Movement::NavBot::Blacklist ) & Vars::Misc::Movement::NavBot::BlacklistEnum::NormalThreats) 
-							&& !( FGet( Vars::Misc::Movement::NavBot::Blacklist ) & Vars::Misc::Movement::NavBot::BlacklistEnum::DormantThreats) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
-							FSlider( "Blacklist slight danger limit", Vars::Misc::Movement::NavBot::BlacklistSlightDangerLimit, 1, 10 );
+						PushTransparent(!(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::NormalThreats)
+										&& !(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::DormantThreats) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
+							FSlider("Blacklist slight danger limit", Vars::Misc::Movement::NavBot::BlacklistSlightDangerLimit, 1, 10);
 						PopTransparent();
 					PopTransparent();
 				PopTransparent();
@@ -1203,8 +1204,8 @@ void CMenu::MenuMisc(int iTab)
 			{
 				if (Section("Debug## Navbot", true))
 				{
-					FSlider( "Sticky danger range", Vars::Misc::Movement::NavBot::StickyDangerRange, 50, 1500, 50 );
-					FSlider( "Projectile danger range", Vars::Misc::Movement::NavBot::ProjectileDangerRange, 50, 1500, 50 );
+					FSlider("Sticky danger range", Vars::Misc::Movement::NavBot::StickyDangerRange, 50, 1500, 50);
+					FSlider("Projectile danger range", Vars::Misc::Movement::NavBot::ProjectileDangerRange, 50, 1500, 50);
 				} EndSection();
 			}
 			if (Section("Mann vs. Machine", true))

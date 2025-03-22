@@ -110,7 +110,7 @@ void CVisuals::DrawNavBot( CTFPlayer* pLocal )
 	{
 	case patrol:
 	{
-		if ( F::NavBot.Defending )
+		if ( F::NavBot.m_bDefending )
 		{
 			szJob = L"Defend";
 		}
@@ -127,7 +127,7 @@ void CVisuals::DrawNavBot( CTFPlayer* pLocal )
 	}
 	case staynear:
 	{
-		szJob = std::format( L"Follow enemy ( {} )", F::NavBot.FollowTargetName.data( ) );
+		szJob = std::format( L"Follow enemy ( {} )", F::NavBot.m_sFollowTargetName.data( ) );
 		break;
 	}
 	case run_reload:
@@ -162,7 +162,7 @@ void CVisuals::DrawNavBot( CTFPlayer* pLocal )
 	}
 	case engineer:
 	{
-		szJob = std::format( L"Engineer ({})", F::NavBot.EngineerTask.data( ) );
+		szJob = std::format( L"Engineer ({})", F::NavBot.m_sEngineerTask.data( ) );
 		break;
 	}
 	case health:
@@ -841,69 +841,71 @@ void CVisuals::DrawBoxes()
 	}
 }
 
-void CVisuals::DrawNavEngine( )
+void CVisuals::DrawNavEngine()
 {
-	if ( !Vars::Misc::Movement::NavEngine::Draw.Value || !F::NavEngine.isReady( ) )
+	if (!Vars::Misc::Movement::NavEngine::Draw.Value || !F::NavEngine.isReady())
 		return;
 
-	const auto& pLocal = H::Entities.GetLocal( );
+	auto pLocal = H::Entities.GetLocal();
+	if (!pLocal || !pLocal->IsAlive() || !F::NavEngine.map)
+		return;
 
-	if ( F::NavEngine.map && pLocal && pLocal->IsAlive( ) )
+	/*if (!F::NavBot.m_vSlightDangerDrawlistNormal.empty())
 	{
-		/*if ( !NavBot->slight_danger_drawlist_normal.empty( ) )
+		for (auto vPos : F::NavBot.m_vSlightDangerDrawlistNormal)
 		{
-			for ( const auto& area : NavBot->slight_danger_drawlist_normal )
-			{
-				RenderBox( area, Vector( -4.0f, -4.0f, -1.0f ), Vector( 4.0f, 4.0f, 1.0f ), Vector( ), Color_t( 255, 150, 0, 255 ), Color_t( 255, 150, 0, 255 ), false );
-			}
-		}
-
-		if ( !NavBot->slight_danger_drawlist_dormant.empty( ) )
-		{
-			for ( const auto& area : NavBot->slight_danger_drawlist_dormant )
-			{
-				RenderBox( area, Vector( -4.0f, -4.0f, -1.0f ), Vector( 4.0f, 4.0f, 1.0f ), Vector( ), Color_t( 255, 150, 0, 255 ), Color_t( 255, 150, 0, 255 ), false );
-			}
-		}*/
-
-		if ( Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Blacklist && !F::NavEngine.getFreeBlacklist( )->empty( ) )
-		{
-			for ( const auto& area : *F::NavEngine.getFreeBlacklist( ) )
-			{
-				RenderBox( area.first->m_center, Vector( -4.0f, -4.0f, -1.0f ), Vector( 4.0f, 4.0f, 1.0f ), Vector( ), Vars::Colors::NavbotBlacklist.Value, Vars::Colors::NavbotBlacklist.Value, false );
-			}
-		}
-		if ( Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Area )
-		{
-			Vector Origin = pLocal->GetAbsOrigin( );
-			const auto area = F::NavEngine.map->findClosestNavSquare( Origin );
-			Vector2D Origin2D = Vector2D( Origin.x, Origin.y );
-			auto edge = area->getNearestPoint( Origin2D );
-			Vector scrEdge;
-			edge.z += PLAYER_JUMP_HEIGHT;
-			RenderBox( edge, Vector( -4.0f, -4.0f, -1.0f ), Vector( 4.0f, 4.0f, 1.0f ), Vector( ), Color_t( 255, 0, 0, 255 ), Color_t( 255, 0, 0, 255 ), false );
-
-			// Nw -> Ne
-			RenderLine( area->m_nwCorner, area->getNeCorner( ), Vars::Colors::NavbotArea.Value, true );
-			// Nw -> Sw
-			RenderLine( area->m_nwCorner, area->getSwCorner( ), Vars::Colors::NavbotArea.Value, true );
-			// Ne -> Se
-			RenderLine( area->getNeCorner( ), area->m_seCorner, Vars::Colors::NavbotArea.Value, true );
-			// Sw -> Se
-			RenderLine( area->getSwCorner( ), area->m_seCorner, Vars::Colors::NavbotArea.Value, true );
+			RenderBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), Color_t(255, 150, 0, 255), false);
 		}
 	}
 
-	if ( Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Path && !F::NavEngine.crumbs.empty( ) )
+	if (!F::NavBot.m_vSlightDangerDrawlistDormant.empty())
 	{
-		for ( size_t i = 0; i < F::NavEngine.crumbs.size( ); ++i )
+		for (auto vPos : F::NavBot.m_vSlightDangerDrawlistDormant)
 		{
-			const Vector start_pos = F::NavEngine.crumbs[ i ].vec;
+			RenderBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), Color_t(255, 150, 0, 255), false);
+		}
+	}*/
 
-			if ( i < F::NavEngine.crumbs.size( ) - 1 )
+	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Blacklist)
+	{
+		if (auto pBlacklist = F::NavEngine.getFreeBlacklist())
+		{
+			if (!pBlacklist->empty())
 			{
-				const Vector end_pos = F::NavEngine.crumbs[ i + 1 ].vec;
-				RenderLine( start_pos, end_pos, Vars::Colors::NavbotPath.Value, false );
+				for (auto& tBlacklistedArea : *pBlacklist)
+					RenderBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, Vars::Colors::NavbotBlacklist.Value, false);
+			}
+		}
+	}
+
+	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Area)
+	{
+		Vector vOrigin = pLocal->GetAbsOrigin();
+		auto pArea = F::NavEngine.map->findClosestNavSquare(vOrigin);
+		auto vEdge = pArea->getNearestPoint(Vector2D(vOrigin.x, vOrigin.y));
+		vEdge.z += PLAYER_JUMP_HEIGHT;
+		RenderBox(vEdge, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 0, 0, 255), Color_t(255, 0, 0, 255), false);
+
+		// Nw -> Ne
+		RenderLine(pArea->m_nwCorner, pArea->getNeCorner(), Vars::Colors::NavbotArea.Value, true);
+		// Nw -> Sw
+		RenderLine(pArea->m_nwCorner, pArea->getSwCorner(), Vars::Colors::NavbotArea.Value, true);
+		// Ne -> Se
+		RenderLine(pArea->getNeCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
+		// Sw -> Se
+		RenderLine(pArea->getSwCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
+	}
+
+	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Path && !F::NavEngine.crumbs.empty())
+	{
+		for (size_t i = 0; i < F::NavEngine.crumbs.size(); ++i)
+		{
+			const Vector vStart = F::NavEngine.crumbs[i].vec;
+
+			if (i < F::NavEngine.crumbs.size() - 1)
+			{
+				const Vector vEnd = F::NavEngine.crumbs[i + 1].vec;
+				RenderLine(vStart, vEnd, Vars::Colors::NavbotPath.Value, false);
 			}
 		}
 	}
