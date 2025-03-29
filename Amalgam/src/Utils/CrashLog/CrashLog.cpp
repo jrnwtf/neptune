@@ -143,9 +143,9 @@ static LONG APIENTRY ExceptionFilter(PEXCEPTION_POINTERS ExceptionInfo)
 	if (bException)
 		ssErrorStream << "\nShift + Enter to skip repetitive exceptions. ";
 	bException = true;
-
+#ifndef TEXTMODE
 	SDK::Output("Unhandled exception", ssErrorStream.str().c_str(), {}, false, true, false, false, false, false, MB_OK | MB_ICONERROR);
-
+#endif
 	ssErrorStream << "\n\n\n\n";
 	std::ofstream file;
 	file.open(F::Configs.m_sConfigPath + "crash_log.txt", std::ios_base::app);
