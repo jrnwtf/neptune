@@ -39,7 +39,7 @@ public:
 	NETVAR_ARRAY(m_iCurrencyCollected, int, "CTFPlayerResource", "m_iCurrencyCollected");
 	NETVAR_ARRAY(m_iBonusPoints, int, "CTFPlayerResource", "m_iBonusPoints");
 	NETVAR_ARRAY(m_iPlayerLevel, int, "CTFPlayerResource", "m_iPlayerLevel");
-	NETVAR_ARRAY(m_iStreaks, int*, "CTFPlayerResource", "m_iStreaks");
+	NETVAR_ARRAY(m_iStreaks, int, "CTFPlayerResource", "m_iStreaks");
 	NETVAR_ARRAY(m_iUpgradeRefundCredits, int, "CTFPlayerResource", "m_iUpgradeRefundCredits");
 	NETVAR_ARRAY(m_iBuybackCredits, int, "CTFPlayerResource", "m_iBuybackCredits");
 	NETVAR(m_iPartyLeaderRedTeamIndex, int, "CTFPlayerResource", "m_iPartyLeaderRedTeamIndex");
@@ -50,4 +50,10 @@ public:
 	NETVAR_ARRAY(m_flConnectTime, float, "CTFPlayerResource", "m_flConnectTime");
 
 	NETVAR_ARRAY_OFF(m_pszPlayerName, const char*, "CTFPlayerResource", "m_iPing", -816);
+
+	void SetStreak(int iPlayerIndex, int iStreakType, int iStreak)
+	{
+		static int nOffset = U::NetVars.GetNetVar("CTFPlayerResource", "m_iStreaks");
+		*reinterpret_cast<int*>(uintptr_t(this) + nOffset + iPlayerIndex * kTFStreak_COUNT + iStreakType) = iStreak;
+	}
 };

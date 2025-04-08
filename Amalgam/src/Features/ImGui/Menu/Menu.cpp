@@ -124,7 +124,7 @@ void CMenu::MenuAimbot(int iTab)
 				FDropdown("Target selection", Vars::Aimbot::General::TargetSelection, { "FOV", "Distance" }, {}, FDropdown_Right);
 				FDropdown("Target", Vars::Aimbot::General::Target, { "Players", "Sentries", "Dispensers", "Teleporters", "Stickies", "NPCs", "Bombs" }, {}, FDropdown_Left | FDropdown_Multi);
 				FDropdown("Ignore", Vars::Aimbot::General::Ignore, { "Friends", "Party", "Invulnerable", "Cloaked", "Unsimulated players", "Dead Ringer", "Vaccinator", "Disguised", "Taunting" }, {}, FDropdown_Right | FDropdown_Multi);
-				FSlider("Aim FOV", Vars::Aimbot::General::AimFOV, 0.f, 180.f, 1.f, "%g", FSlider_Clamp | FSlider_Precision);
+				FSlider("Aim FOV", Vars::Aimbot::General::AimFOV, 0.f, 360.f, 1.f, "%g", FSlider_Clamp | FSlider_Precision);
 				FSlider("Max targets", Vars::Aimbot::General::MaxTargets, 1, 6, 1, "%i", FSlider_Left | FSlider_Min);
 				PushTransparent(FGet(Vars::Aimbot::General::AimType) != Vars::Aimbot::General::AimTypeEnum::Smooth && FGet(Vars::Aimbot::General::AimType) != Vars::Aimbot::General::AimTypeEnum::Assistive);
 				{
@@ -1034,6 +1034,7 @@ void CMenu::MenuVisuals(int iTab)
 				FSDropdown("Local revenge override", Vars::Visuals::Misc::LocalRevengeOverride, {}, FDropdown_Right);
 				FSDropdown("Domination override", Vars::Visuals::Misc::DominationOverride, {}, FDropdown_Left);
 				FSDropdown("Revenge override", Vars::Visuals::Misc::RevengeOverride, {}, FDropdown_Right);
+				FToggle("Killstreak weapons", Vars::Visuals::Misc::KillstreakWeapons);
 			} EndSection();
 
 			EndTable();
@@ -1210,14 +1211,14 @@ void CMenu::MenuMisc(int iTab)
 				if (Section("Debug## Nav Engine", true))
 				{
 					FToggle("Safe pathing", Vars::Misc::Movement::NavEngine::SafePathing);
-					FSlider("Sticky ignore time", Vars::Misc::Movement::NavEngine::StickyIgnoreTime, 15, 100, 5);
-					FSlider("Stuck detect time", Vars::Misc::Movement::NavEngine::StuckDetectTime, 2, 26, 2);
-					FSlider("Stuck blacklist time", Vars::Misc::Movement::NavEngine::StuckBlacklistTime, 20, 600, 20);
-					FSlider("Stuck expire time", Vars::Misc::Movement::NavEngine::StuckExpireTime, 5, 100, 5);
+					FSlider("Sticky ignore time", Vars::Misc::Movement::NavEngine::StickyIgnoreTime, 15, 100, 5, "%it", FSlider_Left);
+					FSlider("Stuck detect time", Vars::Misc::Movement::NavEngine::StuckDetectTime, 2, 26, 2, "%it", FSlider_Right);
+					FSlider("Stuck blacklist time", Vars::Misc::Movement::NavEngine::StuckBlacklistTime, 20, 600, 20, "%it", FSlider_Left);
+					FSlider("Stuck expire time", Vars::Misc::Movement::NavEngine::StuckExpireTime, 5, 100, 5, "%it", FSlider_Right);
 					FSlider("Stuck time", Vars::Misc::Movement::NavEngine::StuckTime, 0.25f, 0.9f, 0.05f, "%gs");
 					FToggle("Vischeck enable", Vars::Misc::Movement::NavEngine::VischeckEnabled);
-					FSlider("Vischeck time", Vars::Misc::Movement::NavEngine::VischeckTime, 0.005f, 3.f, 0.005f, "%gs" );
-					FSlider("Vischeck cache time", Vars::Misc::Movement::NavEngine::VischeckCacheTime, 10, 500, 10);
+					FSlider("Vischeck time", Vars::Misc::Movement::NavEngine::VischeckTime, 0.005f, 3.f, 0.005f, "%gs", FSlider_Left);
+					FSlider("Vischeck cache time", Vars::Misc::Movement::NavEngine::VischeckCacheTime, 10, 500, 10, "%it", FSlider_Right);
 				} EndSection();
 			}
 			if (Section("Exploits", true))
@@ -1325,12 +1326,12 @@ void CMenu::MenuMisc(int iTab)
 						FDropdown("Blacklist", Vars::Misc::Movement::NavBot::Blacklist, { "Normal threats", "Dormant threats", "##Divider", "Players", "Stickies", "Projectiles", "Sentries" }, {}, FDropdown_Multi);
 						PushTransparent(!(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::NormalThreats) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
 						{
-							FSlider("Blacklist normal scan delay", Vars::Misc::Movement::NavBot::BlacklistDelay, 100, 1000, 100);
+							FSlider("Blacklist normal scan delay", Vars::Misc::Movement::NavBot::BlacklistDelay, 0.1f, 1.f, 0.1f, "%gs", FSlider_Left);
 						}
 						PopTransparent();
 						PushTransparent(!(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::DormantThreats) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
 						{
-							FSlider("Blacklist dormant scan delay", Vars::Misc::Movement::NavBot::BlacklistDormantDelay, 500, 5000, 500);
+							FSlider("Blacklist dormant scan delay", Vars::Misc::Movement::NavBot::BlacklistDormantDelay, 0.5f, 5.f, 0.5f, "%gs", FSlider_Right);
 						}
 						PopTransparent();
 						PushTransparent(!(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::NormalThreats)
