@@ -211,6 +211,7 @@
     <ClCompile Include="src\Hooks\IEngineVGui_Paint.cpp" />
     <ClCompile Include="src\Hooks\CBuf_ExecuteCommand.cpp" />
     <ClCompile Include="src\Hooks\IEngineTrace_SetTraceEntity.cpp" />
+    <ClCompile Include="src\Hooks\CTFScatterGun_FireBullet.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Utils\UtlVector\UtlVector.h" />
@@ -613,6 +614,7 @@
     <ClInclude Include="src\SDK\Definitions\Main\IServerEntity.h" />
     <ClInclude Include="src\SDK\Definitions\Main\IServerUnknown.h" />
     <ClInclude Include="src\SDK\Definitions\Misc\IMatchGroupDescription.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\PlayerStats.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

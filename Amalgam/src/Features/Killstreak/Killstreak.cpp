@@ -14,7 +14,7 @@ void CKillstreak::ApplyKillstreak()
 	{
 		if (const auto& pPR = H::Entities.GetPR())
 		{
-			const auto streaksResource = pPR->GetStreaks(I::EngineClient->GetLocalPlayer());
+			const auto streaksResource = pPR->m_iStreaks(I::EngineClient->GetLocalPlayer());
 			if (streaksResource && *streaksResource != GetCurrentStreak())
 			{
 				streaksResource[kTFStreak_Kills] = GetCurrentStreak();

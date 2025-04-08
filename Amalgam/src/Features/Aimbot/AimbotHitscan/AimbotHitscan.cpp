@@ -137,7 +137,7 @@ std::vector<Target_t> CAimbotHitscan::SortTargets(CTFPlayer* pLocal, CTFWeaponBa
 {
 	auto vTargets = GetTargets(pLocal, pWeapon);
 
-	F::AimbotGlobal.SortTargets(&vTargets, Vars::Aimbot::General::TargetSelection.Value);
+	F::AimbotGlobal.SortTargets(vTargets, Vars::Aimbot::General::TargetSelection.Value);
 
 	// Prioritize navbot target
 	if (Vars::Aimbot::General::PrioritizeNavbot.Value && F::NavBot.m_iStayNearTargetIdx)
@@ -150,7 +150,7 @@ std::vector<Target_t> CAimbotHitscan::SortTargets(CTFPlayer* pLocal, CTFWeaponBa
 
 	vTargets.resize(std::min(size_t(Vars::Aimbot::General::MaxTargets.Value), vTargets.size()));
 	if (!Vars::Aimbot::General::PrioritizeNavbot.Value || !F::NavBot.m_iStayNearTargetIdx)
-		F::AimbotGlobal.SortPriority(&vTargets);
+		F::AimbotGlobal.SortPriority(vTargets);
 	return vTargets;
 }
 
@@ -297,7 +297,10 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 		if (pRecords)
 		{
 			vRecords = F::Backtrack.GetValidRecords(pRecords, pLocal);
-			if (!Vars::Backtrack::Enabled.Value && !vRecords.empty())
+			if (vRecords.empty())
+				return false;
+
+			if (!Vars::Backtrack::Enabled.Value)
 				vRecords = { vRecords.front() };
 		}
 		if (!pRecords || vRecords.empty())
@@ -345,26 +348,20 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 	if (flSpread && Vars::Aimbot::General::HitscanPeek.Value)
 		vPeekPos = pLocal->GetShootPos() + pLocal->m_vecVelocity() * TICKS_TO_TIME(-Vars::Aimbot::General::HitscanPeek.Value);
 
-	static float flPreferredRecord = 0; // if we're doubletapping, we can't change viewangles so have a preferred tick to use
-	if (!I::ClientState->chokedcommands)
-		flPreferredRecord = 0;
-	if (flPreferredRecord)
+	// if we're doubletapping, we can't change viewangles so work around that
+	static int iTargetBone = 0;
+	Vec3* pDoubletapAngle = F::Ticks.GetShootAngle();
+	if (pDoubletapAngle && tTarget.m_iTargetType == TargetEnum::Player)
 	{
-		auto pivot = std::find_if(vRecords.begin(), vRecords.end(), [](auto& s) -> bool { return s.m_flSimTime == flPreferredRecord; });
-		if (pivot != vRecords.end())
-			std::rotate(vRecords.begin(), pivot, pivot + 1);
+		std::sort(vRecords.begin(), vRecords.end(), [&](const TickRecord& a, const TickRecord& b) -> bool
+				  {
+					  Vec3 vPosA = { a.m_BoneMatrix.m_aBones[iTargetBone][0][3], a.m_BoneMatrix.m_aBones[iTargetBone][1][3], a.m_BoneMatrix.m_aBones[iTargetBone][2][3] };
+					  Vec3 vPosB = { b.m_BoneMatrix.m_aBones[iTargetBone][0][3], b.m_BoneMatrix.m_aBones[iTargetBone][1][3], b.m_BoneMatrix.m_aBones[iTargetBone][2][3] };
+					  Vec3 vAnglesA = Math::CalcAngle(vEyePos, vPosA);
+					  Vec3 vAnglesB = Math::CalcAngle(vEyePos, vPosB);
+					  return pDoubletapAngle->DeltaAngle(vAnglesA).Length2D() < pDoubletapAngle->DeltaAngle(vAnglesB).Length2D();
+				  });
 	}
-
-	auto RayToOBB = [&](const Vec3& vOrigin, const Vec3& vDirection, const Vec3& vMins, const Vec3& vMaxs, const matrix3x4& mMatrix, float flScale = 1.f) -> bool
-		{
-			switch (Vars::Aimbot::General::AimType.Value)
-			{
-			case Vars::Aimbot::General::AimTypeEnum::Smooth:
-			case Vars::Aimbot::General::AimTypeEnum::Assistive:
-				return Math::RayToOBB(vOrigin, vDirection, vMins, vMaxs, mMatrix, flScale);
-			}
-			return true;
-		};
 
 	int iReturn = false;
 	for (auto& tRecord : vRecords)
@@ -381,7 +378,10 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 			if (!tStorage.m_bFailed)
 			{
 				for (int i = 1 - TIME_TO_TICKS(F::Backtrack.GetReal()); i <= 0; i++)
+				{
+					F::MoveSim.RunTick(tStorage);
 					tTarget.m_vPos = tStorage.m_vPredictedOrigin;
+				}
 			}
 			F::MoveSim.Restore(tStorage);
 
@@ -401,13 +401,12 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 
 			if (SDK::VisPos(pLocal, tTarget.m_pEntity, vEyePos, tTarget.m_vPos))
 			{
-				auto vAngles = Aim(G::CurrentUserCmd->viewangles, Math::CalcAngle(pLocal->GetShootPos(), tTarget.m_vPos));
+				Vec3 vAngles; bool bChanged = Aim(G::CurrentUserCmd->viewangles, Math::CalcAngle(vEyePos, tTarget.m_vPos), vAngles);
 				Vec3 vForward; Math::AngleVectors(vAngles, &vForward);
+				float flDist = vEyePos.DistTo(tTarget.m_vPos);
 
-				if (RayToOBB(vEyePos, vForward, vCheckMins, vCheckMaxs, mTransform))
+				if (!bChanged || Math::RayToOBB(vEyePos, vForward, vCheckMins, vCheckMaxs, mTransform) && SDK::VisPos(pLocal, tTarget.m_pEntity, vEyePos, vEyePos + vForward * flDist))
 				{
-					flPreferredRecord = tRecord.m_flSimTime;
-
 					tTarget.m_vAngleTo = vAngles;
 					tTarget.m_tRecord = tRecord;
 					return true;
@@ -461,6 +460,8 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 				Vec3 vAngle; Math::MatrixAngles(aBones[tHitboxInfo.m_iBone], vAngle);
 				Vec3 vMins = tHitboxInfo.m_iMin;
 				Vec3 vMaxs = tHitboxInfo.m_iMax;
+				Vec3 vCheckMins = (vMins + flBoneSubtract / flModelScale) * flBoneScale;
+				Vec3 vCheckMaxs = (vMaxs - flBoneSubtract / flModelScale) * flBoneScale;
 
 				Vec3 vOffset;
 				{
@@ -512,29 +513,26 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 
 					if (SDK::VisPos(pLocal, tTarget.m_pEntity, vEyePos, vOrigin))
 					{
-						auto vAngles = Aim(G::CurrentUserCmd->viewangles, Math::CalcAngle(pLocal->GetShootPos(), vOrigin));
+						Vec3 vAngles; bool bChanged = Aim(G::CurrentUserCmd->viewangles, Math::CalcAngle(vEyePos, vOrigin), vAngles);
 						Vec3 vForward; Math::AngleVectors(vAngles, &vForward);
+						float flDist = vEyePos.DistTo(vOrigin);
 
-						// not perfect but it will do for now
-						if (Math::RayToOBB(vEyePos, vForward, vHullMins, vHullMaxs, mTransform))
+						// for the time being, no vischecks against other hitboxes
+						if ((!bChanged || Math::RayToOBB(vEyePos, vForward, vCheckMins, vCheckMaxs, aBones[tHitboxInfo.m_iBone], flModelScale) && SDK::VisPos(pLocal, tTarget.m_pEntity, vEyePos, vEyePos + vForward * flDist))
+							&& Math::RayToOBB(vEyePos, vForward, vHullMins, vHullMaxs, mTransform))
 						{
-							// for the time being, no vischecks against other hitboxes
-							Vec3 vCheckMins = (vMins + flBoneSubtract / flModelScale) * flBoneScale, vCheckMaxs = (vMaxs - flBoneSubtract / flModelScale) * flBoneScale;
-							if (RayToOBB(vEyePos, vForward, vCheckMins, vCheckMaxs, aBones[tHitboxInfo.m_iBone], flModelScale))
-							{
-								flPreferredRecord = tRecord.m_flSimTime;
+							iTargetBone = tHitboxInfo.m_iBone;
 
-								tTarget.m_vAngleTo = vAngles;
-								tTarget.m_tRecord = tRecord;
-								tTarget.m_vPos = vOrigin;
-								tTarget.m_nAimedHitbox = iHitbox;
-								tTarget.m_bBacktrack = true;
-								return true;
-							}
-							else if (iReturn == 2 ? vAngles.DeltaAngle(G::CurrentUserCmd->viewangles).Length2D() < tTarget.m_vAngleTo.DeltaAngle(G::CurrentUserCmd->viewangles).Length2D() : true)
-								tTarget.m_vAngleTo = vAngles;
-							iReturn = 2;
+							tTarget.m_vAngleTo = vAngles;
+							tTarget.m_tRecord = tRecord;
+							tTarget.m_vPos = vOrigin;
+							tTarget.m_nAimedHitbox = iHitbox;
+							tTarget.m_bBacktrack = true;
+							return true;
 						}
+						else if (iReturn == 2 ? vAngles.DeltaAngle(G::CurrentUserCmd->viewangles).Length2D() < tTarget.m_vAngleTo.DeltaAngle(G::CurrentUserCmd->viewangles).Length2D() : true)
+							tTarget.m_vAngleTo = vAngles;
+						iReturn = 2;
 					}
 				}
 			}
@@ -585,19 +583,13 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 				if (vEyePos.DistToSqr(vOrigin) > flMaxRange)
 					continue;
 
-				if (bRunPeekCheck)
-				{
-					bRunPeekCheck = false;
-					if (!SDK::VisPos(pLocal, tTarget.m_pEntity, vPeekPos, vOrigin))
-						goto nextTick; // if we can't hit our primary hitbox, don't bother
-				}
-
 				if (SDK::VisPos(pLocal, tTarget.m_pEntity, vEyePos, vOrigin))
 				{
-					auto vAngles = Aim(G::CurrentUserCmd->viewangles, Math::CalcAngle(pLocal->GetShootPos(), vOrigin));
+					Vec3 vAngles; bool bChanged = Aim(G::CurrentUserCmd->viewangles, Math::CalcAngle(vEyePos, vOrigin), vAngles);
 					Vec3 vForward; Math::AngleVectors(vAngles, &vForward);
+					float flDist = vEyePos.DistTo(vOrigin);
 
-					if (RayToOBB(vEyePos, vForward, vCheckMins, vCheckMaxs, mTransform))
+					if (!bChanged || Math::RayToOBB(vEyePos, vForward, vCheckMins, vCheckMaxs, mTransform) && SDK::VisPos(pLocal, tTarget.m_pEntity, vEyePos, vEyePos + vForward * flDist))
 					{
 						tTarget.m_vAngleTo = vAngles;
 						tTarget.m_tRecord = tRecord;
@@ -677,7 +669,7 @@ bool CAimbotHitscan::ShouldFire(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 	return true;
 }
 
-Vec3 CAimbotHitscan::Aim(Vec3 vCurAngle, Vec3 vToAngle, int iMethod)
+bool CAimbotHitscan::Aim(Vec3 vCurAngle, Vec3 vToAngle, Vec3& vOut, int iMethod)
 {
 	Vec3 vReturn = {};
 
@@ -690,20 +682,21 @@ Vec3 CAimbotHitscan::Aim(Vec3 vCurAngle, Vec3 vToAngle, int iMethod)
 	case Vars::Aimbot::General::AimTypeEnum::Plain:
 	case Vars::Aimbot::General::AimTypeEnum::Silent:
 	case Vars::Aimbot::General::AimTypeEnum::Locking:
-		vReturn = vToAngle;
-		break;
+		vOut = vToAngle;
+		return false;
 	case Vars::Aimbot::General::AimTypeEnum::Smooth:
-		vReturn = vCurAngle.LerpAngle(vToAngle, Vars::Aimbot::General::AssistStrength.Value / 100.f);
-		break;
+		vOut = vCurAngle.LerpAngle(vToAngle, Vars::Aimbot::General::AssistStrength.Value / 100.f);
+		return true;
 	case Vars::Aimbot::General::AimTypeEnum::Assistive:
 		Vec3 vMouseDelta = G::CurrentUserCmd->viewangles.DeltaAngle(G::LastUserCmd->viewangles);
 		Vec3 vTargetDelta = vToAngle.DeltaAngle(G::LastUserCmd->viewangles);
 		float flMouseDelta = vMouseDelta.Length2D(), flTargetDelta = vTargetDelta.Length2D();
 		vTargetDelta = vTargetDelta.Normalized() * std::min(flMouseDelta, flTargetDelta);
-		vReturn = vCurAngle - vMouseDelta + vMouseDelta.LerpAngle(vTargetDelta, Vars::Aimbot::General::AssistStrength.Value / 100.f);
+		vOut = vCurAngle - vMouseDelta + vMouseDelta.LerpAngle(vTargetDelta, Vars::Aimbot::General::AssistStrength.Value / 100.f);
+		return true;
 	}
 
-	return vReturn;
+	return false;
 }
 
 // assume angle calculated outside with other overload
@@ -846,7 +839,17 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 				F::Resolver.HitscanRan(pLocal, tTarget.m_pEntity->As<CTFPlayer>(), pWeapon, tTarget.m_nAimedHitbox);
 
 			if (tTarget.m_bBacktrack)
+			{ 
 				pCmd->tick_count = TIME_TO_TICKS(tTarget.m_tRecord.m_flSimTime + F::Backtrack.GetFakeInterp());
+				float flCorrect = std::clamp(F::Backtrack.GetReal(MAX_FLOWS, false) + ROUND_TO_TICKS(F::Backtrack.GetFakeInterp()), 0.f, F::Backtrack.m_flMaxUnlag);
+				int iServerTick = F::Backtrack.m_iTickCount + F::Backtrack.GetAnticipatedChoke() + Vars::Backtrack::Offset.Value + TIME_TO_TICKS(F::Backtrack.GetReal(FLOW_OUTGOING));
+				
+				int iLerpTicks = TIME_TO_TICKS(F::Backtrack.GetFakeInterp());
+				int iTargetTick = pCmd->tick_count - iLerpTicks;
+				float flDeltaTime = flCorrect - TICKS_TO_TIME(iServerTick - iTargetTick);
+				
+				SDK::Output("Delta", std::format("{}", flDeltaTime).c_str());
+			}
 
 			bool bLine = Vars::Visuals::Line::Enabled.Value;
 			bool bBoxes = Vars::Visuals::Hitbox::BonesEnabled.Value & Vars::Visuals::Hitbox::BonesEnabledEnum::OnShot;

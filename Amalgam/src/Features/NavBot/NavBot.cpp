@@ -850,7 +850,7 @@ bool CNavBot::StayNearTarget(int iEntIndex)
 	{
 		m_iStayNearTargetIdx = pEntity->entindex();
 		if (auto pPlayerResource = H::Entities.GetPR())
-			m_sFollowTargetName = SDK::ConvertUtf8ToWide(pPlayerResource->GetPlayerName(pEntity->entindex()));
+			m_sFollowTargetName = SDK::ConvertUtf8ToWide(pPlayerResource->m_pszPlayerName(pEntity->entindex()));
 		return true;
 	}
 
