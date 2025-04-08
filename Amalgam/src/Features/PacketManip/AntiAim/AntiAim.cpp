@@ -240,6 +240,8 @@ void CAntiAim::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd, bo
 
 	if (!F::NavEngine.isPathing())
 		SDK::FixMovement(pCmd, vAngles);
+	else if (!G::SilentAngles)
+		SDK::WalkToFixAntiAim(pCmd, vAngles);
 	pCmd->viewangles.x = vAngles.x;
 	pCmd->viewangles.y = vAngles.y;
 
