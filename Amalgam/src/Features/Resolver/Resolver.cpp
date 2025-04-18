@@ -353,28 +353,34 @@ bool CResolver::GetAngles(CTFPlayer* pPlayer, float* pYaw, float* pPitch, bool* 
 	auto pResource = H::Entities.GetPR();
 	if (!pResource)
 		return false;
-	int iUserID = pResource->m_iUserID(pPlayer->entindex());
-	auto& tData = m_mResolverData[iUserID];
-	bool bYaw = tData.m_bYaw, bPitch = tData.m_bPitch;
 	
-	if (pYaw)
-	{
-		*pYaw = pPlayer->m_angEyeAnglesY();
-		if (bYaw && !bFake)
+	try {
+		int iUserID = pResource->m_iUserID(pPlayer->entindex());
+		auto& tData = m_mResolverData[iUserID];
+		bool bYaw = tData.m_bYaw, bPitch = tData.m_bPitch;
+		
+		if (pYaw)
 		{
-			auto pLocal = H::Entities.GetLocal();
-			if (pLocal && tData.m_bView)
-				*pYaw = Math::CalcAngle(pPlayer->m_vecOrigin(), pLocal->m_vecOrigin()).y;
-			*pYaw += tData.m_flYaw;
+			*pYaw = pPlayer->m_angEyeAnglesY();
+			if (bYaw && !bFake)
+			{
+				auto pLocal = H::Entities.GetLocal();
+				if (pLocal && tData.m_bView)
+					*pYaw = Math::CalcAngle(pPlayer->m_vecOrigin(), pLocal->m_vecOrigin()).y;
+				*pYaw += tData.m_flYaw;
+			}
 		}
+		if (pPitch)
+		{
+			*pPitch = pPlayer->m_angEyeAnglesX();
+			if (bPitch)
+				*pPitch = tData.m_flPitch;
+		}
+		if (pMinwalk)
+			*pMinwalk = tData.m_bMinwalk;
+		return bYaw || bPitch;
 	}
-	if (pPitch)
-	{
-		*pPitch = pPlayer->m_angEyeAnglesX();
-		if (bPitch)
-			*pPitch = tData.m_flPitch;
+	catch (...) {
+		return false;
 	}
-	if (pMinwalk)
-		*pMinwalk = tData.m_bMinwalk;
-	return bYaw || bPitch;
 }
