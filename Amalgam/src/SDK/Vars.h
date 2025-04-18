@@ -379,6 +379,7 @@ namespace Vars
 			CVar(MinWalk, true)
 			CVar(AntiOverlap, false)
 			CVar(InvalidShootPitch, false)
+			CVar(TauntSpin, false)
 		SUBNAMESPACE_END(AntiAim)
 
 		SUBNAMESPACE_BEGIN(Resolver)
@@ -405,10 +406,10 @@ namespace Vars
 
 	NAMESPACE_BEGIN(ESP)
 		CVarEnum(Draw, 0b0, VISUAL, Players = 1 << 0, Buildings = 1 << 1, Projectiles = 1 << 2, Objective = 1 << 3, NPCs = 1 << 4, Health = 1 << 5, Ammo = 1 << 6, Money = 1 << 7, Powerups = 1 << 8, Bombs = 1 << 9, Spellbook = 1 << 10, Gargoyle = 1 << 11)
-		CVarEnum(Player, 0b0, VISUAL, Enemy = 1 << 0, Team = 1 << 1, Local = 1 << 2, Prioritized = 1 << 3, Friends = 1 << 4, Party = 1 << 5, Name = 1 << 6, Box = 1 << 7, Distance = 1 << 8, Bones = 1 << 9, HealthBar = 1 << 10, HealthText = 1 << 11, UberBar = 1 << 12, UberText = 1 << 13, ClassIcon = 1 << 14, ClassText = 1 << 15, WeaponIcon = 1 << 16, WeaponText = 1 << 17, Priority = 1 << 18, Labels = 1 << 19, Buffs = 1 << 20, Debuffs = 1 << 21, Misc = 1 << 22, LagCompensation = 1 << 23, Ping = 1 << 24, KDR = 1 << 25)
-		CVarEnum(Building, 0b0, VISUAL, Enemy = 1 << 0, Team = 1 << 1, Local = 1 << 2, Prioritized = 1 << 3, Friends = 1 << 4, Party = 1 << 5, Name = 1 << 6, Box = 1 << 7, Distance = 1 << 8, HealthBar = 1 << 9, HealthText = 1 << 10, Owner = 1 << 11, Level = 1 << 12, Flags = 1 << 13)
-		CVarEnum(Projectile, 0b0, VISUAL, Enemy = 1 << 0, Team = 1 << 1, Local = 1 << 2, Prioritized = 1 << 3, Friends = 1 << 4, Party = 1 << 5, Name = 1 << 6, Box = 1 << 7, Distance = 1 << 8, Owner = 1 << 9, Flags = 1 << 10)
-		CVarEnum(Objective, 0b0, VISUAL, Enemy = 1 << 0, Team = 1 << 1, Name = 1 << 2, Box = 1 << 3, Distance = 1 << 4, Flags = 1 << 5, IntelReturnTime = 1 << 6)
+		CVarEnum(Player, 0b0, VISUAL, Enemy = 1 << 0, Team = 1 << 1, Local = 1 << 2, Prioritized = 1 << 3, Friends = 1 << 4, Party = 1 << 5, Name = 1 << 6, NameBackground = 1 << 7, Box = 1 << 8, Distance = 1 << 9, Bones = 1 << 10, HealthBar = 1 << 11, HealthText = 1 << 12, UberBar = 1 << 13, UberText = 1 << 14, ClassIcon = 1 << 15, ClassText = 1 << 16, WeaponIcon = 1 << 17, WeaponText = 1 << 18, Priority = 1 << 19, Labels = 1 << 20, Buffs = 1 << 21, Debuffs = 1 << 22, Misc = 1 << 23, LagCompensation = 1 << 24, Ping = 1 << 25, KDR = 1 << 26, ThatsHowMafiaWorks = 1 << 27)
+		CVarEnum(Building, 0b0, VISUAL, Enemy = 1 << 0, Team = 1 << 1, Local = 1 << 2, Prioritized = 1 << 3, Friends = 1 << 4, Party = 1 << 5, Name = 1 << 6, NameBackground = 1 << 7, Box = 1 << 8, Distance = 1 << 9, HealthBar = 1 << 10, HealthText = 1 << 11, Owner = 1 << 12, Level = 1 << 13, Flags = 1 << 14)
+		CVarEnum(Projectile, 0b0, VISUAL, Enemy = 1 << 0, Team = 1 << 1, Local = 1 << 2, Prioritized = 1 << 3, Friends = 1 << 4, Party = 1 << 5, Name = 1 << 6, NameBackground = 1 << 7, Box = 1 << 8, Distance = 1 << 9, Owner = 1 << 10, Flags = 1 << 11)
+		CVarEnum(Objective, 0b0, VISUAL, Enemy = 1 << 0, Team = 1 << 1, Name = 1 << 2, NameBackground = 1 << 3, Box = 1 << 4, Distance = 1 << 5, Flags = 1 << 6, IntelReturnTime = 1 << 7)
 
 		CVar(Dist2Alpha, true, VISUAL)
 		CVar(MaxDist, 2048, VISUAL)
@@ -416,6 +417,7 @@ namespace Vars
 		CVar(DormantAlpha, 50, VISUAL)
 		CVar(DormantPriority, false, VISUAL)
 		CVar(DormantTime, 1.f, VISUAL)
+		CVar(BackgroundOpacity, 200, VISUAL)
 	NAMESPACE_END(ESP)
 
 	NAMESPACE_BEGIN(Chams)
@@ -839,6 +841,7 @@ namespace Vars
 
 		SUBNAMESPACE_BEGIN(Automation)
 			CVarEnum(AntiBackstab, 0, NONE, Off, Yaw, Pitch, Fake)
+			CVar(NoiseSpam, false)
 			CVar(AntiAFK, false)
 			CVar(AntiAutobalance, false)
 			CVar(TauntControl, false)
@@ -848,6 +851,7 @@ namespace Vars
 			CVar(AutoF2Ignored, false)
 			CVar(AutoF1Priority, false)
 			CVarEnum(ForceClass, 0, NONE, Off, Scout, Sniper, Soldier, Demoman, Medic, Heavy, Pyro, Spy, Engineer)
+			CVarEnum(VoiceCommandSpam, 0, NONE, Off, Random, Medic, Thanks, NiceShot, Cheers, Jeers, GoGoGo, MoveUp, GoLeft, GoRight, Yes, No, Incoming, Spy, Sentry, NeedTeleporter, Pootis, NeedSentry, ActivateCharge, Help, BattleCry)
 		SUBNAMESPACE_END(Automation)
 
 		SUBNAMESPACE_BEGIN(Sound)
@@ -855,6 +859,7 @@ namespace Vars
 			CVar(HitsoundAlways, false)
 			CVar(RemoveDSP, false)
 			CVar(GiantWeaponSounds, false)
+			CVar(VoiceCommandSpam, false)
 		SUBNAMESPACE_END(Sound)
 
 		SUBNAMESPACE_BEGIN(Game)

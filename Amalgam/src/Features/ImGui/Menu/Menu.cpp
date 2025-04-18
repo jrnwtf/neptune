@@ -388,6 +388,7 @@ void CMenu::MenuAimbot(int iTab)
 				FToggle("Minwalk", Vars::AntiHack::AntiAim::MinWalk, FToggle_Left);
 				FToggle("Anti-overlap", Vars::AntiHack::AntiAim::AntiOverlap, FToggle_Left);
 				FToggle("Hide pitch on shot", Vars::AntiHack::AntiAim::InvalidShootPitch, FToggle_Right);
+				FToggle("Taunt spin", Vars::AntiHack::AntiAim::TauntSpin, FToggle_Right);
 			} EndSection();
 
 			/* Column 2 */
@@ -484,22 +485,22 @@ void CMenu::MenuVisuals(int iTab)
 				FDropdown("Draw", Vars::ESP::Draw, { "Players", "Buildings", "Projectiles", "Objective", "NPCs", "Health", "Ammo", "Money", "Powerups", "Bombs", "Spellbook", "Gargoyle" }, {}, FDropdown_Multi, 0, nullptr, "Draw ESP");
 				PushTransparent(!(FGet(Vars::ESP::Draw) & Vars::ESP::DrawEnum::Players));
 				{
-					FDropdown("Player", Vars::ESP::Player, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Box", "Distance", "Bones", "Health bar", "Health text", "Uber bar", "Uber text", "Class icon", "Class text", "Weapon icon", "Weapon text", "Priority", "Labels", "Buffs", "Debuffs", "Misc", "Lag compensation", "Ping", "KDR" }, {}, FDropdown_Multi, 0, nullptr, "Player ESP");
+					FDropdown("Player", Vars::ESP::Player, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Name background", "Box", "Distance", "Bones", "Health bar", "Health text", "Uber bar", "Uber text", "Class icon", "Class text", "Weapon icon", "Weapon text", "Priority", "Labels", "Buffs", "Debuffs", "Misc", "Lag compensation", "Ping", "KDR", "That's how mafia works" }, {}, FDropdown_Multi, 0, nullptr, "Player ESP");
 				}
 				PopTransparent();
 				PushTransparent(!(FGet(Vars::ESP::Draw) & Vars::ESP::DrawEnum::Buildings));
 				{
-					FDropdown("Building", Vars::ESP::Building, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Box", "Distance", "Health bar", "Health text", "Owner", "Level", "Flags" }, {}, FDropdown_Multi, 0, nullptr, "Building ESP");
+					FDropdown("Building", Vars::ESP::Building, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Name background", "Box", "Distance", "Health bar", "Health text", "Owner", "Level", "Flags" }, {}, FDropdown_Multi, 0, nullptr, "Building ESP");
 				}
 				PopTransparent();
 				PushTransparent(!(FGet(Vars::ESP::Draw) & Vars::ESP::DrawEnum::Projectiles));
 				{
-					FDropdown("Projectile", Vars::ESP::Projectile, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Box", "Distance", "Owner", "Flags" }, {}, FDropdown_Multi, 0, nullptr, "Projectile ESP");
+					FDropdown("Projectile", Vars::ESP::Projectile, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Name background", "Box", "Distance", "Owner", "Flags" }, {}, FDropdown_Multi, 0, nullptr, "Projectile ESP");
 				}
 				PopTransparent();
 				PushTransparent(!(FGet(Vars::ESP::Draw) & Vars::ESP::DrawEnum::Objective));
 				{
-					FDropdown("Objective", Vars::ESP::Objective, { "Enemy", "Team", "##Divider", "Name", "Box", "Distance", "Flags", "Intel return time" }, {}, FDropdown_Multi, 0, nullptr, "Objective ESP");
+					FDropdown("Objective", Vars::ESP::Objective, { "Enemy", "Team", "##Divider", "Name", "Name background", "Box", "Distance", "Flags", "Intel return time" }, {}, FDropdown_Multi, 0, nullptr, "Objective ESP");
 				}
 				PopTransparent();
 			} EndSection();
@@ -538,6 +539,7 @@ void CMenu::MenuVisuals(int iTab)
 				FSlider("Dormant alpha", Vars::ESP::DormantAlpha, 0, 255, 5, "%i", FSlider_Right | FSlider_Clamp);
 				FSlider("Dormant decay", Vars::ESP::DormantTime, 0.015f, 5.0f, 0.1f, "%gs", FSlider_Left | FSlider_Clamp | FSlider_Precision);
 				FToggle("Dormant priority only", Vars::ESP::DormantPriority, FToggle_Right);
+				FSlider("Background opacity", Vars::ESP::BackgroundOpacity, 0, 255, 5, "%i", FSlider_Left | FSlider_Clamp);
 			} EndSection();
 
 			EndTable();
@@ -1278,6 +1280,8 @@ void CMenu::MenuMisc(int iTab)
 				FToggle("Hitsound always", Vars::Misc::Sound::HitsoundAlways, FToggle_Left);
 				FToggle("Remove DSP", Vars::Misc::Sound::RemoveDSP, FToggle_Right);
 				FToggle("Giant weapon sounds", Vars::Misc::Sound::GiantWeaponSounds);
+				FToggle("Noise spam", Vars::Misc::Automation::NoiseSpam, FToggle_Left);
+				FToggle("Voice command spam", Vars::Misc::Sound::VoiceCommandSpam, FToggle_Right);
 			} EndSection();
 			if (Section("Game", true))
 			{

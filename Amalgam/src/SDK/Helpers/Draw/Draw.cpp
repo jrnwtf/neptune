@@ -203,6 +203,95 @@ void CDraw::StringOutlined(const Font_t& tFont, int x, int y, const Color_t& tCo
 	I::MatSystemSurface->DrawPrintText(wstr, int(wcslen(wstr)));
 }
 
+void CDraw::StringWithBackground(const Font_t& tFont, int x, int y, const Color_t& tColor, const Color_t& tColorBg, const EAlign& eAlign, const char* str, ...)
+{
+	if (str == nullptr)
+		return;
+
+	va_list va_alist;
+	char cbuffer[1024] = { '\0' };
+	wchar_t wstr[1024] = { '\0' };
+
+	va_start(va_alist, str);
+	vsprintf_s(cbuffer, str, va_alist);
+	va_end(va_alist);
+
+	wsprintfW(wstr, L"%hs", cbuffer);
+
+	const auto dwFont = tFont.m_dwFont;
+
+	int w = 0, h = 0; I::MatSystemSurface->GetTextSize(dwFont, wstr, w, h);
+	
+	int padding = Scale(2, Scale_Round);
+	
+	int textX = x, textY = y;
+	switch (eAlign)
+	{
+	case ALIGN_TOPLEFT: break;
+	case ALIGN_TOP: textX -= w / 2; break;
+	case ALIGN_TOPRIGHT: textX -= w; break;
+	case ALIGN_LEFT: textY -= h / 2; break;
+	case ALIGN_CENTER: textX -= w / 2; textY -= h / 2; break;
+	case ALIGN_RIGHT: textX -= w; textY -= h / 2; break;
+	case ALIGN_BOTTOMLEFT: textY -= h; break;
+	case ALIGN_BOTTOM: textX -= w / 2; textY -= h; break;
+	case ALIGN_BOTTOMRIGHT: textX -= w; textY -= h; break;
+	}
+	
+	if (tColorBg.a > 0)
+	{
+		FillRect(textX - padding, textY - padding, w + padding * 2, h + padding * 2, tColorBg);
+	}
+	
+	I::MatSystemSurface->DrawSetTextPos(textX, textY);
+	I::MatSystemSurface->DrawSetTextFont(dwFont);
+	I::MatSystemSurface->DrawSetTextColor(tColor.r, tColor.g, tColor.b, tColor.a);
+	I::MatSystemSurface->DrawPrintText(wstr, int(wcslen(wstr)));
+}
+
+void CDraw::StringWithBackground(const Font_t& tFont, int x, int y, const Color_t& tColor, const Color_t& tColorBg, const EAlign& eAlign, const wchar_t* str, ...)
+{
+	if (str == nullptr)
+		return;
+
+	va_list va_alist;
+	wchar_t wstr[1024] = { '\0' };
+
+	va_start(va_alist, str);
+	vswprintf_s(wstr, str, va_alist);
+	va_end(va_alist);
+
+	const auto dwFont = tFont.m_dwFont;
+
+	int w = 0, h = 0; I::MatSystemSurface->GetTextSize(dwFont, wstr, w, h);
+	
+	int padding = Scale(2, Scale_Round);
+	
+	int textX = x, textY = y;
+	switch (eAlign)
+	{
+	case ALIGN_TOPLEFT: break;
+	case ALIGN_TOP: textX -= w / 2; break;
+	case ALIGN_TOPRIGHT: textX -= w; break;
+	case ALIGN_LEFT: textY -= h / 2; break;
+	case ALIGN_CENTER: textX -= w / 2; textY -= h / 2; break;
+	case ALIGN_RIGHT: textX -= w; textY -= h / 2; break;
+	case ALIGN_BOTTOMLEFT: textY -= h; break;
+	case ALIGN_BOTTOM: textX -= w / 2; textY -= h; break;
+	case ALIGN_BOTTOMRIGHT: textX -= w; textY -= h; break;
+	}
+	
+	if (tColorBg.a > 0)
+	{
+		FillRect(textX - padding, textY - padding, w + padding * 2, h + padding * 2, tColorBg);
+	}
+	
+	I::MatSystemSurface->DrawSetTextPos(textX, textY);
+	I::MatSystemSurface->DrawSetTextFont(dwFont);
+	I::MatSystemSurface->DrawSetTextColor(tColor.r, tColor.g, tColor.b, tColor.a);
+	I::MatSystemSurface->DrawPrintText(wstr, int(wcslen(wstr)));
+}
+
 void CDraw::Line(int x1, int y1, int x2, int y2, const Color_t& tColor)
 {
 	I::MatSystemSurface->DrawSetColor(tColor.r, tColor.g, tColor.b, tColor.a);

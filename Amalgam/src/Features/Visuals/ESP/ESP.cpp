@@ -250,6 +250,55 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				}
 			}
 
+			// Add the Mafia Works feature implementation
+			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::ThatsHowMafiaWorks && pResource && pPlayer != pLocal)
+			{
+				int iKills = pResource->m_iScore(iIndex);
+				int iDeaths = pResource->m_iDeaths(iIndex);
+				int iDamage = pResource->m_iDamage(iIndex);
+				
+				// Calculate player level based on stats
+				int level = 1;
+				if (iKills >= 30 && iDamage >= 10000) level = 6;
+				else if (iKills >= 20 && iDamage >= 5000) level = 5;
+				else if (iKills >= 15 && iDamage >= 3000) level = 4;
+				else if (iKills >= 10 && iDamage >= 2000) level = 3;
+				else if (iKills >= 5 && iDamage >= 500) level = 2;
+				
+				// Define title based on level
+				std::string title;
+				Color_t titleColor;
+				switch (level) {
+					case 1:
+						title = "Lv.1 Crook";
+						titleColor = Color_t(150, 150, 150, 255); // Grey
+						break;
+					case 2:
+						title = "Lv.10 Gangster";
+						titleColor = Color_t(76, 175, 80, 255); // Green
+						break;
+					case 3:
+						title = "Lv.35 Hitman";
+						titleColor = Color_t(33, 150, 243, 255); // Blue
+						break;
+					case 4:
+						title = "Lv.50 Boss";
+						titleColor = Color_t(156, 39, 176, 255); // Purple
+						break;
+					case 5:
+						title = "Lv.80 Godfather";
+						titleColor = Color_t(211, 47, 47, 255); // Red
+						break;
+					case 6:
+						title = "Lv.100 BOSS OF ALL BOSSES";
+						titleColor = Color_t(255, 193, 7, 255); // Gold
+						break;
+				}
+
+				tCache.m_vText.push_back({ ESPTextEnum::Top, title, titleColor, Color_t(0, 0, 0, 200) });
+			}
+
+
 			// Buffs
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Buffs)
 			{
@@ -1029,12 +1078,25 @@ void CESP::DrawPlayers()
 		}
 
 		int iVerticalOffset = H::Draw.Scale(3, Scale_Floor) - 1;
+		bool isFirstElement = true; // Flag to track the first element
 		for (auto& [iMode, sText, tColor, tOutline] : tCache.m_vText)
 		{
 			switch (iMode)
 			{
 			case ESPTextEnum::Top:
-				H::Draw.StringOutlined(fFont, m, t - tOffset, tColor, tOutline, ALIGN_BOTTOM, sText.c_str());
+				if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::NameBackground && 
+				    Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Name && 
+				    isFirstElement)
+				{
+					Color_t backgroundOutline = tOutline;
+					backgroundOutline.a = Vars::ESP::BackgroundOpacity.Value;
+					
+					H::Draw.StringWithBackground(fFont, m, t - tOffset, tColor, backgroundOutline, ALIGN_BOTTOM, sText.c_str());
+				}
+				else
+				{
+					H::Draw.StringOutlined(fFont, m, t - tOffset, tColor, tOutline, ALIGN_BOTTOM, sText.c_str());
+				}
 				tOffset += nTall;
 				break;
 			case ESPTextEnum::Bottom:
@@ -1051,6 +1113,7 @@ void CESP::DrawPlayers()
 			case ESPTextEnum::Uber:
 				H::Draw.StringOutlined(fFont, r, y + h, tColor, tOutline, ALIGN_TOPLEFT, sText.c_str());
 			}
+			isFirstElement = false; // Set to false after processing the first element
 		}
 
 		if (tCache.m_iClassIcon)

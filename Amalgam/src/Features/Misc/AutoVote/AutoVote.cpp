@@ -1,16 +1,40 @@
 #include "AutoVote.h"
 
 #include "../../Players/PlayerUtils.h"
+#include "../../NamedPipe/NamedPipe.h"
 
 void CAutoVote::UserMessage(bf_read& msgData)
 {
 	/*const int iTeam =*/ msgData.ReadByte();
 	const int iVoteID = msgData.ReadLong();
-	/*const int iCaller =*/ msgData.ReadByte();
+	const int iCaller = msgData.ReadByte();
 	char sReason[256]; msgData.ReadString(sReason, sizeof(sReason));
 	char sTarget[256]; msgData.ReadString(sTarget, sizeof(sTarget));
 	const int iTarget = msgData.ReadByte() >> 1;
 	msgData.Seek(0);
+
+
+	PlayerInfo_t pi{};
+	if (I::EngineClient->GetPlayerInfo(iTarget, &pi))
+	{
+		if (F::NPipe::IsLocalBot(pi.friendsID))
+		{
+			I::ClientState->SendStringCmd(std::format("vote {} option2", iVoteID).c_str());
+			return;
+		}
+	}
+
+
+	PlayerInfo_t callerPi{};
+	if (I::EngineClient->GetPlayerInfo(iCaller, &callerPi))
+	{
+		if (F::NPipe::IsLocalBot(callerPi.friendsID))
+		{
+			I::ClientState->SendStringCmd(std::format("vote {} option1", iVoteID).c_str());
+			return;
+		}
+	}
+
 
 	if (Vars::Misc::Automation::AutoF2Ignored.Value
 		&& (F::PlayerUtils.IsIgnored(iTarget)
@@ -18,11 +42,18 @@ void CAutoVote::UserMessage(bf_read& msgData)
 		|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Party && H::Entities.InParty(iTarget)))
 	{
 		I::ClientState->SendStringCmd(std::format("vote {} option2", iVoteID).c_str());
+		return;
 	}
-	else if (Vars::Misc::Automation::AutoF1Priority.Value && F::PlayerUtils.IsPrioritized(iTarget)
+
+
+	if (Vars::Misc::Automation::AutoF1Priority.Value && F::PlayerUtils.IsPrioritized(iTarget)
 		&& !H::Entities.IsFriend(iTarget)
 		&& !H::Entities.InParty(iTarget))
 	{
 		I::ClientState->SendStringCmd(std::format("vote {} option1", iVoteID).c_str());
+		return;
 	}
+
+
+	I::ClientState->SendStringCmd(std::format("vote {} option1", iVoteID).c_str());
 }
