@@ -620,8 +620,7 @@ MAKE_HOOK(CTFGameStats_FindPlayerStats, S::CTFGameStats_FindPlayerStats(), void*
 void CCritHack::Draw(CTFPlayer* pLocal)
 {
 	static auto tf_weapon_criticals = U::ConVars.FindVar("tf_weapon_criticals");
-	const bool bWeaponCriticals = tf_weapon_criticals ? tf_weapon_criticals->GetBool() : true;
-	if (!(Vars::Menu::Indicators.Value & Vars::Menu::IndicatorsEnum::CritHack) || !I::EngineClient->IsInGame() || !bWeaponCriticals)
+	if (!(Vars::Menu::Indicators.Value & Vars::Menu::IndicatorsEnum::CritHack) || !I::EngineClient->IsInGame() || !tf_weapon_criticals->GetBool())
 		return;
 
 	auto pWeapon = H::Entities.GetWeapon();
@@ -731,8 +730,7 @@ void CCritHack::Draw(CTFPlayer* pLocal)
 					rightColor = tStorage.m_iAvailableCrits > 0 ? Color_t{ 40, 200, 40, 255 } : Color_t{ 200, 40, 40, 255 };
 					
 					static auto bucketCap = U::ConVars.FindVar("tf_weapon_criticals_bucket_cap");
-					const float flBucketCap = bucketCap ? bucketCap->GetFloat() : 1000.f;
-					targetProgress = currentBucket / flBucketCap;
+					targetProgress = currentBucket / bucketCap->GetFloat();
 				}
 			}
 			else
@@ -754,18 +752,12 @@ void CCritHack::Draw(CTFPlayer* pLocal)
 
 	int barWidth = static_cast<int>(boxWidth * currentProgress);
 	if (barWidth > 0)
-	{
 		H::Draw.GradientRect(x, y + textBoxHeight, barWidth, barHeight, barColor, barColor, true);
-	}
 
 	H::Draw.String(fFont, x + 5, y + (textBoxHeight / 2), leftColor, ALIGN_LEFT, leftText.c_str());
 	if (!rightText.empty())
-	{
 		H::Draw.String(fFont, x + boxWidth - 5, y + (textBoxHeight / 2), rightColor, ALIGN_RIGHT, rightText.c_str());
-	}
 	
 	if (Vars::Misc::Game::AntiCheatCompatibility.Value)
-	{
 		H::Draw.String(fFont, x + boxWidth / 2, y - fFont.m_nTall - 2, Vars::Colors::IndicatorTextBad.Value, ALIGN_CENTER, "Anti-cheat compatibility");
-	}
 }

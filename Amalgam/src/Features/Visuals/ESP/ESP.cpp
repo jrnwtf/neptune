@@ -90,9 +90,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 		tCache.m_bBones = Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Bones;
 
 		if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Distance && pPlayer != pLocal)
-		{
 			tCache.m_vText.emplace_back(ESPTextEnum::Bottom, std::format("[{:.0f}M]", vDelta.Length2D() / 41), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
-		}
 
 		PlayerInfo_t pi{};
 		if (I::EngineClient->GetPlayerInfo(iIndex, &pi))
@@ -141,7 +139,6 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 								  // sort by priority if unequal
 								  if (a->Priority != b->Priority)
 									  return a->Priority > b->Priority;
-
 								  return a->Name < b->Name;
 							  });
 
@@ -527,9 +524,7 @@ void CESP::StoreBuildings(CTFPlayer* pLocal)
 		tCache.m_bBox = Vars::ESP::Building.Value & Vars::ESP::BuildingEnum::Box;
 
 		if (Vars::ESP::Building.Value & Vars::ESP::BuildingEnum::Distance)
-		{
 			tCache.m_vText.emplace_back(ESPTextEnum::Bottom, std::format("[{:.0f}M]", vDelta.Length2D() / 41), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
-		}
 
 		bool bIsMini = pBuilding->m_bMiniBuilding();
 		if (Vars::ESP::Building.Value & Vars::ESP::BuildingEnum::Name)
@@ -688,9 +683,7 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 		tCache.m_bBox = Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Box;
 
 		if (Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Distance)
-		{
 			tCache.m_vText.emplace_back(ESPTextEnum::Bottom, std::format("[{:.0f}M]", vDelta.Length2D() / 41), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
-		}
 
 		if (Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Name)
 		{
@@ -1094,9 +1087,7 @@ void CESP::DrawPlayers()
 					H::Draw.StringWithBackground(fFont, m, t - tOffset, tColor, backgroundOutline, ALIGN_BOTTOM, sText.c_str());
 				}
 				else
-				{
 					H::Draw.StringOutlined(fFont, m, t - tOffset, tColor, tOutline, ALIGN_BOTTOM, sText.c_str());
-				}
 				tOffset += nTall;
 				break;
 			case ESPTextEnum::Bottom:

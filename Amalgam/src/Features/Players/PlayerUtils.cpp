@@ -15,7 +15,6 @@ PriorityLabel_t* CPlayerlistUtils::GetTag(int iID)
 {
 	if (iID > -1 && iID < m_vTags.size())
 		return &m_vTags[iID];
-
 	return nullptr;
 }
 
@@ -55,24 +54,21 @@ bool CPlayerlistUtils::ContainsSpecialChars(const std::string& name)
 				if ((unsigned char)name[i] == m_vSpecialChars[j] &&
 					(unsigned char)name[i + 1] == m_vSpecialChars[j + 1] &&
 					(unsigned char)name[i + 2] == m_vSpecialChars[j + 2])
-				{
 					return true;
-				}
 			}
 		}
 		
 		// Move to next character (UTF-8 aware)
-		if ((name[i] & 0x80) == 0) {
+		if ((name[i] & 0x80) == 0)
 			i += 1;  // ASCII character
-		} else if ((name[i] & 0xE0) == 0xC0) {
+		else if ((name[i] & 0xE0) == 0xC0)
 			i += 2;  // 2-byte UTF-8 sequence
-		} else if ((name[i] & 0xF0) == 0xE0) {
+		else if ((name[i] & 0xF0) == 0xE0)
 			i += 3;  // 3-byte UTF-8 sequence (Thai characters are here)
-		} else if ((name[i] & 0xF8) == 0xF0) {
+		else if ((name[i] & 0xF8) == 0xF0)
 			i += 4;  // 4-byte UTF-8 sequence
-		} else {
+		else
 			i += 1;  // Invalid UTF-8, skip
-		}
 	}
 	
 	return false;

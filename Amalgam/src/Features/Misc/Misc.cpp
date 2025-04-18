@@ -14,20 +14,18 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 	PingReducer();
 	WeaponSway();
 
+	if (I::EngineClient->IsInGame() && I::EngineClient->IsConnected())
+	{
+		static Timer namedPipeTimer{};
+		if (namedPipeTimer.Run(1.0f))
+			F::NPipe::UpdateLocalBotIgnoreStatus();
+	}
+	
 	if (!pLocal)
 		return;
 
 	AntiAFK(pLocal, pCmd);
 	InstantRespawnMVM(pLocal);
-
-	if (I::EngineClient && I::EngineClient->IsInGame() && I::EngineClient->IsConnected())
-	{
-		static Timer namedPipeTimer{};
-		if (namedPipeTimer.Run(1.0f))
-		{
-			F::NPipe::UpdateLocalBotIgnoreStatus();
-		}
-	}
 
 	if (!pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->m_MoveType() != MOVETYPE_WALK || pLocal->IsSwimming() || pLocal->InCond(TF_COND_SHIELD_CHARGE) || pLocal->InCond(TF_COND_HALLOWEEN_KART))
 		return;
@@ -700,22 +698,16 @@ void CMisc::NoiseSpam(CTFPlayer* pLocal)
 	
 	static float flLastSpamTime = 0.0f;
 	float flCurrentTime = SDK::PlatFloatTime();
-	
 	if (flCurrentTime - flLastSpamTime < 0.2f) 
 		return;
 	
 	flLastSpamTime = flCurrentTime;
-	
-	KeyValues* kv = new KeyValues("use_action_slot_item_server");
-	if (kv)
-	{
-		I::EngineClient->ServerCmdKeyValues(kv);
-	}
+	I::EngineClient->ServerCmdKeyValues(new KeyValues("use_action_slot_item_server"));
 }
 
 void CMisc::VoiceCommandSpam(CTFPlayer* pLocal)
 {
-	if (!Vars::Misc::Automation::VoiceCommandSpam.Value || !pLocal || !I::EngineClient)
+	if (!Vars::Misc::Automation::VoiceCommandSpam.Value || !pLocal || !pLocal->IsAlive())
 		return;
 
 	static float flLastVoiceTime = 0.0f;
