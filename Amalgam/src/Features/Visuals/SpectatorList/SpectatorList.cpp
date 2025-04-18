@@ -121,7 +121,6 @@ void CSpectatorList::Draw(CTFPlayer* pLocal)
 	Color_t activeColor = Vars::Menu::Theme::Active.Value;
 
 	H::Draw.FillRoundRect(x, y, boxWidth, totalHeight, cornerRadius, backgroundColor);
-	H::Draw.LineRoundRect(x, y, boxWidth, totalHeight, cornerRadius, backgroundColor);
 
 	const float headerHeight = H::Draw.Scale(24);
 	Color_t headerBgColor = backgroundColor;

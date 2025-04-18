@@ -1281,7 +1281,7 @@ void CMenu::MenuMisc(int iTab)
 				FToggle("Remove DSP", Vars::Misc::Sound::RemoveDSP, FToggle_Right);
 				FToggle("Giant weapon sounds", Vars::Misc::Sound::GiantWeaponSounds);
 				FToggle("Noise spam", Vars::Misc::Automation::NoiseSpam, FToggle_Left);
-				FToggle("Voice command spam", Vars::Misc::Sound::VoiceCommandSpam, FToggle_Right);
+				FDropdown("Voice command spam", Vars::Misc::Automation::VoiceCommandSpam, { "Off", "Random", "Medic", "Thanks", "Nice Shot", "Cheers", "Jeers", "Go Go Go", "Move Up", "Go Left", "Go Right", "Yes", "No", "Incoming", "Spy", "Sentry Ahead", "Need Teleporter", "Pootis", "Need Sentry", "Activate Charge", "Help", "Battle Cry" }, {});
 			} EndSection();
 			if (Section("Game", true))
 			{
@@ -3350,14 +3350,14 @@ void CMenu::DrawBinds()
 	float flHeight = H::Draw.Scale(18 * vInfo.size() + (Vars::Menu::BindWindowTitle.Value ? 42 : 12));
 	SetNextWindowSize({ flWidth, flHeight });
 	PushStyleVar(ImGuiStyleVar_WindowMinSize, { H::Draw.Scale(40), H::Draw.Scale(40) });
-	if (Begin("Binds", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing))
+	if (Begin("Binds", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBackground))
 	{
 		ImVec2 vWindowPos = GetWindowPos();
 
 		if (Vars::Menu::BindWindowTitle.Value)
-			RenderTwoToneBackground(H::Draw.Scale(28), F::Render.Background0, F::Render.Background0p5, F::Render.Background2);
+			RenderBackground(F::Render.Background0p5);
 		else
-			RenderBackground(F::Render.Background0p5, F::Render.Background2);
+			RenderBackground(F::Render.Background0p5);
 
 		info.x = vWindowPos.x; info.y = vWindowPos.y; old = info;
 		if (m_bIsOpen)
@@ -3366,11 +3366,36 @@ void CMenu::DrawBinds()
 		int iListStart = 8;
 		if (Vars::Menu::BindWindowTitle.Value)
 		{
-			SetCursorPos({ H::Draw.Scale(8), H::Draw.Scale(6) });
-			IconImage(ICON_MD_KEYBOARD);
+			ImVec2 vSize = GetWindowSize();
+			ImVec2 vDrawPos = GetDrawPos();
+			ImDrawList* pDrawList = GetWindowDrawList();
+			
+			ImColor headerBgColor = F::Render.Background0p5.Value;
+			headerBgColor.Value.x *= 0.9f; // r
+			headerBgColor.Value.y *= 0.9f; // g
+			headerBgColor.Value.z *= 0.9f; // b
+			
+			pDrawList->AddRectFilled(
+				{ vDrawPos.x, vDrawPos.y }, 
+				{ vDrawPos.x + vSize.x, vDrawPos.y + H::Draw.Scale(28) }, 
+				headerBgColor, 
+				H::Draw.Scale(3), 
+				ImDrawFlags_RoundCornersTop
+			);
+			
+			SetCursorPos({ H::Draw.Scale(4), H::Draw.Scale(6) });
 			PushFont(F::Render.FontLarge);
-			SetCursorPos({ H::Draw.Scale(30), H::Draw.Scale(7) });
-			FText("Binds");
+			SetCursorPos({ H::Draw.Scale(8), H::Draw.Scale(7) });
+			PushStyleColor(ImGuiCol_Text, F::Render.Active.Value);
+			FText("Key");
+			int keyWidth = 0, keyHeight = 0;
+			ImVec2 textSize = ImGui::CalcTextSize("Key");
+			keyWidth = textSize.x;
+			keyHeight = textSize.y;
+			SetCursorPos({ H::Draw.Scale(8) + keyWidth, H::Draw.Scale(7) });
+			PushStyleColor(ImGuiCol_Text, F::Render.Accent.Value);
+			FText("binds");
+			PopStyleColor(2);
 			PopFont();
 
 			iListStart = 36;

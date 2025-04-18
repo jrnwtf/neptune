@@ -61,47 +61,42 @@ void CRadar::DrawBackground()
 {
 	const WindowBox_t& info = Vars::Radar::Main::Window.Value;
 
-	// Match keybinds/speclist background color and transparency
 	Color_t backgroundColor = Vars::Menu::Theme::Background.Value;
 	backgroundColor = backgroundColor.Lerp({ 127, 127, 127, backgroundColor.a }, 1.f / 9);
 	backgroundColor.a = 245;
-
-	// Get theme colors
 	Color_t accentColor = Vars::Menu::Theme::Accent.Value;
 	Color_t activeColor = Vars::Menu::Theme::Active.Value;
 
-	// Draw rounded background with corner radius matching other UI elements
 	const int cornerRadius = H::Draw.Scale(3);
 	H::Draw.FillRoundRect(info.x, info.y, info.w, info.w, cornerRadius, backgroundColor);
+	const float headerHeight = H::Draw.Scale(24);
+	Color_t headerBgColor = backgroundColor;
+	headerBgColor = { 
+		static_cast<byte>(backgroundColor.r * 0.9f), 
+		static_cast<byte>(backgroundColor.g * 0.9f), 
+		static_cast<byte>(backgroundColor.b * 0.9f), 
+		backgroundColor.a 
+	};
+	
+	H::Draw.FillRoundRect(info.x, info.y, info.w, headerHeight, cornerRadius, headerBgColor);
 
-	// Draw title
 	const auto& indicatorFont = H::Fonts.GetFont(FONT_INDICATORS);
-	H::Draw.String(indicatorFont, info.x + H::Draw.Scale(16), info.y + H::Draw.Scale(13), activeColor, ALIGN_TOPLEFT, "Ra");
+	H::Draw.String(indicatorFont, info.x + H::Draw.Scale(16), info.y + H::Draw.Scale(5), activeColor, ALIGN_TOPLEFT, "Ra");
 	int radarWidth = 0, radarHeight = 0;
 	I::MatSystemSurface->GetTextSize(indicatorFont.m_dwFont, L"Ra", radarWidth, radarHeight);
-	H::Draw.String(indicatorFont, info.x + H::Draw.Scale(16) + radarWidth, info.y + H::Draw.Scale(13), accentColor, ALIGN_TOPLEFT, "dar");
+	H::Draw.String(indicatorFont, info.x + H::Draw.Scale(16) + radarWidth, info.y + H::Draw.Scale(5), accentColor, ALIGN_TOPLEFT, "dar");
 
-	// Draw accent line below title
-	H::Draw.FillRect(info.x + H::Draw.Scale(12), info.y + H::Draw.Scale(32), info.w - H::Draw.Scale(24), H::Draw.Scale(1), accentColor);
-
-	// Calculate radar area dimensions
 	const int titleHeight = H::Draw.Scale(40);
 	const int padding = H::Draw.Scale(12);
 	const int radarAreaHeight = info.w - titleHeight - padding;
 	const int radarAreaWidth = info.w - (padding * 2);
-
-	// Calculate center of radar area
 	const int centerX = info.x + info.w / 2;
 	const int centerY = info.y + titleHeight + (radarAreaHeight / 2);
-
-	// Calculate line length to stay within bounds
 	const int lineLength = std::min(radarAreaWidth, radarAreaHeight) / 2 - H::Draw.Scale(4);
 
-	// Draw crosshair lines (constrained within radar area)
 	H::Draw.Line(centerX - lineLength, centerY, centerX + lineLength, centerY, accentColor);
 	H::Draw.Line(centerX, centerY - lineLength, centerX, centerY + lineLength, accentColor);
 
-	// Draw outer border
 	if (Vars::Radar::Main::Style.Value == Vars::Radar::Main::StyleEnum::Rectangle)
 	{
 		H::Draw.LineRect(
