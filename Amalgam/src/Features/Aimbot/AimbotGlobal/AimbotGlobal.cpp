@@ -1,6 +1,7 @@
 #include "AimbotGlobal.h"
 
 #include "../../Players/PlayerUtils.h"
+#include "../../NamedPipe/NamedPipe.h"
 
 void CAimbotGlobal::SortTargets(std::vector<Target_t>& vTargets, int iMethod)
 {	// Sort by preference
@@ -137,6 +138,11 @@ bool CAimbotGlobal::ShouldIgnore(CBaseEntity* pEntity, CTFPlayer* pLocal, CTFWea
 
 		if (pLocal->m_iTeamNum() == pEntity->m_iTeamNum())
 			return false;
+
+		// pipe local playa
+		PlayerInfo_t pi{};
+		if (I::EngineClient->GetPlayerInfo(pPlayer->entindex(), &pi) && F::NPipe::IsLocalBot(pi.friendsID))
+			return true;
 
 		if (F::PlayerUtils.IsIgnored(pPlayer->entindex()))
 			return true;

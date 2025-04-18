@@ -8,6 +8,7 @@
 #include "../Features/ImGui/Menu/Menu.h"
 #include "../Features/Visuals/Visuals.h"
 #include "../SDK/Events/Events.h"
+#include "../Features/NamedPipe/NamedPipe.h"
 #include <Psapi.h>
 
 static inline std::string GetProcessName(DWORD dwProcessID)
@@ -87,6 +88,7 @@ void CCore::Load()
 #endif
 	U::ConVars.Initialize();
 	F::Commands.Initialize();
+	F::NPipe::Initialize();
 
 	F::Configs.LoadConfig(F::Configs.m_sCurrentConfig, false);
 	F::Configs.m_bConfigLoaded = true;
@@ -148,6 +150,7 @@ void CCore::Unload()
 	U::ConVars.FindVar("cl_wpn_sway_scale")->SetValue(0.f);
 
 	Sleep(250);
+	F::NPipe::Shutdown();
 	U::ConVars.Unload();
 	F::Materials.UnloadMaterials();
 

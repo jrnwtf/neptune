@@ -388,6 +388,7 @@ void CMenu::MenuAimbot(int iTab)
 				FToggle("Minwalk", Vars::AntiHack::AntiAim::MinWalk, FToggle_Left);
 				FToggle("Anti-overlap", Vars::AntiHack::AntiAim::AntiOverlap, FToggle_Left);
 				FToggle("Hide pitch on shot", Vars::AntiHack::AntiAim::InvalidShootPitch, FToggle_Right);
+				FToggle("Taunt spin", Vars::AntiHack::AntiAim::TauntSpin, FToggle_Right);
 			} EndSection();
 
 			/* Column 2 */
@@ -484,22 +485,22 @@ void CMenu::MenuVisuals(int iTab)
 				FDropdown("Draw", Vars::ESP::Draw, { "Players", "Buildings", "Projectiles", "Objective", "NPCs", "Health", "Ammo", "Money", "Powerups", "Bombs", "Spellbook", "Gargoyle" }, {}, FDropdown_Multi, 0, nullptr, "Draw ESP");
 				PushTransparent(!(FGet(Vars::ESP::Draw) & Vars::ESP::DrawEnum::Players));
 				{
-					FDropdown("Player", Vars::ESP::Player, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Box", "Distance", "Bones", "Health bar", "Health text", "Uber bar", "Uber text", "Class icon", "Class text", "Weapon icon", "Weapon text", "Priority", "Labels", "Buffs", "Debuffs", "Misc", "Lag compensation", "Ping", "KDR" }, {}, FDropdown_Multi, 0, nullptr, "Player ESP");
+					FDropdown("Player", Vars::ESP::Player, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Name background", "Box", "Distance", "Bones", "Health bar", "Health text", "Uber bar", "Uber text", "Class icon", "Class text", "Weapon icon", "Weapon text", "Priority", "Labels", "Buffs", "Debuffs", "Misc", "Lag compensation", "Ping", "KDR", "That's how mafia works" }, {}, FDropdown_Multi, 0, nullptr, "Player ESP");
 				}
 				PopTransparent();
 				PushTransparent(!(FGet(Vars::ESP::Draw) & Vars::ESP::DrawEnum::Buildings));
 				{
-					FDropdown("Building", Vars::ESP::Building, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Box", "Distance", "Health bar", "Health text", "Owner", "Level", "Flags" }, {}, FDropdown_Multi, 0, nullptr, "Building ESP");
+					FDropdown("Building", Vars::ESP::Building, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Name background", "Box", "Distance", "Health bar", "Health text", "Owner", "Level", "Flags" }, {}, FDropdown_Multi, 0, nullptr, "Building ESP");
 				}
 				PopTransparent();
 				PushTransparent(!(FGet(Vars::ESP::Draw) & Vars::ESP::DrawEnum::Projectiles));
 				{
-					FDropdown("Projectile", Vars::ESP::Projectile, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Box", "Distance", "Owner", "Flags" }, {}, FDropdown_Multi, 0, nullptr, "Projectile ESP");
+					FDropdown("Projectile", Vars::ESP::Projectile, { "Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Name background", "Box", "Distance", "Owner", "Flags" }, {}, FDropdown_Multi, 0, nullptr, "Projectile ESP");
 				}
 				PopTransparent();
 				PushTransparent(!(FGet(Vars::ESP::Draw) & Vars::ESP::DrawEnum::Objective));
 				{
-					FDropdown("Objective", Vars::ESP::Objective, { "Enemy", "Team", "##Divider", "Name", "Box", "Distance", "Flags", "Intel return time" }, {}, FDropdown_Multi, 0, nullptr, "Objective ESP");
+					FDropdown("Objective", Vars::ESP::Objective, { "Enemy", "Team", "##Divider", "Name", "Name background", "Box", "Distance", "Flags", "Intel return time" }, {}, FDropdown_Multi, 0, nullptr, "Objective ESP");
 				}
 				PopTransparent();
 			} EndSection();
@@ -538,6 +539,7 @@ void CMenu::MenuVisuals(int iTab)
 				FSlider("Dormant alpha", Vars::ESP::DormantAlpha, 0, 255, 5, "%i", FSlider_Right | FSlider_Clamp);
 				FSlider("Dormant decay", Vars::ESP::DormantTime, 0.015f, 5.0f, 0.1f, "%gs", FSlider_Left | FSlider_Clamp | FSlider_Precision);
 				FToggle("Dormant priority only", Vars::ESP::DormantPriority, FToggle_Right);
+				FSlider("Background opacity", Vars::ESP::BackgroundOpacity, 0, 255, 5, "%i", FSlider_Left | FSlider_Clamp);
 			} EndSection();
 
 			EndTable();
@@ -1278,6 +1280,8 @@ void CMenu::MenuMisc(int iTab)
 				FToggle("Hitsound always", Vars::Misc::Sound::HitsoundAlways, FToggle_Left);
 				FToggle("Remove DSP", Vars::Misc::Sound::RemoveDSP, FToggle_Right);
 				FToggle("Giant weapon sounds", Vars::Misc::Sound::GiantWeaponSounds);
+				FToggle("Noise spam", Vars::Misc::Automation::NoiseSpam, FToggle_Left);
+				FDropdown("Voice command spam", Vars::Misc::Automation::VoiceCommandSpam, { "Off", "Random", "Medic", "Thanks", "Nice Shot", "Cheers", "Jeers", "Go Go Go", "Move Up", "Go Left", "Go Right", "Yes", "No", "Incoming", "Spy", "Sentry Ahead", "Need Teleporter", "Pootis", "Need Sentry", "Activate Charge", "Help", "Battle Cry" }, {});
 			} EndSection();
 			if (Section("Game", true))
 			{
@@ -3346,14 +3350,14 @@ void CMenu::DrawBinds()
 	float flHeight = H::Draw.Scale(18 * vInfo.size() + (Vars::Menu::BindWindowTitle.Value ? 42 : 12));
 	SetNextWindowSize({ flWidth, flHeight });
 	PushStyleVar(ImGuiStyleVar_WindowMinSize, { H::Draw.Scale(40), H::Draw.Scale(40) });
-	if (Begin("Binds", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing))
+	if (Begin("Binds", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBackground))
 	{
 		ImVec2 vWindowPos = GetWindowPos();
 
 		if (Vars::Menu::BindWindowTitle.Value)
-			RenderTwoToneBackground(H::Draw.Scale(28), F::Render.Background0, F::Render.Background0p5, F::Render.Background2);
+			RenderBackground(F::Render.Background0p5);
 		else
-			RenderBackground(F::Render.Background0p5, F::Render.Background2);
+			RenderBackground(F::Render.Background0p5);
 
 		info.x = vWindowPos.x; info.y = vWindowPos.y; old = info;
 		if (m_bIsOpen)
@@ -3362,11 +3366,36 @@ void CMenu::DrawBinds()
 		int iListStart = 8;
 		if (Vars::Menu::BindWindowTitle.Value)
 		{
-			SetCursorPos({ H::Draw.Scale(8), H::Draw.Scale(6) });
-			IconImage(ICON_MD_KEYBOARD);
+			ImVec2 vSize = GetWindowSize();
+			ImVec2 vDrawPos = GetDrawPos();
+			ImDrawList* pDrawList = GetWindowDrawList();
+			
+			ImColor headerBgColor = F::Render.Background0p5.Value;
+			headerBgColor.Value.x *= 0.9f; // r
+			headerBgColor.Value.y *= 0.9f; // g
+			headerBgColor.Value.z *= 0.9f; // b
+			
+			pDrawList->AddRectFilled(
+				{ vDrawPos.x, vDrawPos.y }, 
+				{ vDrawPos.x + vSize.x, vDrawPos.y + H::Draw.Scale(28) }, 
+				headerBgColor, 
+				H::Draw.Scale(3), 
+				ImDrawFlags_RoundCornersTop
+			);
+			
+			SetCursorPos({ H::Draw.Scale(4), H::Draw.Scale(6) });
 			PushFont(F::Render.FontLarge);
-			SetCursorPos({ H::Draw.Scale(30), H::Draw.Scale(7) });
-			FText("Binds");
+			SetCursorPos({ H::Draw.Scale(8), H::Draw.Scale(7) });
+			PushStyleColor(ImGuiCol_Text, F::Render.Active.Value);
+			FText("Key");
+			int keyWidth = 0, keyHeight = 0;
+			ImVec2 textSize = ImGui::CalcTextSize("Key");
+			keyWidth = textSize.x;
+			keyHeight = textSize.y;
+			SetCursorPos({ H::Draw.Scale(8) + keyWidth, H::Draw.Scale(7) });
+			PushStyleColor(ImGuiCol_Text, F::Render.Accent.Value);
+			FText("binds");
+			PopStyleColor(2);
 			PopFont();
 
 			iListStart = 36;

@@ -9,8 +9,9 @@ bool CRadar::GetDrawPosition(CTFPlayer* pLocal, CBaseEntity* pEntity, int& x, in
 	const float flYaw = -DEG2RAD(I::EngineClient->GetViewAngles().y);
 	const float flSin = sinf(flYaw), flCos = cosf(flYaw);
 
-	Vec3 vDelta = pLocal->GetAbsOrigin() - pEntity->GetAbsOrigin();
-	Vec2 vPos = { vDelta.x * flSin + vDelta.y * flCos, vDelta.x * flCos - vDelta.y * flSin };
+	const Vec3 vDelta = pLocal->GetAbsOrigin() - pEntity->GetAbsOrigin();
+	auto vPos = Vec2(vDelta.x * flSin + vDelta.y * flCos, vDelta.x * flCos - vDelta.y * flSin);
+	z = vDelta.z;
 
 	switch (Vars::Radar::Main::Style.Value)
 	{
@@ -39,38 +40,78 @@ bool CRadar::GetDrawPosition(CTFPlayer* pLocal, CBaseEntity* pEntity, int& x, in
 		}
 	}
 
-	auto& tWindowBox = Vars::Radar::Main::Window.Value;
-	x = tWindowBox.x + vPos.x / flRange * tWindowBox.w / 2;
-	y = tWindowBox.y + vPos.y / flRange * tWindowBox.w / 2 + tWindowBox.h / 2.f;
-	z = vDelta.z;
+	const WindowBox_t& info = Vars::Radar::Main::Window.Value;
+	const int titleHeight = H::Draw.Scale(40);
+	const int padding = H::Draw.Scale(12);
+	const int radarAreaHeight = info.w - titleHeight - padding;
+	const int radarAreaWidth = info.w - (padding * 2);
+
+	// Calculate position within the radar area (accounting for title and padding)
+	// Add extra padding to keep icons fully within bounds
+	const int iconPadding = H::Draw.Scale(8);
+	x = info.x + padding + std::clamp(vPos.x / flRange * radarAreaWidth / 2 + float(radarAreaWidth) / 2,
+		float(iconPadding), float(radarAreaWidth - iconPadding));
+	y = info.y + titleHeight + std::clamp(vPos.y / flRange * radarAreaHeight / 2 + float(radarAreaHeight) / 2,
+		float(iconPadding), float(radarAreaHeight - iconPadding));
 
 	return true;
 }
 
 void CRadar::DrawBackground()
 {
-	auto& tWindowBox = Vars::Radar::Main::Window.Value;
-	Color_t& tThemeBack = Vars::Menu::Theme::Background.Value;
-	Color_t& tThemeAccent = Vars::Menu::Theme::Accent.Value;
-	Color_t tColorBackground = { tThemeBack.r, tThemeBack.g, tThemeBack.b, byte(Vars::Radar::Main::BackAlpha.Value) };
-	Color_t tColorAccent = { tThemeAccent.r, tThemeAccent.g, tThemeAccent.b, byte(Vars::Radar::Main::LineAlpha.Value) };
+	const WindowBox_t& info = Vars::Radar::Main::Window.Value;
 
-	switch (Vars::Radar::Main::Style.Value)
-	{
-	case Vars::Radar::Main::StyleEnum::Circle:
-	{
-		const float flRadius = tWindowBox.w / 2.f;
-		H::Draw.FillCircle(tWindowBox.x, tWindowBox.y + flRadius, flRadius, 100, tColorBackground);
-		H::Draw.LineCircle(tWindowBox.x, tWindowBox.y + flRadius, flRadius, 100, tColorAccent);
-		break;
-	}
-	case Vars::Radar::Main::StyleEnum::Rectangle:
-		H::Draw.FillRoundRect(tWindowBox.x - tWindowBox.w / 2, tWindowBox.y, tWindowBox.w, tWindowBox.h, H::Draw.Scale(3), tColorBackground);
-		H::Draw.LineRoundRect(tWindowBox.x - tWindowBox.w / 2, tWindowBox.y, tWindowBox.w, tWindowBox.h, H::Draw.Scale(3), tColorAccent);
-	}
+	Color_t backgroundColor = Vars::Menu::Theme::Background.Value;
+	backgroundColor = backgroundColor.Lerp({ 127, 127, 127, backgroundColor.a }, 1.f / 9);
+	backgroundColor.a = 245;
+	Color_t accentColor = Vars::Menu::Theme::Accent.Value;
+	Color_t activeColor = Vars::Menu::Theme::Active.Value;
 
-	H::Draw.Line(tWindowBox.x - tWindowBox.w / 2, tWindowBox.y + tWindowBox.h / 2, tWindowBox.x + tWindowBox.w / 2 - 1, tWindowBox.y + tWindowBox.h / 2, tColorAccent);
-	H::Draw.Line(tWindowBox.x, tWindowBox.y, tWindowBox.x, tWindowBox.y + tWindowBox.h - 1, tColorAccent);
+	const int cornerRadius = H::Draw.Scale(3);
+	H::Draw.FillRoundRect(info.x, info.y, info.w, info.w, cornerRadius, backgroundColor);
+	const float headerHeight = H::Draw.Scale(24);
+	Color_t headerBgColor = backgroundColor;
+	headerBgColor = { 
+		static_cast<byte>(backgroundColor.r * 0.9f), 
+		static_cast<byte>(backgroundColor.g * 0.9f), 
+		static_cast<byte>(backgroundColor.b * 0.9f), 
+		backgroundColor.a 
+	};
+	
+	H::Draw.FillRoundRect(info.x, info.y, info.w, headerHeight, cornerRadius, headerBgColor);
+
+	const auto& indicatorFont = H::Fonts.GetFont(FONT_INDICATORS);
+	H::Draw.String(indicatorFont, info.x + H::Draw.Scale(16), info.y + H::Draw.Scale(5), activeColor, ALIGN_TOPLEFT, "Ra");
+	int radarWidth = 0, radarHeight = 0;
+	I::MatSystemSurface->GetTextSize(indicatorFont.m_dwFont, L"Ra", radarWidth, radarHeight);
+	H::Draw.String(indicatorFont, info.x + H::Draw.Scale(16) + radarWidth, info.y + H::Draw.Scale(5), accentColor, ALIGN_TOPLEFT, "dar");
+
+	const int titleHeight = H::Draw.Scale(40);
+	const int padding = H::Draw.Scale(12);
+	const int radarAreaHeight = info.w - titleHeight - padding;
+	const int radarAreaWidth = info.w - (padding * 2);
+	const int centerX = info.x + info.w / 2;
+	const int centerY = info.y + titleHeight + (radarAreaHeight / 2);
+	const int lineLength = std::min(radarAreaWidth, radarAreaHeight) / 2 - H::Draw.Scale(4);
+
+	H::Draw.Line(centerX - lineLength, centerY, centerX + lineLength, centerY, accentColor);
+	H::Draw.Line(centerX, centerY - lineLength, centerX, centerY + lineLength, accentColor);
+
+	if (Vars::Radar::Main::Style.Value == Vars::Radar::Main::StyleEnum::Rectangle)
+	{
+		H::Draw.LineRect(
+			info.x + padding,
+			info.y + titleHeight,
+			radarAreaWidth,
+			radarAreaHeight,
+			accentColor
+		);
+	}
+	else if (Vars::Radar::Main::Style.Value == Vars::Radar::Main::StyleEnum::Circle)
+	{
+		const float flRadius = std::min(radarAreaWidth, radarAreaHeight) / 2.0f - H::Draw.Scale(2);
+		H::Draw.LineCircle(centerX, centerY, flRadius, 100, accentColor);
+	}
 }
 
 void CRadar::DrawPoints(CTFPlayer* pLocal)

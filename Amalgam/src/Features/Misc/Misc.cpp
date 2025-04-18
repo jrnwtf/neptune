@@ -4,13 +4,23 @@
 #include "../TickHandler/TickHandler.h"
 #include "../Players/PlayerUtils.h"
 #include "../Aimbot/AutoRocketJump/AutoRocketJump.h"
+#include "../NamedPipe/NamedPipe.h"
 
 void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
+	NoiseSpam(pLocal);
+	VoiceCommandSpam(pLocal);
 	CheatsBypass();
 	PingReducer();
 	WeaponSway();
 
+	if (I::EngineClient->IsInGame() && I::EngineClient->IsConnected())
+	{
+		static Timer namedPipeTimer{};
+		if (namedPipeTimer.Run(1.0f))
+			F::NPipe::UpdateLocalBotIgnoreStatus();
+	}
+	
 	if (!pLocal)
 		return;
 
@@ -675,4 +685,108 @@ bool CMisc::SteamRPC()
 	I::SteamFriends->SetRichPresence("steam_player_group_size", std::to_string(Vars::Misc::Steam::GroupSize.Value).c_str());
 
 	return true;
+}
+
+
+void CMisc::NoiseSpam(CTFPlayer* pLocal)
+{
+	if (!Vars::Misc::Automation::NoiseSpam.Value || !pLocal)
+		return;
+	
+	if (pLocal->m_bUsingActionSlot())
+		return;
+	
+	static float flLastSpamTime = 0.0f;
+	float flCurrentTime = SDK::PlatFloatTime();
+	if (flCurrentTime - flLastSpamTime < 0.2f) 
+		return;
+	
+	flLastSpamTime = flCurrentTime;
+	I::EngineClient->ServerCmdKeyValues(new KeyValues("use_action_slot_item_server"));
+}
+
+void CMisc::VoiceCommandSpam(CTFPlayer* pLocal)
+{
+	if (!Vars::Misc::Automation::VoiceCommandSpam.Value || !pLocal || !pLocal->IsAlive())
+		return;
+
+	static float flLastVoiceTime = 0.0f;
+	float flCurrentTime = SDK::PlatFloatTime();
+	
+	if (flCurrentTime - flLastVoiceTime >= 6.5f) // 6500ms in seconds
+	{
+		flLastVoiceTime = flCurrentTime;
+
+		switch (Vars::Misc::Automation::VoiceCommandSpam.Value)
+		{
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::Random:
+			{
+				int menu = SDK::RandomInt(0, 2);
+				int command = SDK::RandomInt(0, 8);
+				std::string cmd = "voicemenu " + std::to_string(menu) + " " + std::to_string(command);
+				I::EngineClient->ClientCmd_Unrestricted(cmd.c_str());
+			}
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::Medic:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 0 0");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::Thanks:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 0 1");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::NiceShot:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 2 6");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::Cheers:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 2 2");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::Jeers:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 2 3");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::GoGoGo:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 0 2");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::MoveUp:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 0 3");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::GoLeft:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 0 4");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::GoRight:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 0 5");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::Yes:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 0 6");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::No:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 0 7");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::Incoming:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 1 0");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::Spy:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 1 1");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::Sentry:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 1 2");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::NeedTeleporter:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 1 3");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::Pootis:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 1 4");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::NeedSentry:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 1 5");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::ActivateCharge:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 1 6");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::Help:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 2 0");
+			break;
+		case Vars::Misc::Automation::VoiceCommandSpamEnum::BattleCry:
+			I::EngineClient->ClientCmd_Unrestricted("voicemenu 2 1");
+			break;
+		}
+	}
 }
