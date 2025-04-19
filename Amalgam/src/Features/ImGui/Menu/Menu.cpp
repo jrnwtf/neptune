@@ -388,7 +388,7 @@ void CMenu::MenuAimbot(int iTab)
 				FToggle("Minwalk", Vars::AntiHack::AntiAim::MinWalk, FToggle_Left);
 				FToggle("Anti-overlap", Vars::AntiHack::AntiAim::AntiOverlap, FToggle_Left);
 				FToggle("Hide pitch on shot", Vars::AntiHack::AntiAim::InvalidShootPitch, FToggle_Right);
-				FToggle("Taunt spin", Vars::AntiHack::AntiAim::TauntSpin, FToggle_Right);
+				FToggle("Taunt spin", Vars::AntiHack::AntiAim::TauntSpin, FToggle_Left);
 			} EndSection();
 
 			/* Column 2 */
