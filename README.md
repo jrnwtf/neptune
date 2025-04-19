@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://nightly.link/TheGameEnhancer2004/Amalgam-v2/workflows/msbuild/master/Amalgamx64Release.zip">
+  <a href="https://nightly.link/mlemlody/neptune/workflows/msbuild/master/Amalgamx64Release.zip">
     <img src=".github/assets/download.png" alt="Download" width="auto" height="auto">
   </a>
   <a href="https://nightly.link/TheGameEnhancer2004/Amalgam-v2/workflows/msbuild/master/Amalgamx64ReleasePDB.zip">
