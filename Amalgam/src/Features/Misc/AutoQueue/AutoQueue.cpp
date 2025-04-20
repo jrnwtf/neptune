@@ -2,7 +2,66 @@
 
 void CAutoQueue::Run()
 {
-	if (Vars::Misc::Queueing::AutoCasualQueue.Value && !I::TFPartyClient->BInQueueForMatchGroup(k_eTFMatchGroup_Casual_Default))
+	static float flLastQueueTime = 0.0f;
+	static bool bQueuedOnce = false;
+	static bool bWasInGame = false;
+	static bool bWasDisconnected = false;
+	
+	if (!Vars::Misc::Queueing::AutoCasualQueue.Value)
+	{
+		bQueuedOnce = false;
+		flLastQueueTime = 0.0f;
+		return;
+	}
+
+	if (I::TFPartyClient->BInQueueForMatchGroup(k_eTFMatchGroup_Casual_Default))
+		return;
+
+	bool bInGame = I::EngineClient->IsInGame();
+	bool bIsLoadingMap = I::EngineClient->IsDrawingLoadingImage();
+
+	if (bIsLoadingMap && Vars::Misc::Queueing::RQLTM.Value)
+		return;
+
+	float flCurrentTime = I::EngineClient->Time();
+	float flQueueDelay = Vars::Misc::Queueing::QueueDelay.Value * 60.0f; 
+	
+	if (bWasInGame && !bInGame && !bIsLoadingMap)
+	{
+		bWasDisconnected = true;
+		
+		if (Vars::Misc::Queueing::RQif.Value && Vars::Misc::Queueing::RQkick.Value)
+		{
+			flLastQueueTime = 0.0f;
+		}
+	}
+	
+	bWasInGame = bInGame;
+
+
+	if (bInGame && Vars::Misc::Queueing::RQif.Value)
+	{
+		int nPlayerCount = 0;
+		
+		for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
+		{
+			PlayerInfo_t pi{};
+			if (I::EngineClient->GetPlayerInfo(i, &pi) && pi.userID != -1)
+				nPlayerCount++;
+		}
+		
+		if (nPlayerCount < Vars::Misc::Queueing::RQplt.Value)
+		{
+			I::EngineClient->ClientCmd_Unrestricted("disconnect");
+			bWasInGame = false;
+			bWasDisconnected = true;
+			flLastQueueTime = 0.0f;
+		}
+	}
+
+	bool bShouldQueue = !bQueuedOnce || (flCurrentTime - flLastQueueTime >= flQueueDelay);
+	
+	if (bShouldQueue && !bInGame && !bIsLoadingMap)
 	{
 		static bool bHasLoaded = false;
 		if (!bHasLoaded)
@@ -10,6 +69,10 @@ void CAutoQueue::Run()
 			I::TFPartyClient->LoadSavedCasualCriteria();
 			bHasLoaded = true;
 		}
+		
 		I::TFPartyClient->RequestQueueForMatch(k_eTFMatchGroup_Casual_Default);
+		flLastQueueTime = flCurrentTime;
+		bQueuedOnce = true;
+		bWasDisconnected = false;
 	}
 }

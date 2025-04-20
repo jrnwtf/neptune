@@ -1307,6 +1307,15 @@ void CMenu::MenuMisc(int iTab)
 				);
 				FToggle("Freeze queue", Vars::Misc::Queueing::FreezeQueue, FToggle_Left);
 				FToggle("Auto queue", Vars::Misc::Queueing::AutoCasualQueue, FToggle_Right);
+				FSlider("Queue delay", Vars::Misc::Queueing::QueueDelay, 0, 10, 1, "%im");
+				FToggle("Requeue if...", Vars::Misc::Queueing::RQif, FToggle_Left);
+				PushTransparent(!FGet(Vars::Misc::Queueing::RQif));
+				{
+					FSlider("Players LT", Vars::Misc::Queueing::RQplt, 0, 100, 1, "%i");
+					FToggle("Kicked", Vars::Misc::Queueing::RQkick, FToggle_Left);
+					FToggle("dont LTM", Vars::Misc::Queueing::RQLTM, FToggle_Right);
+				}
+				PopTransparent();
 			} EndSection();
 			if (Section("Navbot", true))
 			{
