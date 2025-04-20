@@ -1306,7 +1306,8 @@ void CMenu::MenuMisc(int iTab)
 				{
 					FSlider("Players LT", Vars::Misc::Queueing::RQplt, 0, 100, 1, "%i");
 					FToggle("Kicked", Vars::Misc::Queueing::RQkick, FToggle_Left);
-					FToggle("dont LTM", Vars::Misc::Queueing::RQLTM, FToggle_Right);
+					FToggle("dont RQLTM", Vars::Misc::Queueing::RQLTM, FToggle_Right);
+					FToggle("Ignore Friends", Vars::Misc::Queueing::IgnoreFriends, FToggle_Left);
 				}
 				PopTransparent();
 			} EndSection();
