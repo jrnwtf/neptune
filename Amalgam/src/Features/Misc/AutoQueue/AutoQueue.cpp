@@ -1,4 +1,5 @@
 #include "AutoQueue.h"
+#include "../../Players/PlayerUtils.h"
 
 void CAutoQueue::Run()
 {
@@ -47,7 +48,28 @@ void CAutoQueue::Run()
 		{
 			PlayerInfo_t pi{};
 			if (I::EngineClient->GetPlayerInfo(i, &pi) && pi.userID != -1)
-				nPlayerCount++;
+			{
+				bool bShouldCount = true;
+				
+				if (Vars::Misc::Queueing::IgnoreFriends.Value)
+				{
+					uint32_t uFriendsID = pi.friendsID;
+					
+					if (H::Entities.IsFriend(uFriendsID) || 
+						H::Entities.InParty(uFriendsID) ||
+						F::PlayerUtils.HasTag(uFriendsID, F::PlayerUtils.TagToIndex(FRIEND_TAG)) ||
+						F::PlayerUtils.HasTag(uFriendsID, F::PlayerUtils.TagToIndex(FRIEND_IGNORE_TAG)) ||
+						F::PlayerUtils.HasTag(uFriendsID, F::PlayerUtils.TagToIndex(IGNORED_TAG)) ||
+						F::PlayerUtils.HasTag(uFriendsID, F::PlayerUtils.TagToIndex(BOT_IGNORE_TAG)) ||
+						F::PlayerUtils.HasTag(uFriendsID, F::PlayerUtils.TagToIndex(PARTY_TAG)))
+					{
+						bShouldCount = false;
+					}
+				}
+				
+				if (bShouldCount)
+					nPlayerCount++;
+			}
 		}
 		
 		if (nPlayerCount < Vars::Misc::Queueing::RQplt.Value)
