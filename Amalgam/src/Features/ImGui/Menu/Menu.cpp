@@ -1270,6 +1270,7 @@ void CMenu::MenuMisc(int iTab)
 				FToggle("Auto accept item drops", Vars::Misc::Automation::AcceptItemDrops, FToggle_Right);
 				FToggle("Auto F2 ignored", Vars::Misc::Automation::AutoF2Ignored, FToggle_Left);
 				FToggle("Auto F1 priority", Vars::Misc::Automation::AutoF1Priority, FToggle_Right);
+				FToggle("Random votekick", Vars::Misc::Automation::RandomVotekick, FToggle_Left);
 			} EndSection();
 
 			/* Column 2 */

@@ -26,6 +26,7 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 	AntiAFK(pLocal, pCmd);
 	InstantRespawnMVM(pLocal);
+	RandomVotekick(pLocal);
 
 	if (!pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->m_MoveType() != MOVETYPE_WALK || pLocal->IsSwimming() || pLocal->InCond(TF_COND_SHIELD_CHARGE) || pLocal->InCond(TF_COND_HALLOWEEN_KART))
 		return;
@@ -788,5 +789,49 @@ void CMisc::VoiceCommandSpam(CTFPlayer* pLocal)
 			I::EngineClient->ClientCmd_Unrestricted("voicemenu 2 1");
 			break;
 		}
+	}
+}
+
+void CMisc::RandomVotekick(CTFPlayer* pLocal)
+{
+	if (!Vars::Misc::Automation::RandomVotekick.Value || !I::EngineClient->IsInGame() || !I::EngineClient->IsConnected())
+		return;
+
+	if (!m_tRandomVotekickTimer.Run(1.0f))
+		return;
+
+	std::vector<int> vPotentialTargets;
+
+	for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
+	{
+		if (i == I::EngineClient->GetLocalPlayer())
+			continue;
+
+		PlayerInfo_t pi{};
+		if (!I::EngineClient->GetPlayerInfo(i, &pi) || pi.fakeplayer)
+			continue;
+
+		if (H::Entities.IsFriend(i) || 
+			H::Entities.InParty(i) ||
+			F::PlayerUtils.IsIgnored(i) ||
+			F::PlayerUtils.HasTag(i, F::PlayerUtils.TagToIndex(FRIEND_IGNORE_TAG)) ||
+			F::PlayerUtils.HasTag(i, F::PlayerUtils.TagToIndex(BOT_IGNORE_TAG)))
+			continue;
+
+		vPotentialTargets.push_back(i);
+	}
+
+	if (vPotentialTargets.empty())
+		return;
+
+
+	int iRandom = SDK::RandomInt(0, vPotentialTargets.size() - 1);
+	int iTarget = vPotentialTargets[iRandom];
+
+
+	PlayerInfo_t pi{};
+	if (I::EngineClient->GetPlayerInfo(iTarget, &pi))
+	{
+		I::ClientState->SendStringCmd(std::format("callvote Kick \"{} other\"", pi.userID).c_str());
 	}
 }
