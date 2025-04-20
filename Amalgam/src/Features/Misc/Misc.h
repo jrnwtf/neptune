@@ -15,6 +15,7 @@ class CMisc
 	void InstantRespawnMVM(CTFPlayer* pLocal);
 	void NoiseSpam(CTFPlayer* pLocal);
 	void VoiceCommandSpam(CTFPlayer* pLocal);
+	void RandomVotekick(CTFPlayer* pLocal);
 
 	void CheatsBypass();
 	void PingReducer();
@@ -43,6 +44,7 @@ public:
 	int m_iWishCmdrate = -1;
 	//int m_iWishUpdaterate = -1;
 	bool m_bAntiAFK = false;
+	Timer m_tRandomVotekickTimer;
 };
 
 ADD_FEATURE(CMisc, Misc)
