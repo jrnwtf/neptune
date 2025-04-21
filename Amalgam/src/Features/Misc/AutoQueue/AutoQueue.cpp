@@ -51,7 +51,7 @@ void CAutoQueue::Run()
 			{
 				bool bShouldCount = true;
 				
-				if (Vars::Misc::Queueing::IgnoreFriends.Value)
+				if (Vars::Misc::Queueing::RQIgnoreFriends.Value)
 				{
 					uint32_t uFriendsID = pi.friendsID;
 					
