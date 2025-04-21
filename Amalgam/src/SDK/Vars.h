@@ -923,7 +923,7 @@ namespace Vars
 			CVar(RQplt, 12, NONE) 
 			CVar(RQkick, false, NONE) 
 			CVar(RQLTM, false, NONE) 
-			CVar(IgnoreFriends, false)
+			CVar(RQIgnoreFriends, false)
 		SUBNAMESPACE_END(Queueing)
 
 		SUBNAMESPACE_BEGIN(MannVsMachine)
