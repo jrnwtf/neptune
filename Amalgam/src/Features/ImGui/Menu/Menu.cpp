@@ -1337,7 +1337,7 @@ void CMenu::MenuMisc(int iTab)
 							FSlider("Auto scope cancel time", Vars::Misc::Movement::NavBot::AutoScopeCancelTime, 1, 5, 1, "%is");
 						}
 						PopTransparent();
-						FDropdown("Preferences", Vars::Misc::Movement::NavBot::Preferences, { "Get health", "Get ammo", "Reload weapons", "Stalk enemies", "Defend objectives", "Capture objectives", "Help capture objectives", "Escape danger", "Safe capping", "Target sentries", "Auto engie", "##Divider", "Target sentries low range", "Help capture objective friend only", "Dont escape danger with intel" }, {}, FDropdown_Multi);
+						FDropdown("Preferences", Vars::Misc::Movement::NavBot::Preferences, { "Get health", "Get ammo", "Reload weapons", "Stalk enemies", "Defend objectives", "Capture objectives", "Help capture objectives", "Escape danger", "Safe capping", "Target sentries", "Auto engie", "##Divider", "Target sentries low range", "Help capture objective friend only", "Dont escape danger with intel", "Group with others" }, {}, FDropdown_Multi);
 						FDropdown("Blacklist", Vars::Misc::Movement::NavBot::Blacklist, { "Normal threats", "Dormant threats", "##Divider", "Players", "Stickies", "Projectiles", "Sentries" }, {}, FDropdown_Multi);
 						PushTransparent(!(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::NormalThreats) || !FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
 						{
