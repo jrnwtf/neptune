@@ -235,7 +235,8 @@ void CNavParser::Map::updateIgnores()
 						area.z += PLAYER_JUMP_HEIGHT;
 
 						// Check if player is close to us
-						if (player_origin.value().DistToSqr(area) <= pow(1000.0f, 2))
+						float flDistSqr = player_origin.value().DistToSqr(area);
+						if (flDistSqr <= pow(1000.0f, 2))
 						{
 							// Check if player can hurt us
 							if (!F::NavParser.IsVectorVisibleNavigation(player_origin.value(), area, MASK_SHOT))
@@ -284,19 +285,55 @@ void CNavParser::Map::updateIgnores()
 							// if ( pSentry->IsDormant( ) )
 							building_origin->z += PLAYER_JUMP_HEIGHT;
 
+							// Define range tiers for sentry danger
+							const float flHighDangerRange = 900.0f; // Full blacklist
+							const float flMediumDangerRange = 1050.0f; // Caution range (try to avoid)
+							const float flLowDangerRange = 1200.0f; // Safe for some classes
+
 							// Actual building check
 							for (auto& i : navfile.m_areas)
 							{
 								Vector area = i.m_center;
 								area.z += PLAYER_JUMP_HEIGHT;
-								// Out of range
-								if (building_origin->DistToSqr(area) <= pow(1200.0f + HALF_PLAYER_WIDTH, 2))
+								
+								float flDistSqr = building_origin->DistToSqr(area);
+								
+								// High danger - close to sentry
+								if (flDistSqr <= pow(flHighDangerRange + HALF_PLAYER_WIDTH, 2))
 								{
 									// Check if sentry can see us
 									if (F::NavParser.IsVectorVisibleNavigation(*building_origin, area, MASK_SHOT))
 									{
-										// Blacklist because it's in view range of the sentry
+										// High danger - full blacklist
 										free_blacklist[&i] = BR_SENTRY;
+									}
+								}
+								// Medium danger - within sentry range but further away
+								else if (flDistSqr <= pow(flMediumDangerRange + HALF_PLAYER_WIDTH, 2))
+								{
+									// Only blacklist if sentry can see this area
+									if (F::NavParser.IsVectorVisibleNavigation(*building_origin, area, MASK_SHOT))
+									{
+										// Medium sentry danger - can pass through if necessary
+										if (free_blacklist.find(&i) == free_blacklist.end())
+										{
+											// Only set to medium danger if not already high danger
+											free_blacklist[&i] = BR_SENTRY_MEDIUM;
+										}
+									}
+								}
+								// Low danger - edge of sentry range (only for weak classes)
+								else if (!is_strong_class && flDistSqr <= pow(flLowDangerRange + HALF_PLAYER_WIDTH, 2))
+								{
+									// Only blacklist if sentry can see this area
+									if (F::NavParser.IsVectorVisibleNavigation(*building_origin, area, MASK_SHOT))
+									{
+										// Low sentry danger - can pass through if necessary
+										if (free_blacklist.find(&i) == free_blacklist.end())
+										{
+											// Only set to low danger if not already higher danger
+											free_blacklist[&i] = BR_SENTRY_LOW;
+										}
 									}
 								}
 							}
