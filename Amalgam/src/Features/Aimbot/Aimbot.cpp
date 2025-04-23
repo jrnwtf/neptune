@@ -27,8 +27,8 @@ bool CAimbot::ShouldRun(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	if (SDK::AttribHookValue(1, "mult_dmg", pWeapon) == 0)
 		return false;
 
-	if (I::EngineVGui->IsGameUIVisible())
-		return false;
+	// if (I::EngineVGui->IsGameUIVisible())
+	// 	return false;
 
 	return true;
 }
