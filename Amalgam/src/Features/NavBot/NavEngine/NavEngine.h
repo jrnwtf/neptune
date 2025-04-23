@@ -42,6 +42,8 @@ enum Priority_list
 enum BlacklistReason_enum
 {
 	BR_SENTRY,
+	BR_SENTRY_MEDIUM,
+	BR_SENTRY_LOW,
 	BR_STICKY,
 	BR_ENEMY_NORMAL,
 	BR_ENEMY_DORMANT,

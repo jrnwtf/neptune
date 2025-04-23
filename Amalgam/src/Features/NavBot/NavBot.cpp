@@ -47,6 +47,9 @@ bool CNavBot::ShouldSearchAmmo(CTFPlayer* pLocal)
 			continue;
 
 		int iWepID = pWeapon->GetWeaponID();
+		int iMaxClip = pWeapon->GetWeaponInfo() ? pWeapon->GetWeaponInfo()->iMaxClip1 : 0;
+		int iCurClip = pWeapon->m_iClip1();
+		
 		if ((iWepID == TF_WEAPON_SNIPERRIFLE ||
 			iWepID == TF_WEAPON_SNIPERRIFLE_CLASSIC ||
 			iWepID == TF_WEAPON_SNIPERRIFLE_DECAP) &&
@@ -62,6 +65,16 @@ bool CNavBot::ShouldSearchAmmo(CTFPlayer* pLocal)
 
 		// Reserve ammo
 		int iResAmmo = pLocal->GetAmmoCount(pWeapon->m_iPrimaryAmmoType());
+		
+		// If clip and reserve are both very low, definitely get ammo
+		if (iMaxClip > 0 && iCurClip <= iMaxClip * 0.25f && iResAmmo <= iMaxAmmo * 0.25f)
+			return true;
+			
+		// Don't search for ammo if we have more than 60% of max reserve
+		if (iResAmmo >= iMaxAmmo * 0.6f)
+			continue;
+			
+		// Search for ammo if we're below 33% of capacity
 		if (iResAmmo <= iMaxAmmo / 3)
 			return true;
 	}
@@ -2321,10 +2334,51 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 		return false;
 
 	auto pBlacklist = F::NavEngine.getFreeBlacklist();
-	// In danger, try to run (besides if it's a building spot, don't run away from that)
+	
+	// Check if we're in any danger
+	bool bInHighDanger = false;
+	bool bInMediumDanger = false;
+	bool bInLowDanger = false;
+	
 	if (pBlacklist && pBlacklist->contains(pLocalNav))
 	{
+		// Check building spot - don't run away from that
 		if ((*pBlacklist)[pLocalNav].value == BR_BAD_BUILDING_SPOT)
+			return false;
+			
+		// Determine danger level
+		switch ((*pBlacklist)[pLocalNav].value)
+		{
+		case BR_SENTRY:
+		case BR_STICKY:
+		case BR_ENEMY_INVULN:
+			bInHighDanger = true;
+			break;
+		case BR_SENTRY_MEDIUM:
+		case BR_ENEMY_NORMAL:
+			bInMediumDanger = true;
+			break;
+		case BR_SENTRY_LOW:
+		case BR_ENEMY_DORMANT:
+			bInLowDanger = true;
+			break;
+		}
+		
+		// Only escape from high danger by default
+		// Also escape from medium danger if health is low
+		bool bShouldEscape = bInHighDanger || 
+		                    (bInMediumDanger && pLocal->m_iHealth() < pLocal->GetMaxHealth() * 0.5f);
+		
+		// If we're not in high danger and on an important task, we might not need to escape
+		bool bImportantTask = (F::NavEngine.current_priority == capture || 
+		                      F::NavEngine.current_priority == health ||
+		                      F::NavEngine.current_priority == engineer);
+		
+		if (!bShouldEscape && bImportantTask)
+			return false;
+		
+		// If we're in low danger only and on any task, don't escape
+		if (bInLowDanger && !bInMediumDanger && !bInHighDanger && F::NavEngine.current_priority != 0)
 			return false;
 
 		static CNavArea* pTargetArea = nullptr;
@@ -2332,38 +2386,134 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 		if (F::NavEngine.current_priority == danger && !pBlacklist->contains(pTargetArea))
 			return true;
 
-		std::vector<CNavArea*> vAreaPointers;
-		// Copy a ptr list (sadly cat_nav_init exists so this cannot be only done once)
-		for (auto& tArea : F::NavEngine.getNavFile()->m_areas)
-			vAreaPointers.push_back(&tArea);
+		// Determine the reference position to stay close to
+		Vector vReferencePosition;
+		bool bHasTarget = false;
 
-		// Sort by distance
-		std::sort(vAreaPointers.begin(), vAreaPointers.end(), [&](CNavArea* a, CNavArea* b) -> bool
-				  {
-					  return a->m_center.DistToSqr(pLocal->GetAbsOrigin()) < b->m_center.DistToSqr(pLocal->GetAbsOrigin());
-				  });
+		// If we were pursuing a specific objective or following a target, try to stay close to it
+		if (F::NavEngine.current_priority != 0 && F::NavEngine.current_priority != danger && !F::NavEngine.crumbs.empty())
+		{
+			// Use the last crumb in our path as the reference position
+			vReferencePosition = F::NavEngine.crumbs.back().vec;
+			bHasTarget = true;
+		}
+		else
+		{
+			// Use current position if we don't have a target
+			vReferencePosition = pLocal->GetAbsOrigin();
+		}
+
+		std::vector<std::pair<CNavArea*, float>> vSafeAreas;
+		// Copy areas and calculate distances
+		for (auto& tArea : F::NavEngine.getNavFile()->m_areas)
+		{
+			// Skip if area is blacklisted with high danger
+			auto it = pBlacklist->find(&tArea);
+			if (it != pBlacklist->end())
+			{
+				// Check danger level - allow pathing through medium or low danger if we have a target
+				BlacklistReason_enum danger = it->second.value;
+				
+				// Skip high danger areas
+				if (danger == BR_SENTRY || danger == BR_STICKY || danger == BR_ENEMY_INVULN)
+					continue;
+					
+				// Skip medium danger areas if we don't have a target or have low health
+				if ((danger == BR_SENTRY_MEDIUM || danger == BR_ENEMY_NORMAL) && 
+				    (!bHasTarget || pLocal->m_iHealth() < pLocal->GetMaxHealth() * 0.5f))
+					continue;
+			}
+
+			float flDistToReference = tArea.m_center.DistToSqr(vReferencePosition);
+			float flDistToCurrent = tArea.m_center.DistToSqr(pLocal->GetAbsOrigin());
+			
+			// Only consider areas that are not too far away and reachable
+			if (flDistToCurrent < pow(2000.0f, 2))
+			{
+				// If we have a target, prioritize staying near it
+				float flScore = bHasTarget ? flDistToReference : flDistToCurrent;
+				vSafeAreas.push_back({ &tArea, flScore });
+			}
+		}
+
+		// Sort by score (closer to reference position is better)
+		std::sort(vSafeAreas.begin(), vSafeAreas.end(), [](const std::pair<CNavArea*, float>& a, const std::pair<CNavArea*, float>& b) -> bool
+		{
+			return a.second < b.second;
+		});
 
 		int iCalls = 0;
-		// Try to path away
-		for (auto& pArea : vAreaPointers)
+		// Try to path to safe areas
+		for (auto& pArea : vSafeAreas)
 		{
-			if (!pBlacklist->contains(pArea))
+			// Try the 10 closest areas (increased from 5 to give more options)
+			iCalls++;
+			if (iCalls > 10)
+				break;
+
+			// Check if this area is safe (not near enemy)
+			bool bIsSafe = true;
+			for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
 			{
-				// only try the 5 closest valid areas though, something is wrong if this fails
-				iCalls++;
-				if (iCalls > 5)
-					break;
-				if (F::NavEngine.navTo(pArea->m_center, danger))
+				if (!ShouldTarget(pLocal, pLocal->m_hActiveWeapon().Get()->As<CTFWeaponBase>(), pEntity->entindex()))
+					continue;
+
+				// If enemy is too close to this area, mark it as unsafe
+				float flDist = pEntity->GetAbsOrigin().DistToSqr(pArea.first->m_center);
+				if (flDist < pow(m_tSelectedConfig.m_flMinFullDanger * 1.2f, 2))
 				{
-					pTargetArea = pArea;
-					return true;
+					bIsSafe = false;
+					break;
+				}
+			}
+
+			// Skip unsafe areas
+			if (!bIsSafe)
+				continue;
+
+			if (F::NavEngine.navTo(pArea.first->m_center, danger))
+			{
+				pTargetArea = pArea.first;
+				return true;
+			}
+		}
+
+		// If we couldn't find a safe area close to the target, fall back to any safe area
+		if (iCalls <= 0 || (bInHighDanger && iCalls < 10))
+		{
+			std::vector<CNavArea*> vAreaPointers;
+			// Get all areas
+			for (auto& tArea : F::NavEngine.getNavFile()->m_areas)
+				vAreaPointers.push_back(&tArea);
+
+			// Sort by distance to player
+			std::sort(vAreaPointers.begin(), vAreaPointers.end(), [&](CNavArea* a, CNavArea* b) -> bool
+			{
+				return a->m_center.DistToSqr(pLocal->GetAbsOrigin()) < b->m_center.DistToSqr(pLocal->GetAbsOrigin());
+			});
+
+			// Try to path to any non-blacklisted area
+			for (auto& pArea : vAreaPointers)
+			{
+				auto it = pBlacklist->find(pArea);
+				if (it == pBlacklist->end() || 
+				   (bInHighDanger && (it->second.value == BR_SENTRY_LOW || it->second.value == BR_ENEMY_DORMANT)))
+				{
+					iCalls++;
+					if (iCalls > 5)
+						break;
+					if (F::NavEngine.navTo(pArea->m_center, danger))
+					{
+						pTargetArea = pArea;
+						return true;
+					}
 				}
 			}
 		}
 	}
 	// No longer in danger
-	//else if (F::NavEngine.current_priority == danger)
-		//F::NavEngine.cancelPath();
+	else if (F::NavEngine.current_priority == danger)
+		F::NavEngine.cancelPath();
 
 	return false;
 }
