@@ -1,11 +1,8 @@
 #pragma once
 
-#include "../../Utils/Feature/Feature.h"
-#include "../../SDK/SDK.h"
-#include "../Configs/Configs.h"
+#include "../../../SDK/SDK.h"
+#include "../../Configs/Configs.h"
 #include <string>
-#include <unordered_map>
-#include <stdint.h>
 
 namespace F::NamedPipe
 {

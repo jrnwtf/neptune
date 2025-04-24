@@ -1,7 +1,7 @@
 #include "AutoVote.h"
 
 #include "../../Players/PlayerUtils.h"
-#include "../../NamedPipe/NamedPipe.h"
+#include "../../Misc/NamedPipe/NamedPipe.h"
 
 void CAutoVote::UserMessage(bf_read& msgData)
 {

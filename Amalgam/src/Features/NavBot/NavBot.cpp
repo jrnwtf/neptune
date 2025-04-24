@@ -4,7 +4,7 @@
 #include "NavEngine/Controllers/PLController/PLController.h"
 #include "NavEngine/Controllers/Controller.h"
 #include "../Players/PlayerUtils.h"
-#include "../NamedPipe/NamedPipe.h"
+#include "../Misc/NamedPipe/NamedPipe.h"
 #include "../Aimbot/AimbotGlobal/AimbotGlobal.h"
 #include "../TickHandler/TickHandler.h"
 #include "../PacketManip/FakeLag/FakeLag.h"

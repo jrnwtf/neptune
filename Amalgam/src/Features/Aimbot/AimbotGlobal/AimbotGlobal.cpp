@@ -1,7 +1,7 @@
 #include "AimbotGlobal.h"
 
 #include "../../Players/PlayerUtils.h"
-#include "../../NamedPipe/NamedPipe.h"
+#include "../../Misc/NamedPipe/NamedPipe.h"
 
 void CAimbotGlobal::SortTargets(std::vector<Target_t>& vTargets, int iMethod)
 {	// Sort by preference

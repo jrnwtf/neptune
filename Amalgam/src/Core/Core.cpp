@@ -8,7 +8,7 @@
 #include "../Features/ImGui/Menu/Menu.h"
 #include "../Features/Visuals/Visuals.h"
 #include "../SDK/Events/Events.h"
-#include "../Features/NamedPipe/NamedPipe.h"
+#include "../Features/Misc/NamedPipe/NamedPipe.h"
 #include <Psapi.h>
 
 static inline std::string GetProcessName(DWORD dwProcessID)
