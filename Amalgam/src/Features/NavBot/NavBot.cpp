@@ -94,7 +94,7 @@ int CNavBot::ShouldTarget(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iPlayer
 
 	// pipe local playa
 	PlayerInfo_t pi{};
-	if (I::EngineClient->GetPlayerInfo(iPlayerIdx, &pi) && F::NPipe::IsLocalBot(pi.friendsID))
+	if (I::EngineClient->GetPlayerInfo(iPlayerIdx, &pi) && F::NamedPipe::IsLocalBot(pi.friendsID))
 		return 0;
 
 	if (F::PlayerUtils.IsIgnored(iPlayerIdx))
@@ -3095,7 +3095,7 @@ void CNavBot::UpdateLocalBotPositions(CTFPlayer* pLocal)
 			continue;
 
 		// Is this a local bot????
-		if (!F::NPipe::IsLocalBot(pi.friendsID))
+		if (!F::NamedPipe::IsLocalBot(pi.friendsID))
 			continue;
 
 		// Get the player entity

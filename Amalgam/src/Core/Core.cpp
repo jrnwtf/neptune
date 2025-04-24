@@ -88,7 +88,7 @@ void CCore::Load()
 #endif
 	U::ConVars.Initialize();
 	F::Commands.Initialize();
-	F::NPipe::Initialize();
+	F::NamedPipe::Initialize();
 
 	F::Configs.LoadConfig(F::Configs.m_sCurrentConfig, false);
 	F::Configs.m_bConfigLoaded = true;
@@ -150,7 +150,7 @@ void CCore::Unload()
 	U::ConVars.FindVar("cl_wpn_sway_scale")->SetValue(0.f);
 
 	Sleep(250);
-	F::NPipe::Shutdown();
+	F::NamedPipe::Shutdown();
 	U::ConVars.Unload();
 	F::Materials.UnloadMaterials();
 

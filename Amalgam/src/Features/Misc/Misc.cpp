@@ -18,7 +18,7 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 	{
 		static Timer namedPipeTimer{};
 		if (namedPipeTimer.Run(1.0f))
-			F::NPipe::UpdateLocalBotIgnoreStatus();
+			F::NamedPipe::UpdateLocalBotIgnoreStatus();
 	}
 	
 	if (!pLocal)
