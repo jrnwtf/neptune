@@ -17,7 +17,7 @@ void CAutoVote::UserMessage(bf_read& msgData)
 	PlayerInfo_t pi{};
 	if (I::EngineClient->GetPlayerInfo(iTarget, &pi))
 	{
-		if (F::NPipe::IsLocalBot(pi.friendsID))
+		if (F::NamedPipe::IsLocalBot(pi.friendsID))
 		{
 			I::ClientState->SendStringCmd(std::format("vote {} option2", iVoteID).c_str());
 			return;
@@ -28,7 +28,7 @@ void CAutoVote::UserMessage(bf_read& msgData)
 	PlayerInfo_t callerPi{};
 	if (I::EngineClient->GetPlayerInfo(iCaller, &callerPi))
 	{
-		if (F::NPipe::IsLocalBot(callerPi.friendsID))
+		if (F::NamedPipe::IsLocalBot(callerPi.friendsID))
 		{
 			I::ClientState->SendStringCmd(std::format("vote {} option1", iVoteID).c_str());
 			return;

@@ -141,7 +141,7 @@ bool CAimbotGlobal::ShouldIgnore(CBaseEntity* pEntity, CTFPlayer* pLocal, CTFWea
 
 		// pipe local playa
 		PlayerInfo_t pi{};
-		if (I::EngineClient->GetPlayerInfo(pPlayer->entindex(), &pi) && F::NPipe::IsLocalBot(pi.friendsID))
+		if (I::EngineClient->GetPlayerInfo(pPlayer->entindex(), &pi) && F::NamedPipe::IsLocalBot(pi.friendsID))
 			return true;
 
 		if (F::PlayerUtils.IsIgnored(pPlayer->entindex()))

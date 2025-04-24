@@ -1,5 +1,9 @@
 //
+//
+//
 // 4/18/2025 melody
+//
+//
 //
 #include "NamedPipe.h"
 #include "../../SDK/SDK.h"
@@ -16,7 +20,7 @@
 #include <regex>
 #include <unordered_map>
 
-namespace F::NPipe
+namespace F::NamedPipe
 {
     HANDLE hPipe = INVALID_HANDLE_VALUE;
     std::atomic<bool> shouldRun(true);
@@ -24,10 +28,10 @@ namespace F::NPipe
     std::ofstream logFile("C:\\pipe_log.txt", std::ios::app);
     int botId = -1;
     
+
     std::unordered_map<uint32_t, bool> localBots;
-    bool bQueuedStatus = false;
-    bool bStatusUpdateQueued = false;
     
+
     void ConnectAndMaintainPipe();
 
     void Log(const std::string& message)
@@ -56,7 +60,7 @@ namespace F::NPipe
 
     std::string GetTF2Folder()
     {
-        std::string configPath = F::Configs.m_sCorePath;
+        std::string configPath = F::Configs.m_sConfigPath;
         size_t pos = configPath.find_last_of("\\");
         if (pos != std::string::npos)
             return configPath.substr(0, pos);
@@ -519,39 +523,5 @@ namespace F::NPipe
             hPipe = INVALID_HANDLE_VALUE;
         }
         Log("ConnectAndMaintainPipe ended");
-    }
-
-    bool SetStatus(bool bEnabled)
-    {
-        bQueuedStatus = bEnabled;
-        bStatusUpdateQueued = true;
-        return true;
-    }
-
-    bool SendStatusUpdate()
-    {
-        if (!bStatusUpdateQueued)
-            return false;
-
-        bStatusUpdateQueued = false;
-        SendStatusUpdate(bQueuedStatus ? "Enabled" : "Disabled");
-        return true;
-    }
-
-    bool ExecutePipedCommand(const std::string& command, std::string* outResponse)
-    {
-        if (hPipe == INVALID_HANDLE_VALUE)
-        {
-            if (outResponse)
-                *outResponse = "Error: Not connected to pipe";
-            return false;
-        }
-
-        ExecuteCommand(command);
-        
-        if (outResponse)
-            *outResponse = "Command executed: " + command;
-        
-        return true;
     }
 } 
