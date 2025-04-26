@@ -853,6 +853,13 @@ namespace Vars
 			CVar(RandomVotekick, false)
 			CVarEnum(ForceClass, 0, NONE, Off, Scout, Sniper, Soldier, Demoman, Medic, Heavy, Pyro, Spy, Engineer)
 			CVarEnum(VoiceCommandSpam, 0, NONE, Off, Random, Medic, Thanks, NiceShot, Cheers, Jeers, GoGoGo, MoveUp, GoLeft, GoRight, Yes, No, Incoming, Spy, Sentry, NeedTeleporter, Pootis, NeedSentry, ActivateCharge, Help, BattleCry)
+			
+			SUBNAMESPACE_BEGIN(ChatSpam)
+				CVar(Enable, false)
+				CVar(Interval, 3.0f)
+				CVar(TeamChat, false)
+				CVar(Randomize, false)
+			SUBNAMESPACE_END(ChatSpam)
 		SUBNAMESPACE_END(Automation)
 
 		SUBNAMESPACE_BEGIN(Sound)

@@ -16,6 +16,7 @@ class CMisc
 	void NoiseSpam(CTFPlayer* pLocal);
 	void VoiceCommandSpam(CTFPlayer* pLocal);
 	void RandomVotekick(CTFPlayer* pLocal);
+	void ChatSpam(CTFPlayer* pLocal);
 
 	void CheatsBypass();
 	void PingReducer();
@@ -29,6 +30,10 @@ class CMisc
 	bool m_bPeekPlaced = false;
 	Vec3 m_vPeekReturnPos = {};
 	//bool bSteamCleared = false;
+
+	std::vector<std::string> m_vChatSpamLines;
+	Timer m_tChatSpamTimer;
+	int m_iCurrentChatSpamIndex = 0;
 
 public:
 	void RunPre(CTFPlayer* pLocal, CUserCmd* pCmd);
