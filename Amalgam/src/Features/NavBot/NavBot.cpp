@@ -3079,7 +3079,7 @@ void CNavBot::UpdateLocalBotPositions(CTFPlayer* pLocal)
 		return;
 
 	m_vLocalBotPositions.clear();
-	if (!I::EngineClient->IsInGame())
+	if (!I::EngineClient->IsInGame() || !pLocal)
 		return;
 
 	// Get our own info first
@@ -3088,8 +3088,9 @@ void CNavBot::UpdateLocalBotPositions(CTFPlayer* pLocal)
 		return;
 
 	uint32_t localFriendsID = localInfo.friendsID;
+	int iLocalTeam = pLocal->m_iTeamNum();
 
-	// Thenn heck each player
+	// Then check each player
 	for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
 	{
 		if (i == I::EngineClient->GetLocalPlayer())
@@ -3110,6 +3111,9 @@ void CNavBot::UpdateLocalBotPositions(CTFPlayer* pLocal)
 
 		auto pPlayer = pEntity->As<CTFPlayer>();
 		if (!pPlayer->IsAlive() || pPlayer->IsDormant())
+			continue;
+
+		if (pPlayer->m_iTeamNum() != iLocalTeam)
 			continue;
 
 		// Add to our list
@@ -3249,6 +3253,7 @@ bool CNavBot::MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	// Find the leader
 	uint32_t leaderID = 0;
 	Vector vLeaderPos;
+	CTFPlayer* pLeaderPlayer = nullptr;
 	
 	if (!m_vLocalBotPositions.empty())
 	{
@@ -3264,7 +3269,7 @@ bool CNavBot::MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 				auto pLeader = I::ClientEntityList->GetClientEntity(i);
 				if (pLeader && pLeader->IsPlayer())
 				{
-					auto pLeaderPlayer = pLeader->As<CTFPlayer>();
+					pLeaderPlayer = pLeader->As<CTFPlayer>();
 					leaderID = pi.friendsID;
 					vLeaderPos = pLeaderPlayer->GetAbsOrigin();
 					break;
@@ -3272,12 +3277,12 @@ bool CNavBot::MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 			}
 		}
 	}
-	
-	// If we couldn't find the leader, we can't move in formation
-	if (leaderID == 0)
+	if (leaderID == 0 || !pLeaderPlayer)
 		return false;
-	
-	// Calculate our target position
+
+	if (pLeaderPlayer->m_iTeamNum() != pLocal->m_iTeamNum())
+		return false;
+
 	Vector vTargetPos = vLeaderPos + *vOffsetOpt;
 	
 	// If we're already close enough to our position, don't bother moving
@@ -3289,6 +3294,34 @@ bool CNavBot::MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	if (F::NavEngine.current_priority > patrol)
 		return false;
 	
+	static Timer tFailureTimer;
+	static int iConsecutiveFailures = 0;
+	static Vector vLastTargetPos;
+	
+	// Check if we're trying to path to the same position but repeatedly failing
+	if (vLastTargetPos.DistToSqr(vTargetPos) <= pow(50.0f, 2) && !F::NavEngine.isPathing())
+	{
+		iConsecutiveFailures++;
+		
+		// If we've been failing to reach the same target for a while,
+		// temporarily increase the acceptable distance to prevent getting stuck
+		if (iConsecutiveFailures >= 3)
+		{
+			iConsecutiveFailures = 0;
+			
+			// Try a different path approach or temp increase formation distance
+			m_flFormationDistance += 50.0f; // Temp increase formation distance
+			if (m_flFormationDistance > 300.0f) // Cap the maximum distance
+				m_flFormationDistance = 120.0f; // Reset to default if it gets too large
+			
+			return true; // Skip this attempt and try again with new formation distance
+		}
+	}
+	else if (vLastTargetPos.DistToSqr(vTargetPos) > pow(50.0f, 2))
+	{
+		iConsecutiveFailures = 0;
+	}
+	vLastTargetPos = vTargetPos;
 	// Try to navigate to our position in formation
 	if (F::NavEngine.navTo(vTargetPos, patrol, true, !F::NavEngine.isPathing()))
 		return true;
