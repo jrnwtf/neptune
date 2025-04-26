@@ -1263,6 +1263,14 @@ void CMenu::MenuMisc(int iTab)
 				FToggle("Auto F2 ignored", Vars::Misc::Automation::AutoF2Ignored, FToggle_Left);
 				FToggle("Auto F1 priority", Vars::Misc::Automation::AutoF1Priority, FToggle_Right);
 				FToggle("Random votekick", Vars::Misc::Automation::RandomVotekick, FToggle_Left);
+				FToggle("Chat spam", Vars::Misc::Automation::ChatSpam::Enable, FToggle_Right);
+				PushTransparent(!Vars::Misc::Automation::ChatSpam::Enable.Value);
+				{
+					FSlider("Interval", Vars::Misc::Automation::ChatSpam::Interval, 0.5f, 10.0f, 0.5f, "%0.1fs", FSlider_Left | FSlider_Clamp | FSlider_Precision);
+					FToggle("Team chat", Vars::Misc::Automation::ChatSpam::TeamChat, FToggle_Right);
+					FToggle("Randomize", Vars::Misc::Automation::ChatSpam::Randomize, FToggle_Left);
+				}
+				PopTransparent();
 			} EndSection();
 
 			/* Column 2 */
