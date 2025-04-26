@@ -84,6 +84,9 @@ void CRender::LoadColors()
 	colors[ImGuiCol_ScrollbarBg] = {};
 	colors[ImGuiCol_Text] = Active;
 	colors[ImGuiCol_WindowBg] = {};
+	colors[ImGuiCol_CheckMark] = Accent;
+	colors[ImGuiCol_SliderGrab] = Accent;
+	colors[ImGuiCol_SliderGrabActive] = { Accent.Value.x * 1.2f, Accent.Value.y * 1.2f, Accent.Value.z * 1.2f, Accent.Value.w };
 }
 
 void CRender::LoadFonts()
@@ -146,6 +149,7 @@ void CRender::LoadStyle()
 	style.WindowBorderSize = 0.f;
 	style.WindowPadding = { 0, 0 };
 	style.WindowRounding = H::Draw.Scale(3);
+	style.GrabRounding = H::Draw.Scale(3);
 }
 
 void CRender::Initialize(IDirect3DDevice9* pDevice)
