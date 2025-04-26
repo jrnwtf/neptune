@@ -32,12 +32,29 @@ namespace F::NamedPipe
     std::ofstream logFile("C:\\pipe_log.txt", std::ios::app);
     int botId = -1;
     
-
+    const int MAX_RECONNECT_ATTEMPTS = 10;
+    const int BASE_RECONNECT_DELAY_MS = 500;
+    const int MAX_RECONNECT_DELAY_MS = 10000;
+    int currentReconnectAttempts = 0;
+    DWORD lastConnectAttemptTime = 0;
+    
+    std::mutex messageQueueMutex;
+    struct PendingMessage {
+        std::string type;
+        std::string content;
+        bool isPriority;
+    };
+    std::vector<PendingMessage> messageQueue;
+    
     std::unordered_map<uint32_t, bool> localBots;
     
 
     void ConnectAndMaintainPipe();
-
+    void QueueMessage(const std::string& type, const std::string& content, bool isPriority);
+    void ProcessMessageQueue();
+    bool SafeWriteToPipe(const std::string& message);
+    int GetReconnectDelayMs();
+    
     void Log(const std::string& message)
     {
         if (!logFile.is_open())
@@ -262,14 +279,13 @@ namespace F::NamedPipe
 
     void SendStatusUpdate(const std::string& status)
     {
-        if (hPipe == INVALID_HANDLE_VALUE || botId == -1)
-        {
-            return;
+        // Queue the status update message with high priority
+        QueueMessage("Status", status, true);
+        
+        // Process immediately if connected
+        if (hPipe != INVALID_HANDLE_VALUE) {
+            ProcessMessageQueue();
         }
-
-        std::string message = std::to_string(botId) + ":" + status;
-        DWORD bytesWritten;
-        WriteFile(hPipe, message.c_str(), static_cast<DWORD>(message.length()), &bytesWritten, NULL);
     }
 
     void ExecuteCommand(const std::string& command)
@@ -325,14 +341,8 @@ namespace F::NamedPipe
 
     void SendHealthUpdate(int health)
     {
-        if (hPipe == INVALID_HANDLE_VALUE || botId == -1)
-        {
-            return;
-        }
-
-        std::string message = std::to_string(botId) + ":Health:" + std::to_string(health);
-        DWORD bytesWritten;
-        WriteFile(hPipe, message.c_str(), static_cast<DWORD>(message.length()), &bytesWritten, NULL);
+        // Queue health update with medium priority
+        QueueMessage("Health", std::to_string(health), false);
     }
 
     int GetCurrentPlayerClass()
@@ -363,30 +373,30 @@ namespace F::NamedPipe
 
     void SendPlayerClassUpdate(int playerClass)
     {
-        if (hPipe == INVALID_HANDLE_VALUE || botId == -1)
-        {
-            return;
-        }
+        static int lastSentClass = -1;
 
-        std::string classString;
+        if (playerClass == lastSentClass || playerClass < 1 || playerClass > 9)
+            return;
+
+        lastSentClass = playerClass;
+
+        std::string className;
         switch (playerClass)
         {
-            case 1: classString = "Scout"; break;
-            case 2: classString = "Sniper"; break;
-            case 3: classString = "Soldier"; break;
-            case 4: classString = "Demoman"; break;
-            case 5: classString = "Medic"; break;
-            case 6: classString = "Heavy"; break;
-            case 7: classString = "Pyro"; break;
-            case 8: classString = "Spy"; break;
-            case 9: classString = "Engineer"; break;
-            default: classString = "Unknown";
+            case 1: className = "Scout"; break;
+            case 2: className = "Sniper"; break;
+            case 3: className = "Soldier"; break;
+            case 4: className = "Demoman"; break;
+            case 5: className = "Medic"; break;
+            case 6: className = "Heavy"; break;
+            case 7: className = "Pyro"; break;
+            case 8: className = "Spy"; break;
+            case 9: className = "Engineer"; break;
+            default: className = "Unknown"; break;
         }
 
-        std::string message = std::to_string(botId) + ":PlayerClass:" + classString + "\n";
-        DWORD bytesWritten;
-        WriteFile(hPipe, message.c_str(), static_cast<DWORD>(message.length()), &bytesWritten, NULL);
-        Log("Sent player class update: " + classString);
+        // Queue player class update
+        QueueMessage("PlayerClass", className, false);
     }
 
     std::string GetCurrentLevelName()
@@ -396,30 +406,22 @@ namespace F::NamedPipe
 
     void SendMapUpdate()
     {
-        if (hPipe == INVALID_HANDLE_VALUE || botId == -1)
-        {
-            return;
-        }
+        static std::string lastSentMap = "";
+        std::string currentMap = GetCurrentLevelName();
 
-        std::string mapName = GetCurrentLevelName();
-        std::string message = std::to_string(botId) + ":Map:" + mapName + "\n";
-        DWORD bytesWritten;
-        WriteFile(hPipe, message.c_str(), static_cast<DWORD>(message.length()), &bytesWritten, NULL);
-        Log("Sent map update: " + mapName);
+        if (currentMap == lastSentMap)
+            return;
+
+        lastSentMap = currentMap;
+
+        // Queue map update
+        QueueMessage("Map", currentMap, false);
     }
 
     void SendServerInfo()
     {
-        if (hPipe == INVALID_HANDLE_VALUE || botId == -1)
-        {
-            return;
-        }
-
-        std::string serverInfo = "0.0.0.0";
-        std::string message = std::to_string(botId) + ":ServerInfo:" + serverInfo + "\n";
-        DWORD bytesWritten;
-        WriteFile(hPipe, message.c_str(), static_cast<DWORD>(message.length()), &bytesWritten, NULL);
-        Log("Sent server info update: " + serverInfo);
+        // Queue server info update
+        QueueMessage("ServerInfo", "Player", false);
     }
 
     void UpdateBotInfo()
@@ -431,25 +433,25 @@ namespace F::NamedPipe
 
     void BroadcastLocalBotId()
     {
-        if (hPipe == INVALID_HANDLE_VALUE)
-        {
+        if (!I::EngineClient || !I::EngineClient->IsInGame())
             return;
-        }
 
-        auto pLocal = H::Entities.GetLocal();
-        if (!pLocal)
-        {
-            return;
-        }
-
+        // Only proceed if we have a valid steam ID
         PlayerInfo_t pi{};
-        int localIndex = I::EngineClient->GetLocalPlayer();
-        if (I::EngineClient->GetPlayerInfo(localIndex, &pi))
+        int localIdx = I::EngineClient->GetLocalPlayer();
+        if (I::EngineClient->GetPlayerInfo(localIdx, &pi) && pi.friendsID != 0)
         {
-            std::string message = std::to_string(botId != -1 ? botId : 0) + ":LocalBot:" + std::to_string(pi.friendsID) + "\n";
-            DWORD bytesWritten;
-            WriteFile(hPipe, message.c_str(), static_cast<DWORD>(message.length()), &bytesWritten, NULL);
-            Log("Broadcasted local bot ID: " + std::to_string(pi.friendsID));
+            // Use the friends ID from player info
+            uint32_t friendsID = pi.friendsID;
+            
+            // Queue local bot broadcast with high priority
+            QueueMessage("LocalBot", std::to_string(friendsID), true);
+            Log("Queued local bot ID broadcast: " + std::to_string(friendsID));
+            
+            // Process immediately if connected
+            if (hPipe != INVALID_HANDLE_VALUE) {
+                ProcessMessageQueue();
+            }
         }
     }
 
@@ -550,101 +552,306 @@ namespace F::NamedPipe
         Log("Cleared local bots list");
     }
 
+    void QueueMessage(const std::string& type, const std::string& content, bool isPriority = false)
+    {
+        std::lock_guard<std::mutex> lock(messageQueueMutex);
+        
+        if (isPriority || messageQueue.size() < 100) {
+            messageQueue.push_back({type, content, isPriority});
+        } else {
+            for (auto it = messageQueue.begin(); it != messageQueue.end(); ++it) {
+                if (!it->isPriority) {
+                    messageQueue.erase(it);
+                    messageQueue.push_back({type, content, isPriority});
+                    break;
+                }
+            }
+        }
+    }
+    
+    void ProcessMessageQueue()
+    {
+        if (hPipe == INVALID_HANDLE_VALUE) return;
+        
+        std::lock_guard<std::mutex> lock(messageQueueMutex);
+        if (messageQueue.empty()) return;
+        
+        int processCount = 0;
+        auto it = messageQueue.begin();
+        while (it != messageQueue.end() && processCount < 10) {
+            std::string message;
+            if (botId != -1) {
+                message = std::to_string(botId) + ":" + it->type + ":" + it->content + "\n";
+            } else {
+                message = "0:" + it->type + ":" + it->content + "\n";
+            }
+            
+            DWORD bytesWritten = 0;
+            BOOL success = WriteFile(hPipe, message.c_str(), static_cast<DWORD>(message.length()), &bytesWritten, NULL);
+            
+            if (success && bytesWritten == message.length()) {
+                it = messageQueue.erase(it);
+                processCount++;
+            } else {
+                Log("Failed to write queued message: " + std::to_string(GetLastError()));
+                break;
+            }
+        }
+    }
+
+    bool SafeWriteToPipe(const std::string& message)
+    {
+        if (hPipe == INVALID_HANDLE_VALUE) {
+            QueueMessage("Status", "QueuedMessage", false);
+            return false;
+        }
+        
+        DWORD bytesWritten = 0;
+        BOOL success = WriteFile(hPipe, message.c_str(), static_cast<DWORD>(message.length()), &bytesWritten, NULL);
+        
+        if (!success || bytesWritten != message.length()) {
+            DWORD error = GetLastError();
+            Log("WriteFile failed: " + std::to_string(error) + " - " + GetErrorMessage(error));
+            
+            if (error == ERROR_BROKEN_PIPE || error == ERROR_PIPE_NOT_CONNECTED) {
+                CloseHandle(hPipe);
+                hPipe = INVALID_HANDLE_VALUE;
+            }
+            return false;
+        }
+        return true;
+    }
+    
+    int GetReconnectDelayMs()
+    {
+        int delay = std::min(
+            BASE_RECONNECT_DELAY_MS * (1 << std::min(currentReconnectAttempts, 10)), 
+            MAX_RECONNECT_DELAY_MS
+        );
+        
+        int jitter = delay * 0.2 * (static_cast<double>(rand()) / RAND_MAX - 0.5);
+        return delay + jitter;
+    }
+
     void ConnectAndMaintainPipe()
     {
         Log("ConnectAndMaintainPipe started");
+        srand(static_cast<unsigned int>(time(nullptr)));
+        
         while (shouldRun)
         {
+            DWORD currentTime = GetTickCount();
+            
             if (hPipe == INVALID_HANDLE_VALUE)
             {
-                Log("Attempting to connect to pipe");
-                hPipe = CreateFile(
-                    PIPE_NAME,
-                    GENERIC_READ | GENERIC_WRITE,
-                     0,
-                    NULL,
-                    OPEN_EXISTING,
-                    0,
-                    NULL);
 
-                if (hPipe != INVALID_HANDLE_VALUE)
+                int reconnectDelay = GetReconnectDelayMs();
+                if (currentTime - lastConnectAttemptTime > static_cast<DWORD>(reconnectDelay) || lastConnectAttemptTime == 0)
                 {
-                    Log("Connected to pipe");
-                    SendStatusUpdate("Connected");
+                    lastConnectAttemptTime = currentTime;
+                    currentReconnectAttempts++;
+                    
+                    Log("Attempting to connect to pipe (attempt " + std::to_string(currentReconnectAttempts) + 
+                        ", delay: " + std::to_string(reconnectDelay) + "ms)");
+                        
 
-                    if (botId != -1)
+                    OVERLAPPED overlapped = {0};
+                    overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+                    
+                    if (overlapped.hEvent == NULL) {
+                        Log("Failed to create connection event: " + std::to_string(GetLastError()));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(reconnectDelay));
+                        continue;
+                    }
+                    
+                    hPipe = CreateFile(
+                        PIPE_NAME,
+                        GENERIC_READ | GENERIC_WRITE,
+                        0,
+                        NULL,
+                        OPEN_EXISTING,
+                        FILE_FLAG_OVERLAPPED,
+                        NULL);
+    
+                    if (hPipe != INVALID_HANDLE_VALUE)
                     {
-                        Log("Using Bot ID: " + std::to_string(botId));
+    
+                        currentReconnectAttempts = 0;
+                        Log("Connected to pipe");
+                        
+    
+                        DWORD pipeMode = PIPE_READMODE_MESSAGE;
+                        SetNamedPipeHandleState(hPipe, &pipeMode, NULL, NULL);
+                        
+    
+                        QueueMessage("Status", "Connected", true);
+                        ProcessMessageQueue();
+    
+                        if (botId != -1)
+                        {
+                            Log("Using Bot ID: " + std::to_string(botId));
+                        }
+                        else
+                        {
+                            Log("Warning: Bot ID not set");
+                        }
+                        
+                        ClearLocalBots();
                     }
                     else
                     {
-                        Log("Warning: Bot ID not set");
+                        DWORD error = GetLastError();
+                        Log("Failed to connect to pipe: " + std::to_string(error) + " - " + GetErrorMessage(error));
                     }
                     
-                    ClearLocalBots();
+                    CloseHandle(overlapped.hEvent);
                 }
                 else
                 {
-                    DWORD error = GetLastError();
-                    Log("Failed to connect to pipe: " + std::to_string(error) + " - " + GetErrorMessage(error));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 }
             }
 
             if (hPipe != INVALID_HANDLE_VALUE)
             {
-                SendStatusUpdate("Heartbeat");
-                SendPlayerClassUpdate(GetCurrentPlayerClass());
-                SendMapUpdate();
-                SendServerInfo();
-                
-                if (I::EngineClient && I::EngineClient->IsInGame())
-                {
-                    UpdateLocalBotIgnoreStatus();
-                }
-                
-                char buffer[1024];
-                DWORD bytesRead;
+
                 DWORD bytesAvail = 0;
-
-                if (PeekNamedPipe(hPipe, NULL, 0, NULL, &bytesAvail, NULL) && bytesAvail > 0)
-                {
-                    if (ReadFile(hPipe, buffer, sizeof(buffer), &bytesRead, NULL))
-                    {
-                        std::string message(buffer, bytesRead);
-                        Log("Received message: " + message);
-                        std::istringstream iss(message);
-                        std::string botNumber, messageType, content;
-                        std::getline(iss, botNumber, ':');
-                        std::getline(iss, messageType, ':');
-                        std::getline(iss, content);
-
-                        if (messageType == "Command")
-                        {
-                            Log("Executing command: " + content);
-                            ExecuteCommand(content);
-                        }
-                        else if (messageType == "LocalBot")
-                        {
-                            ProcessLocalBotMessage(message);
-                        }
-                        else
-                        {
-                            Log("Received unknown message type: " + messageType);
-                        }
-                    }
-                    else
-                    {
-                        Log("ReadFile failed: " + std::to_string(GetLastError()));
+                if (!PeekNamedPipe(hPipe, NULL, 0, NULL, &bytesAvail, NULL)) {
+                    DWORD error = GetLastError();
+                    if (error == ERROR_BROKEN_PIPE || error == ERROR_PIPE_NOT_CONNECTED || error == ERROR_NO_DATA) {
+                        Log("Pipe disconnected: " + std::to_string(error) + " - " + GetErrorMessage(error));
                         CloseHandle(hPipe);
                         hPipe = INVALID_HANDLE_VALUE;
+                        continue;
                     }
                 }
+                
+
+                ProcessMessageQueue();
+                
+
+                QueueMessage("Status", "Heartbeat", true);
+                ProcessMessageQueue();
+                
+
+                static int updateCounter = 0;
+                if (++updateCounter % 3 == 0) {
+                    QueueMessage("PlayerClass", std::to_string(GetCurrentPlayerClass()), false);
+                    QueueMessage("Map", GetCurrentLevelName(), false);
+                    QueueMessage("ServerInfo", "Player", false); // This will be populated by SendServerInfo internally
+                    ProcessMessageQueue();
+                    
+                    if (I::EngineClient && I::EngineClient->IsInGame()) {
+                        UpdateLocalBotIgnoreStatus();
+                    }
+                }
+                
+
+                char buffer[4096] = {0};
+                DWORD bytesRead = 0;
+                
+
+                OVERLAPPED overlapped = {0};
+                overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+                
+                if (overlapped.hEvent != NULL) {
+
+                    if (bytesAvail > 0) {
+                        BOOL readSuccess = ReadFile(hPipe, buffer, sizeof(buffer) - 1, &bytesRead, &overlapped);
+                        
+                        if (!readSuccess && GetLastError() == ERROR_IO_PENDING) {
+                            DWORD waitResult = WaitForSingleObject(overlapped.hEvent, 1000);
+                            
+                            if (waitResult == WAIT_OBJECT_0) {
+                                if (!GetOverlappedResult(hPipe, &overlapped, &bytesRead, FALSE)) {
+                                    Log("GetOverlappedResult failed: " + std::to_string(GetLastError()));
+                                    CloseHandle(overlapped.hEvent);
+                                    CloseHandle(hPipe);
+                                    hPipe = INVALID_HANDLE_VALUE;
+                                    continue;
+                                }
+                            } else if (waitResult == WAIT_TIMEOUT) {
+                                CancelIo(hPipe);
+                                CloseHandle(overlapped.hEvent);
+                                continue;
+                            } else {
+                                Log("Wait failed: " + std::to_string(GetLastError()));
+                                CloseHandle(overlapped.hEvent);
+                                CloseHandle(hPipe);
+                                hPipe = INVALID_HANDLE_VALUE;
+                                continue;
+                            }
+                        } else if (!readSuccess) {
+                            Log("ReadFile failed immediately: " + std::to_string(GetLastError()));
+                            CloseHandle(overlapped.hEvent);
+                            CloseHandle(hPipe);
+                            hPipe = INVALID_HANDLE_VALUE;
+                            continue;
+                        }
+                        
+
+                        if (bytesRead > 0) {
+                            buffer[bytesRead] = '\0'; // Ensure null termination
+                            std::string message(buffer, bytesRead);
+                            Log("Received message: " + message);
+                            
+
+                            std::stringstream ss(message);
+                            std::string line;
+                            
+                            while (std::getline(ss, line)) {
+                                if (line.empty()) continue;
+                                
+
+                                std::istringstream iss(line);
+                                std::string botNumber, messageType, content;
+                                std::getline(iss, botNumber, ':');
+                                std::getline(iss, messageType, ':');
+                                std::getline(iss, content);
+
+                                if (messageType == "Command") {
+                                    Log("Executing command: " + content);
+                                    ExecuteCommand(content);
+                                } else if (messageType == "LocalBot") {
+                                    ProcessLocalBotMessage(line);
+                                } else {
+                                    Log("Received unknown message type: " + messageType);
+                                }
+                            }
+                        }
+                    }
+                    
+                    CloseHandle(overlapped.hEvent);
+                }
             }
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            
+
+            if (hPipe == INVALID_HANDLE_VALUE) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            } else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(333));
+            }
         }
 
+
+        {
+            std::lock_guard<std::mutex> lock(messageQueueMutex);
+            messageQueue.clear();
+        }
+        
         if (hPipe != INVALID_HANDLE_VALUE)
         {
+
+            try {
+                if (botId != -1) {
+                    std::string message = std::to_string(botId) + ":Status:Disconnecting\n";
+                    DWORD bytesWritten = 0;
+                    WriteFile(hPipe, message.c_str(), static_cast<DWORD>(message.length()), &bytesWritten, NULL);
+                }
+            } catch (...) {
+                // Ignore any errors during shutdown
+            }
+            
             CloseHandle(hPipe);
             hPipe = INVALID_HANDLE_VALUE;
         }
