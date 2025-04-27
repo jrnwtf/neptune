@@ -11,10 +11,10 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
 	NoiseSpam(pLocal);
 	VoiceCommandSpam(pLocal);
+	ChatSpam(pLocal);
 	CheatsBypass();
 	PingReducer();
 	WeaponSway();
-	ChatSpam(pLocal);
 	
 	if (I::EngineClient && I::EngineClient->IsInGame() && I::EngineClient->IsConnected())
 	{
