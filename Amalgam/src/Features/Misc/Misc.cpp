@@ -14,10 +14,10 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 	CheatsBypass();
 	PingReducer();
 	WeaponSway();
+	ChatSpam(pLocal);
 	
 	if (I::EngineClient && I::EngineClient->IsInGame() && I::EngineClient->IsConnected())
 	{
-		ChatSpam(pLocal);
 		static Timer namedPipeTimer{};
 		if (namedPipeTimer.Run(1.0f))
 		{
