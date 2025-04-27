@@ -835,9 +835,25 @@ void CMisc::RandomVotekick(CTFPlayer* pLocal)
 	}
 }
 
+
+// lmaobox if(crash){(dontcrash)} method down here
 void CMisc::ChatSpam(CTFPlayer* pLocal)
 {
-	if (!Vars::Misc::Automation::ChatSpam::Enable.Value || !pLocal)
+	if (!Vars::Misc::Automation::ChatSpam::Enable.Value || !pLocal || !I::EngineClient)
+	{
+		m_tChatSpamTimer.Update();
+		return;
+	}
+	
+	try
+	{
+		if (!I::EngineClient->IsInGame() || !I::EngineClient->IsConnected())
+		{
+			m_tChatSpamTimer.Update();
+			return;
+		}
+	}
+	catch (...)
 	{
 		m_tChatSpamTimer.Update();
 		return;
@@ -845,110 +861,183 @@ void CMisc::ChatSpam(CTFPlayer* pLocal)
 		
 	if (m_vChatSpamLines.empty())
 	{
-		char gamePath[MAX_PATH];
-		GetModuleFileNameA(GetModuleHandleA("hl2.exe"), gamePath, MAX_PATH);
-		std::string gameDir = gamePath;
-		size_t lastSlash = gameDir.find_last_of("\\/");
-		if (lastSlash != std::string::npos)
-			gameDir = gameDir.substr(0, lastSlash);
-			
-		// Debug info
-		SDK::Output("ChatSpam", "Loading chat lines from file", {}, true, true);
-		
-		std::vector<std::string> pathsToTry = {
-			"cat_chatspam.txt",
-			gameDir + "\\cat_chatspam.txt",
-			gameDir + "\\tf\\cat_chatspam.txt"
-		};
-		
-		bool fileLoaded = false;
-		std::string successfulPath;
-		
-		for (const auto& path : pathsToTry)
+		try
 		{
-			std::ifstream file(path);
-			if (file.is_open())
-			{
-				std::string line;
-				while (std::getline(file, line))
-				{
-					if (!line.empty())
-						m_vChatSpamLines.push_back(line);
-				}
-				file.close();
+			char gamePath[MAX_PATH];
+			GetModuleFileNameA(GetModuleHandleA("tf_win64.exe"), gamePath, MAX_PATH);
+			std::string gameDir = gamePath;
+			size_t lastSlash = gameDir.find_last_of("\\/");
+			if (lastSlash != std::string::npos)
+				gameDir = gameDir.substr(0, lastSlash);
 				
-				SDK::Output("ChatSpam", std::format("Loaded {} lines from {}", m_vChatSpamLines.size(), path).c_str(), {}, true, true);
-				fileLoaded = true;
-				successfulPath = path;
-				break;
-			}
-		}
-		
-		if (!fileLoaded)
-		{
-			std::string defaultPath = gameDir + "\\tf\\cat_chatspam.txt";
-			std::ofstream newFile(defaultPath);
+			// Debug info
+			SDK::Output("ChatSpam", "Loading chat lines from file", {}, true, true);
 			
-			if (newFile.is_open())
+			std::vector<std::string> pathsToTry = {
+				"cat_chatspam.txt",
+				gameDir + "\\tf\\cat_chatspam.txt"
+			};
+			
+			bool fileLoaded = false;
+			std::string successfulPath;
+			
+			for (const auto& path : pathsToTry)
 			{
-				newFile << "This is a default message from cat_chatspam.txt\n";
-				newFile << "Edit this file tf/cat_chatspam.txt\n";
-				newFile << "Each line will be sent as a separate message\n";
-				newFile << "[Amalgam] Chat Spam is working!\n";
-				newFile << "Put your chat spam lines in this file\n";
-				newFile.close();
-				
-				std::ifstream checkFile(defaultPath);
-				if (checkFile.is_open())
+				try
 				{
-					std::string line;
-					while (std::getline(checkFile, line))
+					std::ifstream file(path);
+					if (file.is_open())
 					{
-						if (!line.empty())
-							m_vChatSpamLines.push_back(line);
+						std::string line;
+						while (std::getline(file, line))
+						{
+							if (!line.empty())
+								m_vChatSpamLines.push_back(line);
+						}
+						file.close();
+						
+						SDK::Output("ChatSpam", std::format("Loaded {} lines from {}", m_vChatSpamLines.size(), path).c_str(), {}, true, true);
+						fileLoaded = true;
+						successfulPath = path;
+						break;
 					}
-					checkFile.close();
-					
-					SDK::Output("ChatSpam", std::format("Created and loaded default file at {}", defaultPath).c_str(), {}, true, true);
-					fileLoaded = true;
+				}
+				catch (...)
+				{
+					continue;
 				}
 			}
+			
+			if (!fileLoaded)
+			{
+				try
+				{
+					std::string defaultPath = gameDir + "\\tf\\cat_chatspam.txt";
+					std::ofstream newFile(defaultPath);
+					
+					if (newFile.is_open())
+					{
+						newFile << "This is a default message from cat_chatspam.txt\n";
+						newFile << "Edit this file tf/cat_chatspam.txt\n";
+						newFile << "Each line will be sent as a separate message\n";
+						newFile << "[Amalgam] Chat Spam is working!\n";
+						newFile << "Put your chat spam lines in this file\n";
+						newFile.close();
+						
+						std::ifstream checkFile(defaultPath);
+						if (checkFile.is_open())
+						{
+							std::string line;
+							while (std::getline(checkFile, line))
+							{
+								if (!line.empty())
+									m_vChatSpamLines.push_back(line);
+							}
+							checkFile.close();
+							
+							SDK::Output("ChatSpam", std::format("Created and loaded default file at {}", defaultPath).c_str(), {}, true, true);
+							fileLoaded = true;
+						}
+					}
+				}
+				catch (...)
+				{
+					// File operations failed, continue to fallback
+				}
+			}
+			
+			if (!fileLoaded || m_vChatSpamLines.empty())
+			{
+				SDK::Output("ChatSpam", "Failed to load or create chat spam file, using built-in messages", {}, true, true);
+				m_vChatSpamLines.push_back("Put your chat spam lines in cat_chatspam.txt");
+				m_vChatSpamLines.push_back("ChatSpam is running but couldn't find cat_chatspam.txt");
+				m_vChatSpamLines.push_back("[Amalgam] Chat Spam is working!");
+			}
 		}
-		
-		if (!fileLoaded || m_vChatSpamLines.empty())
+		catch (...)
 		{
-			SDK::Output("ChatSpam", "Failed to load or create chat spam file, using built-in messages", {}, true, true);
-			m_vChatSpamLines.push_back("Put your chat spam lines in cat_chatspam.txt");
-			m_vChatSpamLines.push_back("ChatSpam is running but couldn't find cat_chatspam.txt");
+			// If we failed completely with file handling, add a single fallback message
 			m_vChatSpamLines.push_back("[Amalgam] Chat Spam is working!");
 		}
 	}
 	
+	if (m_vChatSpamLines.empty())
+	{
+		return;
+	}
+	
+	// Enforce reasonable spam interval to prevent overwhelming the engine
 	float spamInterval = Vars::Misc::Automation::ChatSpam::Interval.Value;
-	if (spamInterval <= 0.0f)
-		spamInterval = 0.1f; 
+	if (spamInterval <= 0.2f) // Increased minimum interval to be safer
+		spamInterval = 0.2f; 
 	
 	if (!m_tChatSpamTimer.Run(spamInterval))
 		return;
 		
+	// Get chat line safely
 	std::string chatLine;
-	if (Vars::Misc::Automation::ChatSpam::Randomize.Value)
-	{
-		int randomIndex = SDK::RandomInt(0, m_vChatSpamLines.size() - 1);
-		chatLine = m_vChatSpamLines[randomIndex];
-	}
-	else
-	{
-		chatLine = m_vChatSpamLines[m_iCurrentChatSpamIndex];
-		m_iCurrentChatSpamIndex = (m_iCurrentChatSpamIndex + 1) % m_vChatSpamLines.size();
-	}
+	const size_t lineCount = m_vChatSpamLines.size();
 	
-	std::string chatCommand;
-	if (Vars::Misc::Automation::ChatSpam::TeamChat.Value)
-		chatCommand = "say_team \"" + chatLine + "\"";
-	else
-		chatCommand = "say \"" + chatLine + "\"";
+	if (lineCount == 0)
+		return;
+	
+	try
+	{
+		if (Vars::Misc::Automation::ChatSpam::Randomize.Value)
+		{
+			// Safer random index generation
+			int max = static_cast<int>(lineCount) - 1;
+			if (max < 0) max = 0;
+			int randomIndex = SDK::RandomInt(0, max);
+			
+			// Double-check bounds for safety
+			if (randomIndex >= 0 && randomIndex < static_cast<int>(lineCount))
+				chatLine = m_vChatSpamLines[randomIndex];
+			else
+				chatLine = "[ChatSpam]";
+		}
+		else
+		{
+			// Reset index if invalid
+			if (m_iCurrentChatSpamIndex < 0 || m_iCurrentChatSpamIndex >= static_cast<int>(lineCount))
+				m_iCurrentChatSpamIndex = 0;
+			
+			// Extra safety check
+			if (m_iCurrentChatSpamIndex >= 0 && m_iCurrentChatSpamIndex < static_cast<int>(lineCount))
+			{
+				chatLine = m_vChatSpamLines[m_iCurrentChatSpamIndex];
+				m_iCurrentChatSpamIndex = (m_iCurrentChatSpamIndex + 1) % static_cast<int>(lineCount);
+			}
+			else
+			{
+				chatLine = "[ChatSpam]";
+				m_iCurrentChatSpamIndex = 0;
+			}
+		}
 		
-	SDK::Output("ChatSpam", std::format("Sending: {}", chatCommand).c_str(), {}, true, true);
-	I::EngineClient->ClientCmd_Unrestricted(chatCommand.c_str());
+		// Limit message length to prevent buffer issues
+		if (chatLine.length() > 150) 
+		{
+			chatLine = chatLine.substr(0, 150);
+		}
+		
+		// Build the chat command
+		std::string chatCommand;
+		if (Vars::Misc::Automation::ChatSpam::TeamChat.Value)
+			chatCommand = "say_team \"" + chatLine + "\"";
+		else
+			chatCommand = "say \"" + chatLine + "\"";
+		
+		// Final null check before calling engine
+		if (I::EngineClient)
+		{
+			SDK::Output("ChatSpam", std::format("Sending: {}", chatCommand).c_str(), {}, true, true);
+			I::EngineClient->ClientCmd_Unrestricted(chatCommand.c_str());
+		}
+	}
+	catch (...)
+	{
+		// Silently fail if we encounter any exception during command execution
+		return;
+	}
 }
