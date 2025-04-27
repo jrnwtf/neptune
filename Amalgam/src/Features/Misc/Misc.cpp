@@ -11,13 +11,13 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
 	NoiseSpam(pLocal);
 	VoiceCommandSpam(pLocal);
-	ChatSpam(pLocal);
 	CheatsBypass();
 	PingReducer();
 	WeaponSway();
 	
 	if (I::EngineClient && I::EngineClient->IsInGame() && I::EngineClient->IsConnected())
 	{
+		ChatSpam(pLocal);
 		static Timer namedPipeTimer{};
 		if (namedPipeTimer.Run(1.0f))
 		{
@@ -848,6 +848,12 @@ void CMisc::ChatSpam(CTFPlayer* pLocal)
 	try
 	{
 		if (!I::EngineClient->IsInGame() || !I::EngineClient->IsConnected())
+		{
+			m_tChatSpamTimer.Update();
+			return;
+		}
+		
+		if (!pLocal->IsAlive() || pLocal->m_iTeamNum() <= 1 || pLocal->m_iClass() == TF_CLASS_UNDEFINED)
 		{
 			m_tChatSpamTimer.Update();
 			return;
