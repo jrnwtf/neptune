@@ -1127,7 +1127,6 @@
     <ClCompile Include="src\Hooks\CPlayerResource_GetPlayerName.cpp" />
     <ClCompile Include="src\Hooks\CTFGCClientSystem_UpdateAssignedLobby.cpp" />
     <ClCompile Include="src\Hooks\CTFHudDeathNotice_AddAdditionalMsg.cpp" />
-    <ClCompile Include="src\Hooks\CTFScatterGun_FireBullet.cpp" />
     <ClCompile Include="src\Hooks\CThirdPersonManager_Update.cpp" />
     <ClCompile Include="src\Hooks\CViewRender_PerformScreenOverlay.cpp" />
     <ClCompile Include="src\Hooks\FuckReportShit.cpp" />

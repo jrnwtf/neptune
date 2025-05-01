@@ -372,7 +372,7 @@
 #define	FL_CLIENT (1<<7)
 #define FL_FAKECLIENT (1<<8)
 #define	FL_INWATER (1<<9)
-#define PLAYER_FLAG_BITS 10
+#define PLAYER_FLAG_BITS 32
 
 #define	LIFE_ALIVE 0
 #define	LIFE_DYING 1
