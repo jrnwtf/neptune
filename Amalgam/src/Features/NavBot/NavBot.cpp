@@ -1855,7 +1855,7 @@ std::optional<Vector> CNavBot::GetDoomsdayGoal(CTFPlayer* pLocal, int iOurTeam, 
 					}
 					
 					// Back up a bit from the rocket
-					Vector vSaferPosition = *vRocket - vPathToRocket.Scale(300.0f);
+					Vector vSaferPosition = *vRocket - (vPathToRocket * 300.0f);
 					return vSaferPosition;
 				}
 
@@ -1896,7 +1896,7 @@ std::optional<Vector> CNavBot::GetDoomsdayGoal(CTFPlayer* pLocal, int iOurTeam, 
 							}
 							
 							// Position offset from carrier toward rocket but slightly to the side
-							Vector vOffset = vCarrierToRocket.Scale(-80.0f) + vCrossProduct.Scale(60.0f);
+							Vector vOffset = (vCarrierToRocket * -80.0f) + (vCrossProduct * 60.0f);
 							return pCarrier->GetAbsOrigin() + vOffset;
 						}
 						
@@ -3221,7 +3221,7 @@ std::optional<Vector> CNavBot::GetFormationOffset(CTFPlayer* pLocal, int positio
 	
 	// Different formation styles:
 	// 1. Line formation (bots following one after another)
-	vOffset = vDirection.Scale(-m_flFormationDistance * positionIndex);
+	vOffset = (vDirection * -m_flFormationDistance * positionIndex);
 	
 	return vOffset;
 }
