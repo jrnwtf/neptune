@@ -250,7 +250,7 @@ void CResolver::HitscanRan(CTFPlayer* pLocal, CTFPlayer* pTarget, CTFWeaponBase*
 	if (!pResource)
 		return;
 	m_iWaitingForTarget = pResource->m_iUserID(pTarget->entindex());
-	m_flWaitingForDamage = I::GlobalVars->curtime + F::Backtrack.GetReal(MAX_FLOWS, false) + 0.1f;
+	m_flWaitingForDamage = I::GlobalVars->curtime + F::Backtrack.GetReal(MAX_FLOWS, false) * 1.5f + 0.1f;
 	if (iHitbox == HITBOX_HEAD && G::CanHeadshot)
 	{
 		// not dealing with ambassador's range check right now

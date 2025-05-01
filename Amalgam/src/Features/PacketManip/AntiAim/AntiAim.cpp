@@ -91,7 +91,7 @@ void CAntiAim::RunOverlapping(CTFPlayer* pEntity, CUserCmd* pCmd, float& flRealY
 		return;
 
 	float flFakeYaw = GetBaseYaw(pEntity, pCmd, true) + GetYawOffset(pEntity, true);
-	const float flYawDiff = RAD2DEG(Math::AngleDiffRad(DEG2RAD(flRealYaw), DEG2RAD(flFakeYaw)));
+	const float flYawDiff = Math::NormalizeAngle(flRealYaw - flFakeYaw);
 	if (fabsf(flYawDiff) < flEpsilon)
 		flRealYaw += flYawDiff > 0 ? flEpsilon : -flEpsilon;
 }
@@ -238,10 +238,7 @@ void CAntiAim::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd, bo
 	if (Vars::Misc::Game::AntiCheatCompatibility.Value)
 		Math::ClampAngles(vAngles);
 
-	if (!F::NavEngine.isPathing())
-		SDK::FixMovement(pCmd, vAngles);
-	else if (!G::SilentAngles)
-		SDK::WalkToFixAntiAim(pCmd, vAngles);
+	SDK::FixMovement(pCmd, vAngles);
 	pCmd->viewangles.x = vAngles.x;
 	pCmd->viewangles.y = vAngles.y;
 

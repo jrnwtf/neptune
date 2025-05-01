@@ -104,7 +104,7 @@ public:
 	struct CachedConnection
 	{
 		int expire_tick;
-		bool vischeck_state;
+		int vischeck_state;
 	};
 
 	struct CachedStucktime
@@ -124,7 +124,6 @@ public:
 		State state;
 	};
 
-	bool CastRay(Vector origin, Vector endpos, unsigned mask, ITraceFilter* filter);
 	bool IsPlayerPassableNavigation(Vector origin, Vector target, unsigned int mask = MASK_PLAYERSOLID);
 
 	Vector handleDropdown(Vector current_pos, Vector next_pos);

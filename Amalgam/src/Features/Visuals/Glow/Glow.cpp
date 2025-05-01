@@ -5,42 +5,42 @@
 #include "../../Backtrack/Backtrack.h"
 #include "../../Players/PlayerUtils.h"
 
-static inline bool GetPlayerGlow(CBaseEntity* pEntity, CTFPlayer* pLocal, Glow_t* pGlow, Color_t* pColor, bool bFriendly, bool bEnemy, const float flActualDistance = 0.f)
+static inline bool GetPlayerGlow(CBaseEntity* pPlayer, CBaseEntity* pEntity, CTFPlayer* pLocal, Glow_t* pGlow, Color_t* pColor, bool bEnemy, bool bTeam, const float flActualDistance = 0.f)
 {
-	if (Vars::Glow::Player::Local.Value && pEntity == pLocal
-		|| Vars::Glow::Player::Priority.Value && F::PlayerUtils.IsPrioritized(pEntity->entindex())
-		|| Vars::Glow::Player::Friend.Value && H::Entities.IsFriend(pEntity->entindex())
-		|| Vars::Glow::Player::Party.Value && H::Entities.InParty(pEntity->entindex())
-		|| Vars::Glow::Player::Target.Value && pEntity->entindex() == G::Target.first)
+	if (Vars::Glow::Player::Local.Value && pPlayer == pLocal
+		|| Vars::Glow::Player::Priority.Value && F::PlayerUtils.IsPrioritized(pPlayer->entindex())
+		|| Vars::Glow::Player::Friend.Value && H::Entities.IsFriend(pPlayer->entindex())
+		|| Vars::Glow::Player::Party.Value && H::Entities.InParty(pPlayer->entindex())
+		|| Vars::Glow::Player::Target.Value && pEntity->entindex() == G::AimTarget.m_iEntIndex)
 	{
 		*pGlow = Glow_t(Vars::Glow::Player::Stencil.Value, Vars::Glow::Player::Blur.Value);
-		*pColor = H::Color.GetEntityDrawColor(pLocal, pEntity, Vars::Colors::Relative.Value);
+		*pColor = H::Color.GetEntityDrawColor(pLocal, pPlayer, Vars::Colors::Relative.Value, pEntity);
 		return true;
 	}
 	if (pEntity == pLocal)
 		return false;
 
-	const bool bTeam = pEntity->m_iTeamNum() == pLocal->m_iTeamNum();
+	const bool bIsTeam = pEntity->m_iTeamNum() == pLocal->m_iTeamNum();
 	int iType = 0;
-	*pGlow = bTeam
-		? Glow_t(Vars::Glow::Friendly::Stencil.Value, Vars::Glow::Friendly::Blur.Value)
+	*pGlow = bIsTeam
+		? Glow_t(Vars::Glow::Team::Stencil.Value, Vars::Glow::Team::Blur.Value)
 		: Glow_t(Vars::Glow::Enemy::Stencil.Value, Vars::Glow::Enemy::Blur.Value);
-	*pColor = H::Color.GetEntityDrawColor(pLocal, pEntity, Vars::Colors::Relative.Value, &iType);
+	*pColor = H::Color.GetEntityDrawColor(pLocal, pPlayer, Vars::Colors::Relative.Value, pEntity, &iType);
 
 	// distance things
 	const Vec3 vDelta = !flActualDistance ? pEntity->m_vecOrigin() - pLocal->m_vecOrigin() : Vec3();
 	const float flDistance = (flActualDistance ? flActualDistance : vDelta.Length2D());
-	if (flDistance >= (bTeam ? Vars::Glow::Friendly::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value) ||
-		flDistance <= (bTeam ? Vars::Glow::Friendly::MinDist.Value : Vars::Glow::Enemy::MinDist.Value))
+	if (flDistance >= (bIsTeam ? Vars::Glow::Team::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value) ||
+		flDistance <= (bIsTeam ? Vars::Glow::Team::MinDist.Value : Vars::Glow::Enemy::MinDist.Value))
 		return false;
 
-	if (bTeam ? Vars::Glow::Friendly::Dist2Alpha.Value : Vars::Glow::Enemy::Dist2Alpha.Value)
+	if (bIsTeam ? Vars::Glow::Team::Dist2Alpha.Value : Vars::Glow::Enemy::Dist2Alpha.Value)
 	{
-		pColor->a = Math::RemapVal(flDistance, (bTeam ? Vars::Glow::Friendly::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value) - 256.f, (bTeam ? Vars::Glow::Friendly::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value), pColor->a, 0.f);
-		pColor->a = Math::RemapVal(flDistance, (bTeam ? Vars::Glow::Friendly::MinDist.Value : Vars::Glow::Enemy::MinDist.Value) + 256.f, (bTeam ? Vars::Glow::Friendly::MinDist.Value : Vars::Glow::Enemy::MinDist.Value), pColor->a, 0.f);
+		pColor->a = Math::RemapVal(flDistance, (bIsTeam ? Vars::Glow::Team::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value) - 256.f, (bIsTeam ? Vars::Glow::Team::MaxDist.Value : Vars::Glow::Enemy::MaxDist.Value), pColor->a, 0.f);
+		pColor->a = Math::RemapVal(flDistance, (bIsTeam ? Vars::Glow::Team::MinDist.Value : Vars::Glow::Enemy::MinDist.Value) + 256.f, (bIsTeam ? Vars::Glow::Team::MinDist.Value : Vars::Glow::Enemy::MinDist.Value), pColor->a, 0.f);
 	}
 
-	return bTeam ? bFriendly : bEnemy;
+	return bIsTeam ? bTeam : bEnemy;
 }
 
 static inline void ApplyDistanceAlphaMod(byte* pAlpha, float flDistance, float flMinDistance, float flMaxDistance, bool bActive)
@@ -65,7 +65,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		// player glow
 	case ETFClassID::CTFPlayer:
 	{
-		return GetPlayerGlow(pEntity, pLocal, pGlow, pColor, Vars::Glow::Friendly::Players.Value, Vars::Glow::Enemy::Players.Value);
+		return GetPlayerGlow(pEntity, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Players.Value, Vars::Glow::Team::Players.Value);
 	}
 	// building glow
 	case ETFClassID::CObjectSentrygun:
@@ -77,7 +77,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 
 		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
 		flDistance = vDelta.Length2D();
-		return GetPlayerGlow(pOwner, pLocal, pGlow, pColor, Vars::Glow::Friendly::Buildings.Value, Vars::Glow::Enemy::Buildings.Value, flDistance);
+		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Buildings.Value, Vars::Glow::Team::Buildings.Value, flDistance);
 	}
 	// ragdoll glow
 	case ETFClassID::CTFRagdoll:
@@ -89,7 +89,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 
 		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
 		flDistance = vDelta.Length2D();
-		return GetPlayerGlow(pOwner, pLocal, pGlow, pColor, Vars::Glow::Friendly::Ragdolls.Value, Vars::Glow::Enemy::Ragdolls.Value, flDistance);
+		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Ragdolls.Value, Vars::Glow::Team::Ragdolls.Value, flDistance);
 	}
 	// projectile glow
 	case ETFClassID::CBaseProjectile:
@@ -122,7 +122,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 
 		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
 		flDistance = vDelta.Length2D();
-		return GetPlayerGlow(pOwner, pLocal, pGlow, pColor, Vars::Glow::Friendly::Projectiles.Value, Vars::Glow::Enemy::Projectiles.Value, flDistance);
+		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Projectiles.Value, Vars::Glow::Team::Projectiles.Value, flDistance);
 	}
 	case ETFClassID::CTFBaseRocket:
 	case ETFClassID::CTFFlameRocket:
@@ -145,7 +145,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 
 		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
 		flDistance = vDelta.Length2D();
-		return GetPlayerGlow(pOwner, pLocal, pGlow, pColor, Vars::Glow::Friendly::Projectiles.Value, Vars::Glow::Enemy::Projectiles.Value, flDistance);
+		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Projectiles.Value, Vars::Glow::Team::Projectiles.Value, flDistance);
 	}
 	case ETFClassID::CTFBaseProjectile:
 	case ETFClassID::CTFProjectile_EnergyRing: // not drawn, shoulddraw check, small anyways
@@ -157,7 +157,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 
 		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
 		flDistance = vDelta.Length2D();
-		return GetPlayerGlow(pOwner, pLocal, pGlow, pColor, Vars::Glow::Friendly::Projectiles.Value, Vars::Glow::Enemy::Projectiles.Value, flDistance);
+		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Projectiles.Value, Vars::Glow::Team::Projectiles.Value, flDistance);
 	}
 	// objective glow
 	case ETFClassID::CCaptureFlag:
@@ -188,10 +188,10 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		{
 			if (auto pOwner = pEntity->m_hOwnerEntity().Get())
 			{
-				return GetPlayerGlow(pOwner, pLocal, pGlow, pColor, Vars::Glow::World::NPCs.Value, Vars::Glow::World::NPCs.Value, flDistance);
+				return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::World::NPCs.Value, Vars::Glow::World::NPCs.Value, flDistance);
 			}
 			else
-				*pColor = H::Color.GetEntityDrawColor(pLocal, pEntity, Vars::Colors::Relative.Value);
+				*pColor = H::Color.GetEntityDrawColor(pLocal, pEntity, Vars::Colors::Relative.Value, pEntity);
 		}
 		else
 			*pColor = Vars::Colors::NPC.Value;
@@ -306,7 +306,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	// player glow
 	auto pOwner = pEntity->m_hOwnerEntity().Get();
 	if (pOwner && pOwner->IsPlayer())
-		return GetPlayerGlow(pOwner, pLocal, pGlow, pColor, Vars::Glow::Friendly::Players.Value, Vars::Glow::Enemy::Players.Value);
+		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Players.Value, Vars::Glow::Team::Players.Value);
 
 	return false;
 }
@@ -451,15 +451,20 @@ void CGlow::Store(CTFPlayer* pLocal)
 			if (Vars::Backtrack::Enabled.Value && Vars::Glow::Backtrack::Enabled.Value && (Vars::Glow::Backtrack::Stencil.Value || Vars::Glow::Backtrack::Blur.Value) && pEntity != pLocal)
 			{
 				auto pWeapon = H::Entities.GetWeapon();
-				if (pWeapon && G::PrimaryWeaponType != EWeaponType::PROJECTILE)
+				if (pWeapon && (G::PrimaryWeaponType != EWeaponType::PROJECTILE || Vars::Glow::Backtrack::Draw.Value & Vars::Glow::Backtrack::DrawEnum::Always))
 				{
 					bool bShowFriendly = false, bShowEnemy = true;
-					if (G::PrimaryWeaponType == EWeaponType::MELEE && SDK::AttribHookValue(0, "speed_buff_ally", pWeapon) > 0)
-						bShowFriendly = true;
-					if (pWeapon->GetWeaponID() == TF_WEAPON_MEDIGUN)
-						bShowFriendly = true, bShowEnemy = false;
+					if (!(Vars::Glow::Backtrack::Draw.Value & Vars::Glow::Backtrack::DrawEnum::IgnoreTeam))
+					{
+						if (G::PrimaryWeaponType == EWeaponType::MELEE && SDK::AttribHookValue(0, "speed_buff_ally", pWeapon) > 0)
+							bShowFriendly = true;
+						else if (pWeapon->GetWeaponID() == TF_WEAPON_MEDIGUN)
+							bShowFriendly = true, bShowEnemy = false;
+					}
+					else if (pWeapon->GetWeaponID() == TF_WEAPON_MEDIGUN)
+						bShowEnemy = false;
 
-					if (bShowFriendly && pEntity->m_iTeamNum() == pLocal->m_iTeamNum() || bShowEnemy && pEntity->m_iTeamNum() != pLocal->m_iTeamNum())
+					if (bShowEnemy && pEntity->m_iTeamNum() != pLocal->m_iTeamNum() || bShowFriendly && pEntity->m_iTeamNum() == pLocal->m_iTeamNum())
 					{
 						tGlow = Glow_t(Vars::Glow::Backtrack::Stencil.Value, Vars::Glow::Backtrack::Blur.Value);
 						mvEntities[tGlow].emplace_back(pEntity, Vars::Colors::Backtrack.Value.a ? Vars::Colors::Backtrack.Value : tColor, true);
@@ -523,12 +528,15 @@ void CGlow::RenderBacktrack(const DrawModelState_t& pState, const ModelRenderInf
 
 
 
-	auto drawModel = [&](Vec3& vOrigin, const DrawModelState_t& pState, const ModelRenderInfo_t& pInfo, matrix3x4* pBoneToWorld)
+	auto drawModel = [&](Vec3& vOrigin, const DrawModelState_t& pState, const ModelRenderInfo_t& pInfo, matrix3x4* pBoneToWorld, float flBlend)
 		{
 			if (!SDK::IsOnScreen(pEntity, vOrigin))
 				return;
 
+			//float flOriginalBlend = I::RenderView->GetBlend();
+			//I::RenderView->SetBlend(flBlend * flOriginalBlend);
 			ModelRender_DrawModelExecute->Call<void>(I::ModelRender, pState, pInfo, pBoneToWorld);
+			//I::RenderView->SetBlend(flOriginalBlend);
 		};
 
 	const auto& pRecords = F::Backtrack.GetRecords(pEntity);
@@ -536,35 +544,31 @@ void CGlow::RenderBacktrack(const DrawModelState_t& pState, const ModelRenderInf
 	if (!vRecords.size())
 		return;
 
-	switch (Vars::Glow::Backtrack::Draw.Value)
-	{
-	case Vars::Glow::Backtrack::DrawEnum::Last: // last
-	{
-		auto vLastRec = vRecords.end() - 1;
-		if (vLastRec != vRecords.end() && pEntity->GetAbsOrigin().DistTo(vLastRec->m_vOrigin) > 0.1f)
-			drawModel(vLastRec->m_vOrigin, pState, pInfo, vLastRec->m_BoneMatrix.m_aBones);
-		break;
-	}
-	case Vars::Glow::Backtrack::DrawEnum::LastFirst: // last + first
-	{
-		auto vFirstRec = vRecords.begin();
-		if (vFirstRec != vRecords.end() && pEntity->GetAbsOrigin().DistTo(vFirstRec->m_vOrigin) > 0.1f)
-			drawModel(vFirstRec->m_vOrigin, pState, pInfo, vFirstRec->m_BoneMatrix.m_aBones);
-		auto vLastRec = vRecords.end() - 1;
-		if (vLastRec != vRecords.end() && pEntity->GetAbsOrigin().DistTo(vLastRec->m_vOrigin) > 0.1f)
-			drawModel(vLastRec->m_vOrigin, pState, pInfo, vLastRec->m_BoneMatrix.m_aBones);
-		break;
-	}
-	case Vars::Glow::Backtrack::DrawEnum::All: // all
-	{
-		for (auto& record : vRecords)
-		{
-			if (pEntity->GetAbsOrigin().DistTo(record.m_vOrigin) < 0.1f)
-				continue;
+	bool bDrawLast = Vars::Glow::Backtrack::Draw.Value & Vars::Glow::Backtrack::DrawEnum::Last;
+	bool bDrawFirst = Vars::Glow::Backtrack::Draw.Value & Vars::Glow::Backtrack::DrawEnum::First;
 
-			drawModel(record.m_vOrigin, pState, pInfo, record.m_BoneMatrix.m_aBones);
+	if (!bDrawLast && !bDrawFirst)
+	{
+		for (auto& tRecord : vRecords)
+		{
+			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(tRecord.m_vOrigin), 1.f, 24.f, 0.f, 1.f))
+				drawModel(tRecord.m_vOrigin, pState, pInfo, tRecord.m_BoneMatrix.m_aBones, flBlend);
 		}
 	}
+	else
+	{
+		if (bDrawLast)
+		{
+			auto& tRecord = vRecords.back();
+			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(tRecord.m_vOrigin), 1.f, 24.f, 0.f, 1.f))
+				drawModel(tRecord.m_vOrigin, pState, pInfo, tRecord.m_BoneMatrix.m_aBones, flBlend);
+		}
+		if (bDrawFirst)
+		{
+			auto& tRecord = vRecords.front();
+			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(tRecord.m_vOrigin), 1.f, 24.f, 0.f, 1.f))
+				drawModel(tRecord.m_vOrigin, pState, pInfo, tRecord.m_BoneMatrix.m_aBones, flBlend);
+		}
 	}
 }
 void CGlow::RenderFakeAngle(const DrawModelState_t& pState, const ModelRenderInfo_t& pInfo)
@@ -671,6 +675,8 @@ void CGlow::RenderViewmodel(const DrawModelState_t& pState, const ModelRenderInf
 
 void CGlow::Initialize()
 {
+	int nWidth, nHeight; I::MatSystemSurface->GetScreenSize(nWidth, nHeight);
+
 	if (!m_pMatGlowColor)
 	{
 		m_pMatGlowColor = I::MaterialSystem->FindMaterial("dev/glow_color", TEXTURE_GROUP_OTHER);
@@ -678,40 +684,11 @@ void CGlow::Initialize()
 		F::Materials.m_mMatList[m_pMatGlowColor] = true;
 	}
 	
-	if (!m_pMatBlurX)
-	{
-		KeyValues* kv = new KeyValues("BlurFilterX");
-		kv->SetString("$basetexture", "glow_buffer_1");
-		m_pMatBlurX = F::Materials.Create("MatBlurX", kv);
-	}
-
-	if (!m_pMatBlurY)
-	{
-		KeyValues* kv = new KeyValues("BlurFilterY");
-		kv->SetString("$basetexture", "glow_buffer_2");
-		m_pMatBlurY = F::Materials.Create("MatBlurY", kv);
-	}
-
-	if (!m_pMatHaloAddToScreen)
-	{
-		KeyValues* kv = new KeyValues("UnlitGeneric");
-		kv->SetString("$basetexture", "glow_buffer_1");
-		kv->SetString("$additive", "1");
-		m_pMatHaloAddToScreen = F::Materials.Create("MatHaloAddToScreen", kv);
-	}
-
-	if (!m_pRtFullFrame)
-	{
-		m_pRtFullFrame = I::MaterialSystem->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
-		m_pRtFullFrame->IncrementReferenceCount();
-	}
-
 	if (!m_pRenderBuffer1)
 	{
 		m_pRenderBuffer1 = I::MaterialSystem->CreateNamedRenderTargetTextureEx(
-			"glow_buffer_1",
-			m_pRtFullFrame->GetActualWidth(),
-			m_pRtFullFrame->GetActualHeight(),
+			"RenderBuffer1",
+			nWidth, nHeight,
 			RT_SIZE_LITERAL,
 			IMAGE_FORMAT_RGB888,
 			MATERIAL_RT_DEPTH_SHARED,
@@ -724,9 +701,8 @@ void CGlow::Initialize()
 	if (!m_pRenderBuffer2)
 	{
 		m_pRenderBuffer2 = I::MaterialSystem->CreateNamedRenderTargetTextureEx(
-			"glow_buffer_2",
-			m_pRtFullFrame->GetActualWidth(),
-			m_pRtFullFrame->GetActualHeight(),
+			"RenderBuffer2",
+			nWidth, nHeight,
 			RT_SIZE_LITERAL,
 			IMAGE_FORMAT_RGB888,
 			MATERIAL_RT_DEPTH_SHARED,
@@ -734,6 +710,28 @@ void CGlow::Initialize()
 			CREATERENDERTARGETFLAGS_HDR
 		);
 		m_pRenderBuffer2->IncrementReferenceCount();
+	}
+
+	if (!m_pMatHaloAddToScreen)
+	{
+		KeyValues* kv = new KeyValues("UnlitGeneric");
+		kv->SetString("$basetexture", "RenderBuffer1");
+		kv->SetString("$additive", "1");
+		m_pMatHaloAddToScreen = F::Materials.Create("MatHaloAddToScreen", kv);
+	}
+
+	if (!m_pMatBlurX)
+	{
+		KeyValues* kv = new KeyValues("BlurFilterX");
+		kv->SetString("$basetexture", "RenderBuffer1");
+		m_pMatBlurX = F::Materials.Create("MatBlurX", kv);
+	}
+
+	if (!m_pMatBlurY)
+	{
+		KeyValues* kv = new KeyValues("BlurFilterY");
+		kv->SetString("$basetexture", "RenderBuffer2");
+		m_pMatBlurY = F::Materials.Create("MatBlurY", kv);
 	}
 }
 
@@ -765,13 +763,6 @@ void CGlow::Unload()
 		m_pMatHaloAddToScreen->DecrementReferenceCount();
 		m_pMatHaloAddToScreen->DeleteIfUnreferenced();
 		m_pMatHaloAddToScreen = nullptr;
-	}
-
-	if (m_pRtFullFrame)
-	{
-		m_pRtFullFrame->DecrementReferenceCount();
-		m_pRtFullFrame->DeleteIfUnreferenced();
-		m_pRtFullFrame = nullptr;
 	}
 
 	if (m_pRenderBuffer1)

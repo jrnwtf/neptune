@@ -270,7 +270,7 @@ public:
 		return x * v.x + y * v.y;
 	}
 
-	inline bool IsZero(const float tolerance = 0.001f) const
+	inline bool IsZero(float tolerance = 0.001f) const
 	{
 		return fabsf(x) < tolerance &&
 			   fabsf(y) < tolerance;
@@ -429,6 +429,11 @@ public:
 		x = X; y = Y; z = Z;
 	}
 
+	inline Vec3 To2D()
+	{
+		return { x, y };
+	}
+
 	inline Vec3 Min(const Vec3& v) const
 	{
 		return Vec3(std::min<float>(x, v.x), std::min<float>(y, v.y), std::min<float>(z, v.z));
@@ -543,15 +548,33 @@ public:
 		return flLength;
 	}
 
+	inline float Normalize2D()
+	{
+		float flLength = Length2D();
+		float flLengthNormal = 1.f / (FLT_EPSILON + flLength);
+
+		x *= flLengthNormal;
+		y *= flLengthNormal;
+		z = 0;
+
+		return flLength;
+	}
+
 	inline Vec3 Normalized()
 	{
 		float flLengthNormal = 1.f / (FLT_EPSILON + Length());
 		return Vec3(x * flLengthNormal, y * flLengthNormal, z * flLengthNormal);
 	}
 
-	inline Vec3 Get2D()
+	inline Vec3 Normalized2D()
 	{
-		return Vec3(x, y, 0);
+		float flLengthNormal = 1.f / (FLT_EPSILON + Length2D());
+		return Vec3(x * flLengthNormal, y * flLengthNormal);
+	}
+
+	inline Vec2 Get2D()
+	{
+		return {x, y};
 	}
 
 	inline float Length2D(void) const
@@ -584,21 +607,11 @@ public:
 		return Vec3(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x);
 	}
 
-	inline bool IsZero(const float tolerance = 0.001f) const
+	inline bool IsZero(float tolerance = 0.001f) const
 	{
 		return fabsf(x) < tolerance &&
 			   fabsf(y) < tolerance &&
 			   fabsf(z) < tolerance;
-	}
-
-	inline Vec3 Scale(float fl)
-	{
-		return Vec3(x * fl, y * fl, z * fl);
-	}
-
-	inline void Init(float ix, float iy, float iz)
-	{
-		x = ix; y = iy; z = iz;
 	}
 
 	inline Vec3 ToAngle() const noexcept

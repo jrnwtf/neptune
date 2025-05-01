@@ -1250,39 +1250,34 @@ bool CNavBot::MeleeAttack(CUserCmd* pCmd, CTFPlayer* pLocal, int iSlot, ClosestE
 	if (F::NavEngine.current_priority > prio_melee)
 		return false;
 
-	static Timer tMeleeCooldown{};
+	
+	static Timer tVischeckCooldown{};
+	if (tVischeckCooldown.Run(0.2f))
 	{
 		trace_t trace;
-		CTraceFilterWorldAndPropsOnly filter{};
-
-		const auto hb = pPlayer->GetHitboxCenter(HITBOX_THORAX);
-		if (!hb.IsZero())
-		{
-			SDK::TraceHull(pLocal->GetShootPos(), hb, pLocal->m_vecMins(), pLocal->m_vecMaxs(), MASK_PLAYERSOLID, &filter, &trace);
-			bIsVisible = trace.fraction == 1.f;
-		}
-		else
-			bIsVisible = false;
+		CTraceFilterHitscan filter{}; filter.pSkip = pLocal;
+		SDK::TraceHull(pLocal->GetShootPos(), pPlayer->GetAbsOrigin(), pLocal->m_vecMins() * 0.3f, pLocal->m_vecMaxs() * 0.3f, MASK_PLAYERSOLID, &filter, &trace);
+		bIsVisible = trace.DidHit() ? trace.m_pEnt && trace.m_pEnt == pPlayer : true;
 	}
 
 	Vector vTargetOrigin = pPlayer->GetAbsOrigin();
-
+	Vector vLocalOrigin = pLocal->GetAbsOrigin();
 	// If we are close enough, don't even bother with using the navparser to get there
 	if (tClosestEnemy.m_flDist < pow(100.0f, 2) && bIsVisible)
 	{
-		Vector vLocalOrigin = pLocal->GetAbsOrigin();
-		// Should fix getting stuck at trying to walk to players in unreachable areas
-		if (pow(vTargetOrigin.z, 2) < pow(vLocalOrigin.z - PLAYER_JUMP_HEIGHT, 2) || pow(vTargetOrigin.z, 2) > pow(vLocalOrigin.z + PLAYER_JUMP_HEIGHT, 2))
-			return false;
+		// Crouch if we are standing on someone
+		if (pLocal->m_hGroundEntity().Get() && pLocal->m_hGroundEntity().Get()->IsPlayer())
+			pCmd->buttons |= IN_DUCK;
 
 		SDK::WalkTo(pCmd, pLocal, vTargetOrigin);
 		F::NavEngine.cancelPath();
 		F::NavEngine.current_priority = prio_melee;
 		return true;
 	}
-
+	
 	// Don't constantly path, it's slow.
 	// The closer we are, the more we should try to path
+	static Timer tMeleeCooldown{};
 	if (!tMeleeCooldown.Run(tClosestEnemy.m_flDist < pow(100.0f, 2) ? 0.2f : tClosestEnemy.m_flDist < pow(1000.0f, 2) ? 0.5f : 2.f) && F::NavEngine.isPathing())
 		return F::NavEngine.current_priority == prio_melee;
 
@@ -2701,9 +2696,9 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 		if (!F::Ticks.m_bRechargeQueue &&
 			(Vars::Misc::Movement::NavBot::RechargeDT.Value != Vars::Misc::Movement::NavBot::RechargeDTEnum::WaitForFL || !Vars::CL_Move::Fakelag::Fakelag.Value || !F::FakeLag.m_iGoal) &&
 			G::Attacking != 1 &&
-			(F::Ticks.m_iShiftedTicks < F::Ticks.m_iMaxShift) && tDoubletapRecharge.Check(Vars::Misc::Movement::NavBot::RechargeDTDelay.Value))
+			(F::Ticks.m_iShiftedTicks < F::Ticks.m_iShiftedGoal) && tDoubletapRecharge.Check(Vars::Misc::Movement::NavBot::RechargeDTDelay.Value))
 			F::Ticks.m_bRechargeQueue = true;
-		else if (F::Ticks.m_iShiftedTicks >= F::Ticks.m_iMaxShift)
+		else if (F::Ticks.m_iShiftedTicks >= F::Ticks.m_iShiftedGoal)
 			tDoubletapRecharge.Update();
 	}
 
@@ -2736,7 +2731,7 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 		auto pEntity = I::ClientEntityList->GetClientEntity(tClosestEnemy.m_iEntIdx);
 		if (pEntity && pEntity->As<CTFPlayer>()->IsAlive() && !pEntity->As<CTFPlayer>()->IsInvulnerable() && pWeapon->HasAmmo())
 		{
-			if (abs(G::Target.second - I::GlobalVars->tickcount) < 32 || tClosestEnemy.m_flDist <= pow(800.f, 2))
+			if (G::AimTarget.m_iEntIndex && G::AimTarget.m_iDuration || tClosestEnemy.m_flDist <= pow(800.f, 2))
 				tSpinupTimer.Update();
 			if (!tSpinupTimer.Check(3.f)) // 3 seconds until unrev
 				pCmd->buttons |= IN_ATTACK2;

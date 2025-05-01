@@ -306,7 +306,7 @@ void CCritHack::ResetWeapons(CTFPlayer* pLocal)
 	for (int i = 0; i < MAX_WEAPONS; i++)
 	{
 		auto pWeapon = pLocal->GetWeaponFromSlot(i);
-		if (!pWeapon || !WeaponCanCrit(pWeapon))
+		if (!pWeapon || !WeaponCanCrit(pWeapon, true))
 			continue;
 
 		int iSlot = pWeapon->GetSlot();

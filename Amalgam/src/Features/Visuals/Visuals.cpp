@@ -573,11 +573,11 @@ void CVisuals::DrawAntiAim(CTFPlayer* pLocal)
 		Vec3 vScreen1, vScreen2;
 		if (SDK::W2S(vOrigin, vScreen1))
 		{
-			constexpr auto distance = 50.f;
-			if (SDK::W2S(Math::GetRotatedPosition(vOrigin, F::AntiAim.vRealAngles.y, distance), vScreen2))
+			constexpr float flDistance = 50.f;
+			if (SDK::W2S(Math::RotatePoint(vOrigin, {}, F::AntiAim.vRealAngles.y).Normalized() * flDistance, vScreen2))
 				H::Draw.Line(vScreen1.x, vScreen1.y, vScreen2.x, vScreen2.y, { 0, 255, 0, 255 });
 
-			if (SDK::W2S(Math::GetRotatedPosition(vOrigin, F::AntiAim.vFakeAngles.y, distance), vScreen2))
+			if (SDK::W2S(Math::RotatePoint(vOrigin, {}, F::AntiAim.vFakeAngles.y).Normalized() * flDistance, vScreen2))
 				H::Draw.Line(vScreen1.x, vScreen1.y, vScreen2.x, vScreen2.y, { 255, 0, 0, 255 });
 		}
 
@@ -659,6 +659,10 @@ void CVisuals::DrawDebugInfo(CTFPlayer* pLocal)
 		{
 			Vec3 vVelocity = pLocal->m_vecVelocity();
 			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Velocity: {:.3f} ({:.3f}, {:.3f}, {:.3f})", vVelocity.Length(), vVelocity.x, vVelocity.y, vVelocity.z).c_str());
+		}
+		{
+			auto pGround = pLocal->m_hGroundEntity().Get();
+			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Ground entity: {}", pGround ? pGround->GetClientClass()->m_pNetworkName : "none").c_str());
 		}
 		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Choke: {}, {}", G::Choking, I::ClientState->chokedcommands).c_str());
 		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Ticks: {}, {}", F::Ticks.m_iShiftedTicks, F::Ticks.m_iShiftedGoal).c_str());

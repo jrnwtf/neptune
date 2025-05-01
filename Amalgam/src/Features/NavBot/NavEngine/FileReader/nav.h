@@ -254,7 +254,7 @@ public:
 
 		z = GetZ(x, y);
 
-		close.Init(x, y, z);
+		close = Vector(x, y, z);
 		return close;
 	}
 };
