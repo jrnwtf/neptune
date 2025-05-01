@@ -92,6 +92,9 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 		if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Distance && !bLocal)
 			tCache.m_vText.emplace_back(ESPTextEnum::Bottom, std::format("[{:.0f}M]", vDelta.Length2D() / 41), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 
+		if (auto uPartyId = H::Entities.GetSignificantParty(iIndex))
+			tCache.m_vText.emplace_back(ESPTextEnum::Top, std::format("Party id: {}", uPartyId), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+
 		PlayerInfo_t pi{};
 		if (I::EngineClient->GetPlayerInfo(iIndex, &pi))
 		{

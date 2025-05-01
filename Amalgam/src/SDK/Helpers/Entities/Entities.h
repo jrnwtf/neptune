@@ -2,6 +2,7 @@
 #include "../../../Utils/Feature/Feature.h"
 #include "../../Definitions/Classes.h"
 #include <unordered_map>
+#include <unordered_set>
 
 enum struct EGroupType
 {
@@ -43,6 +44,8 @@ class CEntities
 	std::unordered_map<int, Vec3> m_mAvgVelocities;
 	std::unordered_map<int, uint32_t> m_mModels;
 	std::unordered_map<int, std::deque<VelFixRecord>> m_mOrigins;
+	std::unordered_map<uint64_t, std::unordered_set<int>> m_mIParties;
+	std::unordered_map<uint64_t, std::unordered_set<uint32_t>> m_mUParties;
 
 	std::unordered_map<int, bool> m_mIFriends;
 	std::unordered_map<uint32_t, bool> m_mUFriends;
@@ -50,6 +53,8 @@ class CEntities
 	std::unordered_map<uint32_t, bool> m_mUParty;
 	std::unordered_map<int, bool> m_mIF2P;
 	std::unordered_map<uint32_t, bool> m_mUF2P;
+	std::unordered_map<int, uint64_t> m_mIPartyId;
+	std::unordered_map<uint32_t, uint64_t> m_mUPartyId;
 	std::unordered_map<int, int> m_mILevels;
 	std::unordered_map<uint32_t, int> m_mULevels;
 	std::unordered_map<int, int> m_mIPriorities;
@@ -96,6 +101,10 @@ public:
 	bool InParty(uint32_t uFriendsID);
 	bool IsF2P(int iIndex);
 	bool IsF2P(uint32_t uFriendsID);
+	uint64_t GetPartyId(int iIndex);
+	uint64_t GetPartyId(uint32_t uFriendsID);
+	uint64_t GetSignificantParty(int iIndex);
+	uint64_t GetSignificantParty(uint32_t uFriendsID);
 	int GetLevel(int iIndex);
 	int GetLevel(uint32_t uFriendsID);
 	int GetPriority(int iIndex);

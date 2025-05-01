@@ -2132,8 +2132,11 @@ void CMenu::MenuSettings(int iTab)
 							IconImage(ICON_MD_GROUP);
 						}
 						SetCursorPos({ vOriginalPos.x + lOffset, vOriginalPos.y + H::Draw.Scale(7) });
-						FText(player.m_sName.c_str());
-						lOffset += FCalcTextSize(player.m_sName.c_str()).x + H::Draw.Scale(8);
+
+						auto uPartyId = H::Entities.GetSignificantParty(player.m_uFriendsID);
+						std::string sNameAndParty = player.m_sName + (uPartyId ? std::format(" (Party id: {})", uPartyId) : "");
+						FText(sNameAndParty.c_str());
+						lOffset += FCalcTextSize(sNameAndParty.c_str()).x + H::Draw.Scale(8);
 
 						// buttons
 						bool bClicked = false;

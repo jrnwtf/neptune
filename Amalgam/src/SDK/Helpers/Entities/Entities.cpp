@@ -161,6 +161,7 @@ void CEntities::Store()
 	}
 	std::unordered_map<uint32_t, bool> mParty = {};
 	std::unordered_map<uint32_t, bool> mF2P = {};
+	std::unordered_map<uint32_t, uint64_t> mPartyId = {};
 	std::unordered_map<int, int> mLevels = {};
 	if (bShouldUpdateInfo)
 	{
@@ -170,6 +171,8 @@ void CEntities::Store()
 		m_mUParty.clear();
 		m_mIF2P.clear();
 		m_mUF2P.clear();
+		m_mIPartyId.clear();
+		m_mUPartyId.clear();
 		m_mILevels.clear();
 		m_mULevels.clear();
 		m_mIPriorities.clear();
@@ -192,6 +195,10 @@ void CEntities::Store()
 				pLobby->GetMemberDetails(&pDetails, i);
 
 				mF2P[cSteamID.GetAccountID()] = *reinterpret_cast<bool*>(uintptr_t(pDetails.Proto()) + 69);
+				mPartyId[cSteamID.GetAccountID()] = *reinterpret_cast<uint64_t*>(uintptr_t(pDetails.Proto()) + 48);
+				m_mUPartyId[cSteamID.GetAccountID()] = mPartyId[cSteamID.GetAccountID()];
+				if (!m_mUParties.contains(mPartyId[cSteamID.GetAccountID()]) || !m_mUParties[mPartyId[cSteamID.GetAccountID()]].contains(cSteamID.GetAccountID()))
+						m_mUParties[mPartyId[cSteamID.GetAccountID()]].insert(cSteamID.GetAccountID());
 			}
 		}
 		if (auto pGameRules = I::TFGameRules())
@@ -214,6 +221,12 @@ void CEntities::Store()
 				m_mIFriends[n] = m_mUFriends[pi.friendsID] = I::SteamFriends->HasFriend({ pi.friendsID, 1, k_EUniversePublic, k_EAccountTypeIndividual }, k_EFriendFlagImmediate);
 				m_mIParty[n] = m_mUParty[pi.friendsID] = mParty.contains(pi.friendsID) && n != I::EngineClient->GetLocalPlayer();
 				m_mIF2P[n] = m_mUF2P[pi.friendsID] = mF2P.contains(pi.friendsID) ? mF2P[pi.friendsID] : false;
+				if (mPartyId.contains(pi.friendsID))
+				{
+					if (!m_mIParties.contains(mPartyId[pi.friendsID]) || !m_mIParties[mPartyId[pi.friendsID]].contains(n))
+						m_mIParties[mPartyId[pi.friendsID]].insert(n);
+					m_mIPartyId[n] = mPartyId[pi.friendsID];
+				}
 				m_mILevels[n] = m_mULevels[pi.friendsID] = mLevels.contains(n) ? mLevels[n] : -2;
 				m_mIPriorities[n] = m_mUPriorities[pi.friendsID] = n != I::EngineClient->GetLocalPlayer() ? F::PlayerUtils.GetPriority(pi.friendsID, false) : 0;
 			}
@@ -289,6 +302,8 @@ void CEntities::Store()
 		m_mEyeAngles[n] = vNewAngles;
 		m_mPingAngles[n] = (vNewAngles - vOldAngles) / (flSimTime - flOldSimTime) * (F::Backtrack.GetReal() + TICKS_TO_TIME(F::Backtrack.GetAnticipatedChoke()));
 	}
+	std::erase_if(m_mIParties, [](const auto& entry) { return entry.second.size() < 2; });
+	std::erase_if(m_mUParties, [](const auto& entry) { return entry.second.size() < 2; });
 }
 
 void CEntities::Clear(bool bShutdown)
@@ -311,6 +326,8 @@ void CEntities::Clear(bool bShutdown)
 		m_mEyeAngles.clear();
 		m_mPingAngles.clear();
 		m_mLagCompensation.clear();
+		m_mIParties.clear();
+		m_mUParties.clear();
 	}
 }
 
@@ -502,6 +519,20 @@ bool CEntities::InParty(int iIndex) { return m_mIParty[iIndex]; }
 bool CEntities::InParty(uint32_t uFriendsID) { return m_mUParty[uFriendsID]; }
 bool CEntities::IsF2P(int iIndex) { return m_mIF2P[iIndex]; }
 bool CEntities::IsF2P(uint32_t uFriendsID) { return m_mUF2P[uFriendsID]; }
+uint64_t CEntities::GetPartyId(int iIndex) { return m_mIPartyId[iIndex]; }
+uint64_t CEntities::GetPartyId(uint32_t uFriendsID) { return m_mUPartyId[uFriendsID]; }
+uint64_t CEntities::GetSignificantParty(int iIndex)
+{
+	if (!m_mIPartyId.contains(iIndex) || !m_mIParties.contains(m_mIPartyId[iIndex]))
+		return 0;
+	return m_mIPartyId[iIndex];
+}
+uint64_t CEntities::GetSignificantParty(uint32_t uFriendsID)
+{
+	if (!m_mUPartyId.contains(uFriendsID) || !m_mUParties.contains(m_mUPartyId[uFriendsID]))
+		return 0;
+	return m_mUPartyId[uFriendsID];
+}
 int CEntities::GetLevel(int iIndex) { return m_mILevels.contains(iIndex) ? m_mILevels[iIndex] : -2; }
 int CEntities::GetLevel(uint32_t uFriendsID) { return m_mULevels.contains(uFriendsID) ? m_mULevels[uFriendsID] : -2; }
 int CEntities::GetPriority(int iIndex) { return m_mIPriorities[iIndex]; }
