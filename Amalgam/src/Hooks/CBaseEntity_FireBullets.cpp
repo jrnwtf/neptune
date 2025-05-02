@@ -42,13 +42,15 @@ MAKE_HOOK(CBaseEntity_FireBullets, S::CBaseEntity_FireBullets(), void,
 	const bool bCrit = nDamageType & DMG_CRITICAL || pLocal->IsCritBoosted();
 	const int iTeam = pLocal->m_iTeamNum();
 
-	auto& sString = bCrit ? Vars::Visuals::Particles::CritTrail.Value : Vars::Visuals::Particles::BulletTrail.Value;
+	auto& sString = bCrit ? Vars::Visuals::Effects::CritTracer.Value : Vars::Visuals::Effects::BulletTracer.Value;
 	auto uHash = FNV1A::Hash32(sString.c_str());
-	if (!pLocal->IsInValidTeam() || uHash == FNV1A::Hash32Const("Off") || uHash == FNV1A::Hash32Const("Default"))
+	if (!pLocal->IsInValidTeam() || uHash == FNV1A::Hash32Const("Default"))
 		return CALL_ORIGINAL(rcx, pWeapon, info, bDoEffects, nDamageType, nCustomDamageType);
 
 	switch (uHash)
 	{
+	case FNV1A::Hash32Const("None"):
+		return;
 	case FNV1A::Hash32Const("Big nasty"):
 		H::Particles.ParticleTracer(iTeam == TF_TEAM_RED ? "bullet_bignasty_tracer01_blue" : "bullet_bignasty_tracer01_red", trace.startpos, trace.endpos, pLocal->entindex(), iAttachment, true);
 		break;
@@ -114,7 +116,7 @@ MAKE_HOOK(CBaseEntity_FireBullets, S::CBaseEntity_FireBullets(), void,
 		beamInfo.m_flSpeed = Vars::Visuals::Beams::Speed.Value;
 		beamInfo.m_nStartFrame = 0;
 		beamInfo.m_flFrameRate = 0;
-		Color_t clr = F::NoSpreadHitscan.m_iPredictionBullet > -1 && iBullet == F::NoSpreadHitscan.m_iPredictionBullet ? Vars::Colors::NoSpread.Value : Vars::Visuals::Beams::BeamColor.Value;
+		Color_t clr = F::NoSpreadHitscan.m_iPredictionBullet > -1 && iBullet == F::NoSpreadHitscan.m_iPredictionBullet ? Vars::Colors::NoSpread.Value : Vars::Visuals::Beams::Color.Value;
 		beamInfo.m_flRed = clr.r;
 		beamInfo.m_flGreen = clr.g;
 		beamInfo.m_flBlue = clr.b;

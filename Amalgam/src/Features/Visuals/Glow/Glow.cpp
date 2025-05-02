@@ -79,18 +79,6 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		flDistance = vDelta.Length2D();
 		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Buildings.Value, Vars::Glow::Team::Buildings.Value, flDistance);
 	}
-	// ragdoll glow
-	case ETFClassID::CTFRagdoll:
-	case ETFClassID::CRagdollProp:
-	case ETFClassID::CRagdollPropAttached:
-	{
-		auto pOwner = pEntity->As<CTFRagdoll>()->m_hPlayer().Get();
-		if (!pOwner) pOwner = pEntity;
-
-		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
-		flDistance = vDelta.Length2D();
-		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Ragdolls.Value, Vars::Glow::Team::Ragdolls.Value, flDistance);
-	}
 	// projectile glow
 	case ETFClassID::CBaseProjectile:
 	case ETFClassID::CBaseGrenade:
@@ -158,6 +146,18 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
 		flDistance = vDelta.Length2D();
 		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Projectiles.Value, Vars::Glow::Team::Projectiles.Value, flDistance);
+	}
+	// ragdoll glow
+	case ETFClassID::CTFRagdoll:
+	case ETFClassID::CRagdollProp:
+	case ETFClassID::CRagdollPropAttached:
+	{
+		auto pOwner = pEntity->As<CTFRagdoll>()->m_hPlayer().Get();
+		if (!pOwner) pOwner = pEntity;
+
+		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
+		flDistance = vDelta.Length2D();
+		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Ragdolls.Value, Vars::Glow::Team::Ragdolls.Value, flDistance);
 	}
 	// objective glow
 	case ETFClassID::CCaptureFlag:
@@ -347,7 +347,7 @@ void CGlow::SetupBegin(Glow_t glow, IMatRenderContext* pRenderContext, IMaterial
 
 	StencilBegin(pRenderContext);
 
-	flSavedBlend = I::RenderView->GetBlend();
+	m_flSavedBlend = I::RenderView->GetBlend();
 	I::RenderView->SetBlend(0.f);
 	I::RenderView->SetColorModulation(1.f, 1.f, 1.f);
 	I::ModelRender->ForcedMaterialOverride(m_pMatGlowColor);
@@ -399,14 +399,14 @@ void CGlow::SetupEnd(Glow_t glow, IMatRenderContext* pRenderContext, IMaterial* 
 
 	StencilEnd(pRenderContext);
 
-	I::RenderView->SetBlend(flSavedBlend);
+	I::RenderView->SetBlend(m_flSavedBlend);
 	I::RenderView->SetColorModulation(1.f, 1.f, 1.f);
 	I::ModelRender->ForcedMaterialOverride(nullptr);
 }
 
 void CGlow::DrawModel(CBaseEntity* pEntity, bool bModel)
 {
-	bRendering = true;
+	m_bRendering = true;
 
 	/*
 	if (pEntity->IsPlayer())
@@ -423,14 +423,14 @@ void CGlow::DrawModel(CBaseEntity* pEntity, bool bModel)
 	else*/
 		pEntity->DrawModel(STUDIO_RENDER | STUDIO_NOSHADOWS);
 
-	bRendering = false;
+	m_bRendering = false;
 }
 
 
 
 void CGlow::Store(CTFPlayer* pLocal)
 {
-	mvEntities.clear();
+	m_mEntities.clear();
 	if (!pLocal)
 		return;
 
@@ -443,7 +443,7 @@ void CGlow::Store(CTFPlayer* pLocal)
 		Glow_t tGlow = {}; Color_t tColor = {};
 		if (GetGlow(pLocal, pEntity, &tGlow, &tColor)
 			&& SDK::IsOnScreen(pEntity, !H::Entities.IsProjectile(pEntity) /*&& pEntity->GetClassID() != ETFClassID::CTFMedigunShield*/))
-			mvEntities[tGlow].emplace_back(pEntity, tColor);
+			m_mEntities[tGlow].emplace_back(pEntity, tColor);
 
 		if (pEntity->IsPlayer() && !pEntity->IsDormant())
 		{
@@ -467,7 +467,7 @@ void CGlow::Store(CTFPlayer* pLocal)
 					if (bShowEnemy && pEntity->m_iTeamNum() != pLocal->m_iTeamNum() || bShowFriendly && pEntity->m_iTeamNum() == pLocal->m_iTeamNum())
 					{
 						tGlow = Glow_t(Vars::Glow::Backtrack::Stencil.Value, Vars::Glow::Backtrack::Blur.Value);
-						mvEntities[tGlow].emplace_back(pEntity, Vars::Colors::Backtrack.Value.a ? Vars::Colors::Backtrack.Value : tColor, true);
+						m_mEntities[tGlow].emplace_back(pEntity, Vars::Colors::Backtrack.Value.a ? Vars::Colors::Backtrack.Value : tColor, true);
 					}
 				}
 			}
@@ -476,7 +476,7 @@ void CGlow::Store(CTFPlayer* pLocal)
 			if (Vars::Glow::FakeAngle::Enabled.Value && (Vars::Glow::FakeAngle::Stencil.Value || Vars::Glow::FakeAngle::Blur.Value) && pEntity == pLocal && F::FakeAngle.bDrawChams && F::FakeAngle.bBonesSetup)
 			{
 				tGlow = Glow_t(Vars::Glow::FakeAngle::Stencil.Value, Vars::Glow::FakeAngle::Blur.Value);
-				mvEntities[tGlow].emplace_back(pEntity, Vars::Colors::FakeAngle.Value.a ? Vars::Colors::FakeAngle.Value : tColor, true);
+				m_mEntities[tGlow].emplace_back(pEntity, Vars::Colors::FakeAngle.Value.a ? Vars::Colors::FakeAngle.Value : tColor, true);
 			}
 		}
 	}
@@ -492,14 +492,14 @@ void CGlow::RenderMain()
 	if (!pRenderContext || !m_pMatGlowColor || !m_pMatBlurX || !m_pMatBlurY || !m_pMatHaloAddToScreen)
 		return F::Materials.ReloadMaterials();
 
-	for (auto& [tGlow, vInfo] : mvEntities)
+	for (auto& [tGlow, vInfo] : m_mEntities)
 	{
 		SetupBegin(tGlow, pRenderContext, m_pMatGlowColor, m_pMatBlurY);
 		for (auto& tInfo : vInfo)
 		{
-			bExtra = tInfo.m_bExtra;
+			m_bExtra = tInfo.m_bExtra;
 			DrawModel(tInfo.m_pEntity, true);
-			bExtra = false;
+			m_bExtra = false;
 		}
 
 		SetupMid(pRenderContext, w, h);
@@ -507,9 +507,9 @@ void CGlow::RenderMain()
 		{
 			I::RenderView->SetColorModulation(tInfo.m_cColor.r / 255.f, tInfo.m_cColor.g / 255.f, tInfo.m_cColor.b / 255.f);
 			I::RenderView->SetBlend(tInfo.m_cColor.a / 255.f);
-			bExtra = tInfo.m_bExtra;
+			m_bExtra = tInfo.m_bExtra;
 			DrawModel(tInfo.m_pEntity, false);
-			bExtra = false;
+			m_bExtra = false;
 		}
 
 		SetupEnd(tGlow, pRenderContext, m_pMatBlurX, m_pMatBlurY, m_pMatHaloAddToScreen, w, h);
@@ -583,7 +583,7 @@ void CGlow::RenderFakeAngle(const DrawModelState_t& pState, const ModelRenderInf
 }
 void CGlow::RenderHandler(const DrawModelState_t& pState, const ModelRenderInfo_t& pInfo, matrix3x4* pBoneToWorld)
 {
-	if (!bExtra)
+	if (!m_bExtra)
 	{
 		static auto ModelRender_DrawModelExecute = U::Hooks.m_mHooks["IVModelRender_DrawModelExecute"];
 		if (ModelRender_DrawModelExecute)

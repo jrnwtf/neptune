@@ -6,7 +6,7 @@ MAKE_HOOK(CGameEventManager_FireEventClientSide, U::Memory.GetVFunc(I::GameEvent
 	IGameEventManager2* rcx, IGameEvent* event)
 {
 	// We have to do it here because our own event listener runs after game event manager
-	if (Vars::Visuals::Misc::KillstreakWeapons.Value)
+	if (Vars::Visuals::Other::KillstreakWeapons.Value)
 	{
 		auto uHash = FNV1A::Hash32(event->GetName());
 		if (uHash == FNV1A::Hash32Const("player_death"))

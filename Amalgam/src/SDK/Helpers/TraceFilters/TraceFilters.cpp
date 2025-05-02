@@ -6,7 +6,9 @@ bool CTraceFilterHitscan::ShouldHitEntity(IHandleEntity* pServerEntity, int nCon
 {
 	if (!pServerEntity || pServerEntity == pSkip)
 		return false;
-
+	//if (pServerEntity->GetRefEHandle().GetSerialNumber() == (1 << 15))
+	//	return I::ClientEntityList->GetClientEntity(0) != pSkip;
+	
 	auto pEntity = reinterpret_cast<CBaseEntity*>(pServerEntity);
 
 	switch (pEntity->GetClassID())
@@ -58,6 +60,8 @@ bool CTraceFilterProjectile::ShouldHitEntity(IHandleEntity* pServerEntity, int n
 {
 	if (!pServerEntity || pServerEntity == pSkip)
 		return false;
+	//if (pServerEntity->GetRefEHandle().GetSerialNumber() == (1 << 15))
+	//	return I::ClientEntityList->GetClientEntity(0) != pSkip;
 
 	auto pEntity = reinterpret_cast<CBaseEntity*>(pServerEntity);
 
@@ -106,6 +110,8 @@ bool CTraceFilterWorldAndPropsOnly::ShouldHitEntity(IHandleEntity* pServerEntity
 {
 	if (!pServerEntity || pServerEntity == pSkip)
 		return false;
+	if (pServerEntity->GetRefEHandle().GetSerialNumber() == (1 << 15))
+		return I::ClientEntityList->GetClientEntity(0) != pSkip;
 
 	auto pEntity = reinterpret_cast<CBaseEntity*>(pServerEntity);
 
@@ -129,9 +135,6 @@ bool CTraceFilterWorldAndPropsOnly::ShouldHitEntity(IHandleEntity* pServerEntity
 			}
 		}
 	}
-
-	if (pServerEntity->GetRefEHandle().GetSerialNumber() == (1 << 15))
-		return I::ClientEntityList->GetClientEntity(0) != pSkip;
 
 	return false;
 }

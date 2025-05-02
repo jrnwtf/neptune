@@ -62,7 +62,7 @@ void CKillstreak::PlayerDeath(IGameEvent* pEvent)
 
 void CKillstreak::PlayerSpawn(IGameEvent* pEvent)
 {
-	if (!Vars::Visuals::Misc::KillstreakWeapons.Value)
+	if (!Vars::Visuals::Other::KillstreakWeapons.Value)
 		return;
 
 	const int userid = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("userid"));

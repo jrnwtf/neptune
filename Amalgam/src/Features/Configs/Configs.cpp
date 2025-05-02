@@ -265,13 +265,13 @@ CConfigs::CConfigs()
 	boost::property_tree::ptree mapTree;\
 	for (auto& [iBind, tValue] : pVar->As<type>()->Map)\
 		SaveJson(mapTree, std::to_string(iBind), tValue);\
-	tree.put_child(pVar->m_sName.c_str(), mapTree);\
+	tree.put_child(pVar->m_sName, mapTree);\
 }
 #define SaveMain(type, tree) if (IsType(type)) SaveCond(type, tree)
 #define LoadCond(type, tree)\
 {\
 	pVar->As<type>()->Map = { { DEFAULT_BIND, pVar->As<type>()->Default } };\
-	if (const auto mapTree = tree.get_child_optional(pVar->m_sName.c_str()))\
+	if (const auto mapTree = tree.get_child_optional(pVar->m_sName))\
 	{\
 		for (auto& it : *mapTree)\
 		{\
@@ -311,6 +311,8 @@ CConfigs::CConfigs()
 			}\
 		}\
 	}\
+	else if (!(pVar->m_iFlags & NOSAVE))\
+		SDK::Output("Amalgam", std::format("{} not found", pVar->m_sName).c_str(), { 175, 150, 255, 127 }, true, true);\
 }
 #define LoadMain(type, tree) if (IsType(type)) LoadCond(type, tree)
 
@@ -371,7 +373,7 @@ bool CConfigs::SaveConfig(const std::string& sConfigName, bool bNotify)
 	}
 	catch (...)
 	{
-		SDK::Output("SaveConfig", "Failed", { 175, 150, 255 }, true, true);
+		SDK::Output("Amalgam", "Save config failed", { 175, 150, 255, 127 }, true, true);
 		return false;
 	}
 
@@ -489,16 +491,16 @@ bool CConfigs::LoadConfig(const std::string& sConfigName, bool bNotify)
 	}
 	catch (...)
 	{
-		SDK::Output("LoadConfig", "Failed", { 175, 150, 255 }, true, true);
+		SDK::Output("Amalgam", "Load config failed", { 175, 150, 255, 127 }, true, true);
 		return false;
 	}
 
 	return true;
 }
 
-#define SaveRegular(type, tree) SaveJson(tree, pVar->m_sName.c_str(), pVar->As<type>()->Map[DEFAULT_BIND])
+#define SaveRegular(type, tree) SaveJson(tree, pVar->m_sName, pVar->As<type>()->Map[DEFAULT_BIND])
 #define SaveMisc(type, tree) if (IsType(type)) SaveRegular(type, tree);
-#define LoadRegular(type, tree) LoadJson(tree, pVar->m_sName.c_str(), pVar->As<type>()->Map[DEFAULT_BIND])
+#define LoadRegular(type, tree) LoadJson(tree, pVar->m_sName, pVar->As<type>()->Map[DEFAULT_BIND])
 #define LoadMisc(type, tree) if (IsType(type)) LoadRegular(type, tree);
 
 bool CConfigs::SaveVisual(const std::string& sConfigName, bool bNotify)
@@ -533,7 +535,7 @@ bool CConfigs::SaveVisual(const std::string& sConfigName, bool bNotify)
 	}
 	catch (...)
 	{
-		SDK::Output("SaveVisual", "Failed", { 175, 150, 255 }, true, true);
+		SDK::Output("Amalgam", "Save visuals failed", { 175, 150, 255, 127 }, true, true);
 		return false;
 	}
 	return true;
@@ -580,7 +582,7 @@ bool CConfigs::LoadVisual(const std::string& sConfigName, bool bNotify)
 	}
 	catch (...)
 	{
-		SDK::Output("LoadVisual", "Failed", { 175, 150, 255 }, true, true);
+		SDK::Output("Amalgam", "Load visuals failed", { 175, 150, 255, 127 }, true, true);
 		return false;
 	}
 	return true;
@@ -589,7 +591,7 @@ bool CConfigs::LoadVisual(const std::string& sConfigName, bool bNotify)
 #define ResetType(type) pVar->As<type>()->Map = { { DEFAULT_BIND, pVar->As<type>()->Default } };
 #define ResetT(type) if (IsType(type)) ResetType(type)
 
-void CConfigs::RemoveConfig(const std::string& sConfigName, bool bNotify)
+void CConfigs::DeleteConfig(const std::string& sConfigName, bool bNotify)
 {
 	try
 	{
@@ -597,7 +599,8 @@ void CConfigs::RemoveConfig(const std::string& sConfigName, bool bNotify)
 		{
 			std::filesystem::remove(m_sConfigPath + sConfigName + m_sConfigExtension);
 
-			LoadConfig("default", false);
+			if (FNV1A::Hash32(m_sCurrentConfig.c_str()) == FNV1A::Hash32(sConfigName.c_str()))
+				LoadConfig("default", false);
 
 			if (bNotify)
 				SDK::Output("Amalgam", std::format("Config {} deleted", sConfigName).c_str(), { 175, 150, 255 }, true, true, true);
@@ -607,22 +610,7 @@ void CConfigs::RemoveConfig(const std::string& sConfigName, bool bNotify)
 	}
 	catch (...)
 	{
-		SDK::Output("RemoveConfig", "Failed", { 175, 150, 255 }, true, true);
-	}
-}
-
-void CConfigs::RemoveVisual(const std::string& sConfigName, bool bNotify)
-{
-	try
-	{
-		std::filesystem::remove(m_sVisualsPath + sConfigName + m_sConfigExtension);
-
-		if (bNotify)
-			SDK::Output("Amalgam", std::format("Visual config {} deleted", sConfigName).c_str(), { 175, 150, 255 }, true, true, true);
-	}
-	catch (...)
-	{
-		SDK::Output("RemoveVisual", "Failed", { 175, 150, 255 }, true, true);
+		SDK::Output("Amalgam", "Remove config failed", { 175, 150, 255, 127 }, true, true);
 	}
 }
 
@@ -659,7 +647,22 @@ void CConfigs::ResetConfig(const std::string& sConfigName, bool bNotify)
 	}
 	catch (...)
 	{
-		SDK::Output("ResetConfig", "Failed", { 175, 150, 255 }, true, true);
+		SDK::Output("Amalgam", "Reset config failed", { 175, 150, 255, 127 }, true, true);
+	}
+}
+
+void CConfigs::DeleteVisual(const std::string& sConfigName, bool bNotify)
+{
+	try
+	{
+		std::filesystem::remove(m_sVisualsPath + sConfigName + m_sConfigExtension);
+
+		if (bNotify)
+			SDK::Output("Amalgam", std::format("Visual config {} deleted", sConfigName).c_str(), { 175, 150, 255 }, true, true, true);
+	}
+	catch (...)
+	{
+		SDK::Output("Amalgam", "Remove visuals failed", { 175, 150, 255, 127 }, true, true);
 	}
 }
 
@@ -694,6 +697,6 @@ void CConfigs::ResetVisual(const std::string& sConfigName, bool bNotify)
 	}
 	catch (...)
 	{
-		SDK::Output("ResetVisual", "Failed", { 175, 150, 255 }, true, true);
+		SDK::Output("Amalgam", "Reset visuals failed", { 175, 150, 255, 127 }, true, true);
 	}
 }
