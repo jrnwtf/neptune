@@ -46,8 +46,7 @@ bool CAutoRocketJump::SetAngles(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 				if (!pLocal->IsOnGround())
 					continue;
 
-				SDK::Output("Velocity", std::format("{}", tStorage.m_MoveData.m_vecVelocity.Length()).c_str());
-				Vec3 vForward = (tStorage.m_MoveData.m_vecVelocity * Vec3(1, 1, 0)).Normalized();
+				Vec3 vForward = tStorage.m_MoveData.m_vecVelocity.To2D().Normalized();
 				vPoint = tStorage.m_MoveData.m_vecAbsOrigin - vForward * flOffset; //- Vec3(0, 0, 20);
 				bShouldReturn = false;
 				break;
@@ -68,9 +67,9 @@ bool CAutoRocketJump::SetAngles(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 		return false;
 
 	{	// correct yaw
-		Vec3 vShootPos = tProjInfo.m_vPos - vLocalPos; vShootPos.z = 0;
+		Vec3 vShootPos = (tProjInfo.m_vPos - vLocalPos).To2D();
 		Vec3 vTarget = vPoint - vLocalPos;
-		Vec3 vForward; Math::AngleVectors(tProjInfo.m_vAng, &vForward); vForward.z = 0; vForward.Normalize();
+		Vec3 vForward; Math::AngleVectors(tProjInfo.m_vAng, &vForward); vForward.Normalize2D();
 		float flA = 1.f;
 		float flB = 2 * (vShootPos.x * vForward.x + vShootPos.y * vForward.y);
 		float flC = vShootPos.Length2DSqr() - vTarget.Length2DSqr();

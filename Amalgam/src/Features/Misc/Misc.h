@@ -7,7 +7,6 @@ class CMisc
 	void AutoJump(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void AutoJumpbug(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void AutoStrafe(CTFPlayer* pLocal, CUserCmd* pCmd);
-	void AutoPeek(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void MovementLock(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void BreakJump(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void BreakShootSound(CTFPlayer* pLocal, CUserCmd* pCmd);
@@ -25,6 +24,7 @@ class CMisc
 	void TauntKartControl(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void FastMovement(CTFPlayer* pLocal, CUserCmd* pCmd);
 
+	void AutoPeek(CTFPlayer* pLocal, CUserCmd* pCmd, bool bPost = false);
 	void EdgeJump(CTFPlayer* pLocal, CUserCmd* pCmd, bool bPost = false);
 
 	bool m_bPeekPlaced = false;

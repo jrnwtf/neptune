@@ -43,7 +43,7 @@ std::optional<float> CResolver::GetPitchForSniperDot(CTFPlayer* pEntity, CTFPlay
 
 void CResolver::FrameStageNotify()
 {
-	if (!Vars::AntiHack::Resolver::Enabled.Value || !I::EngineClient->IsInGame() || I::EngineClient->IsPlayingDemo())
+	if (!Vars::Resolver::Enabled.Value || !I::EngineClient->IsInGame() || I::EngineClient->IsPlayingDemo())
 		return;
 	auto pResource = H::Entities.GetPR();
 	if (!pResource)
@@ -88,22 +88,22 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 
 			float& flYaw = tData.m_flYaw;
 			float& flPitch = tData.m_flPitch;
-			bool bAutoYaw = tData.m_bAutoSetYaw && Vars::AntiHack::Resolver::AutoResolveYawAmount.Value;
-			bool bAutoPitch = tData.m_bAutoSetPitch && Vars::AntiHack::Resolver::AutoResolvePitchAmount.Value;
+			bool bAutoYaw = tData.m_bAutoSetYaw && Vars::Resolver::AutoResolveYawAmount.Value;
+			bool bAutoPitch = tData.m_bAutoSetPitch && Vars::Resolver::AutoResolvePitchAmount.Value;
 
 			if (bAutoYaw)
 			{
-				flYaw = Math::NormalizeAngle(flYaw + Vars::AntiHack::Resolver::AutoResolveYawAmount.Value);
+				flYaw = Math::NormalizeAngle(flYaw + Vars::Resolver::AutoResolveYawAmount.Value);
 
 				F::Backtrack.ResolverUpdate(pTarget);
 				F::Output.ReportResolver(I::EngineClient->GetPlayerForUserID(m_iWaitingForTarget), "Cycling", "yaw", flYaw);
 			}
 
 			if (bAutoPitch
-				&& (!bAutoYaw || fabsf(flYaw) < fabsf(Vars::AntiHack::Resolver::AutoResolveYawAmount.Value / 2))
+				&& (!bAutoYaw || fabsf(flYaw) < fabsf(Vars::Resolver::AutoResolveYawAmount.Value / 2))
 				&& fabsf(pTarget->m_angEyeAnglesX()) == 90.f && !m_mSniperDots.contains(m_iWaitingForTarget))
 			{
-				flPitch = Math::NormalizeAngle(flPitch + Vars::AntiHack::Resolver::AutoResolvePitchAmount.Value, 180.f);
+				flPitch = Math::NormalizeAngle(flPitch + Vars::Resolver::AutoResolvePitchAmount.Value, 180.f);
 
 				F::Backtrack.ResolverUpdate(pTarget);
 				F::Output.ReportResolver(I::EngineClient->GetPlayerForUserID(m_iWaitingForTarget), "Cycling", "pitch", flPitch);
@@ -115,7 +115,7 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 		}
 	}
 
-	if (!Vars::AntiHack::Resolver::Enabled.Value)
+	if (!Vars::Resolver::Enabled.Value)
 		return;
 
 	auto pResource = H::Entities.GetPR();
@@ -146,7 +146,7 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 
 			return pClosest;
 		};
-	if (Vars::AntiHack::Resolver::CycleYaw.Value)
+	if (Vars::Resolver::CycleYaw.Value)
 	{
 		if (SDK::PlatFloatTime() > m_flLastYawCycle + 0.5f)
 		{
@@ -156,7 +156,7 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 				auto& tData = m_mResolverData[iUserID];
 
 				float& flYaw = tData.m_flYaw;
-				flYaw = Math::NormalizeAngle(flYaw + Vars::AntiHack::Resolver::CycleYaw.Value);
+				flYaw = Math::NormalizeAngle(flYaw + Vars::Resolver::CycleYaw.Value);
 
 				F::Backtrack.ResolverUpdate(pTarget);
 				F::Output.ReportResolver(pTarget->entindex(), "Cycling", "yaw", flYaw);
@@ -167,7 +167,7 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 	}
 	else
 		m_flLastYawCycle = 0.f;
-	if (Vars::AntiHack::Resolver::CyclePitch.Value)
+	if (Vars::Resolver::CyclePitch.Value)
 	{
 		if (SDK::PlatFloatTime() > m_flLastPitchCycle + 0.5f)
 		{
@@ -178,7 +178,8 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 				if (fabsf(pTarget->m_angEyeAnglesX()) != 90.f)
 					F::Output.ReportResolver("Target not using out of bounds pitch");
 				float& flPitch = tData.m_flPitch;
-				flPitch = Math::NormalizeAngle(flPitch + Vars::AntiHack::Resolver::CyclePitch.Value, 180.f);
+				flPitch += Vars::Resolver::CyclePitch.Value;
+				flPitch = Math::NormalizeAngle(flPitch + Vars::Resolver::CyclePitch.Value, 180.f);
 				F::Backtrack.ResolverUpdate(pTarget);
 				F::Output.ReportResolver(pTarget->entindex(), "Cycling", "pitch", flPitch);
 			}
@@ -188,7 +189,7 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 	else
 		m_flLastPitchCycle = 0.f;
 
-	if (Vars::AntiHack::Resolver::CycleMinwalk.Value)
+	if (Vars::Resolver::CycleMinwalk.Value)
 	{
 		if (SDK::PlatFloatTime() > m_flLastMinwalkCycle + 0.5f)
 		{
@@ -210,7 +211,7 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 	else
 		m_flLastMinwalkCycle = 0.f;
 
-	if (Vars::AntiHack::Resolver::CycleView.Value)
+	if (Vars::Resolver::CycleView.Value)
 	{
 		if (SDK::PlatFloatTime() > m_flLastViewCycle + 0.5f)
 		{
@@ -232,12 +233,12 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 
 void CResolver::HitscanRan(CTFPlayer* pLocal, CTFPlayer* pTarget, CTFWeaponBase* pWeapon, int iHitbox)
 {
-	if (!Vars::AntiHack::Resolver::Enabled.Value || !Vars::AntiHack::Resolver::AutoResolve.Value
+	if (!Vars::Resolver::Enabled.Value || !Vars::Resolver::AutoResolve.Value
 		|| Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Smooth || pLocal->m_iTeamNum() == pTarget->m_iTeamNum())
 		return;
-	if (Vars::AntiHack::Resolver::AutoResolveCheatersOnly.Value && !F::PlayerUtils.HasTag(pTarget->entindex(), CHEATER_TAG))
+	if (Vars::Resolver::AutoResolveCheatersOnly.Value && !F::PlayerUtils.HasTag(pTarget->entindex(), CHEATER_TAG))
 		return;
-	if (Vars::AntiHack::Resolver::AutoResolveHeadshotOnly.Value && (iHitbox != HITBOX_HEAD || !G::CanHeadshot))
+	if (Vars::Resolver::AutoResolveHeadshotOnly.Value && (iHitbox != HITBOX_HEAD || !G::CanHeadshot))
 		return;
 	if (pWeapon->GetWeaponSpread())
 	{
@@ -250,7 +251,7 @@ void CResolver::HitscanRan(CTFPlayer* pLocal, CTFPlayer* pTarget, CTFWeaponBase*
 	if (!pResource)
 		return;
 	m_iWaitingForTarget = pResource->m_iUserID(pTarget->entindex());
-	m_flWaitingForDamage = I::GlobalVars->curtime + F::Backtrack.GetReal(MAX_FLOWS, false) + 0.1f;
+	m_flWaitingForDamage = I::GlobalVars->curtime + F::Backtrack.GetReal(MAX_FLOWS, false) * 1.5f + 0.1f;
 	if (iHitbox == HITBOX_HEAD && G::CanHeadshot)
 	{
 		// not dealing with ambassador's range check right now
@@ -346,7 +347,7 @@ void CResolver::SetView(int iUserID, bool bValue)
 
 bool CResolver::GetAngles(CTFPlayer* pPlayer, float* pYaw, float* pPitch, bool* pMinwalk, bool bFake)
 {
-	if (!Vars::AntiHack::Resolver::Enabled.Value)
+	if (!Vars::Resolver::Enabled.Value)
 		return false;
 	if (pPlayer->entindex() == I::EngineClient->GetLocalPlayer() || pPlayer->IsDormant() || !pPlayer->IsAlive() || pPlayer->IsAGhost())
 		return false;

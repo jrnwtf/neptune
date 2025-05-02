@@ -134,13 +134,13 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 			if (F::NavParser.IsPlayerPassableNavigation(points.current, points.center) &&
 				F::NavParser.IsPlayerPassableNavigation(points.center, points.next))
 			{
-				vischeck_cache[key] = { TICKCOUNT_TIMESTAMP(60), true };
+				vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), 1 };
 
 				const float cost = points.next.DistToSqr(points.current);
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
 			}
 			else
-				vischeck_cache[key] = { TICKCOUNT_TIMESTAMP(60), false };
+				vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), -1 };
 		}
 	}
 }
@@ -162,7 +162,7 @@ CNavArea* CNavParser::Map::findClosestNavSquare(const Vector& vec)
 		if (pLocal->GetAbsOrigin() == vec)
 		{
 			auto key = std::pair<CNavArea*, CNavArea*>(&i, &i);
-			if (vischeck_cache.count(key) && !vischeck_cache[key].vischeck_state)
+			if (vischeck_cache.count(key) && vischeck_cache[key].vischeck_state == -1)
 				continue;
 		}
 
@@ -433,20 +433,9 @@ void CNavParser::Map::UpdateRespawnRooms()
 	}
 }
 
-bool CNavParser::CastRay(Vector origin, Vector endpos, unsigned mask, ITraceFilter* filter)
-{
-	CGameTrace trace;
-	Ray_t ray;
-	ray.Init(origin, endpos);
-	// This was found to be So inefficient that it is literally unusable for our purposes. it is almost 1000x slower than the above.
-	// ray.Init(origin, target, -right * HALF_PLAYER_WIDTH, right * HALF_PLAYER_WIDTH);
-	I::EngineTrace->TraceRay(ray, mask, filter, &trace);
-	return trace.DidHit();
-}
-
 bool CNavParser::IsPlayerPassableNavigation(Vector origin, Vector target, unsigned int mask)
 {
-	const Vector tr = target - origin;
+	Vector tr = target - origin;
 	Vector angles;
 	Math::VectorAngles(tr, angles);
 
@@ -454,24 +443,27 @@ bool CNavParser::IsPlayerPassableNavigation(Vector origin, Vector target, unsign
 	Math::AngleVectors(angles, &forward, &right, nullptr);
 	right.z = 0;
 
-	const float tr_length = tr.Length();
-	const Vector relative_endpos = forward * tr_length;
+	float tr_length = tr.Length();
+	Vector relative_endpos = forward * tr_length;
 
-	// We want to keep the same angle for these two bounding box traces
-	const Vector left_ray_origin = origin - right * HALF_PLAYER_WIDTH;
-	const Vector left_ray_endpos = left_ray_origin + relative_endpos;
-
+	trace_t trace;
 	CTraceFilterNavigation Filter{};
 
+	// We want to keep the same angle for these two bounding box traces
+	Vector left_ray_origin = origin - right * HALF_PLAYER_WIDTH;
+	Vector left_ray_endpos = left_ray_origin + relative_endpos;
+	SDK::Trace(left_ray_origin, left_ray_endpos, mask, &Filter, &trace);
+
 	// Left ray hit something
-	if (CastRay(left_ray_origin, left_ray_endpos, mask, &Filter))
+	if (trace.DidHit())
 		return false;
 
-	const Vector right_ray_origin = origin + right * HALF_PLAYER_WIDTH;
-	const Vector right_ray_endpos = right_ray_origin + relative_endpos;
+	Vector right_ray_origin = origin + right * HALF_PLAYER_WIDTH;
+	Vector right_ray_endpos = right_ray_origin + relative_endpos;
+	SDK::Trace(right_ray_origin, right_ray_endpos, mask, &Filter, &trace);
 
 	// Return if the right ray hit something
-	return !CastRay(right_ray_origin, right_ray_endpos, mask, &Filter);
+	return !trace.DidHit();
 }
 
 Vector CNavParser::GetForwardVector(Vector origin, Vector viewangles, float distance)
@@ -679,27 +671,28 @@ void CNavEngine::vischeckPath()
 	const auto timestamp = TICKCOUNT_TIMESTAMP(Vars::Misc::Movement::NavEngine::VischeckCacheTime.Value);
 
 	// Iterate all the crumbs
-	for (unsigned int i = 0; i < crumbs.size() - 1; i++)
+	for (auto it = crumbs.begin(), next = it + 1; next != crumbs.end(); it++, next++)
 	{
-		const auto current_crumb = crumbs[i];
-		const auto next_crumb = crumbs[i + 1];
+		auto current_crumb = *it;
+		auto next_crumb = *next;
+		auto key = std::pair<CNavArea*, CNavArea*>(current_crumb.navarea, next_crumb.navarea);
+
 		auto current_center = current_crumb.vec;
-		auto next_center = next_crumb.vec;
-
 		current_center.z += PLAYER_JUMP_HEIGHT;
-		next_center.z += PLAYER_JUMP_HEIGHT;
-		const auto key = std::pair<CNavArea*, CNavArea*>(current_crumb.navarea, next_crumb.navarea);
 
+		auto next_center = next_crumb.vec;
+		next_center.z += PLAYER_JUMP_HEIGHT;
+		
 		// Check if we can pass, if not, abort pathing and mark as bad
 		if (!F::NavParser.IsPlayerPassableNavigation(current_center, next_center))
 		{
 			// Mark as invalid for a while
-			map->vischeck_cache[key] = { timestamp, false };
+			map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, -1 };
 			abandonPath();
 		}
 		// Else we can update the cache (if not marked bad before this)
-		else if (!map->vischeck_cache.count(key) || map->vischeck_cache[key].vischeck_state)
-			map->vischeck_cache[key] = { timestamp, true };
+		else if (!map->vischeck_cache.count(key) || map->vischeck_cache[key].vischeck_state != -1)
+			map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, 1 };
 	}
 }
 
@@ -711,8 +704,7 @@ void CNavEngine::checkBlacklist()
 	if (!blacklist_check_timer.Run(0.5f))
 		return;
 
-	const auto& pLocal = H::Entities.GetLocal();
-
+	auto pLocal = H::Entities.GetLocal();
 	if (!pLocal || !pLocal->IsAlive())
 		return;
 
@@ -724,9 +716,9 @@ void CNavEngine::checkBlacklist()
 		map->pather.Reset();
 		return;
 	}
-	const auto origin = pLocal->GetAbsOrigin();
+	auto origin = pLocal->GetAbsOrigin();
 
-	const auto local_area = map->findClosestNavSquare(origin);
+	auto local_area = map->findClosestNavSquare(origin);
 	for (const auto& entry : map->free_blacklist)
 	{
 		// Local player is in a blocked area, so temporarily remove the blacklist as else we would be stuck
@@ -764,7 +756,7 @@ void CNavEngine::updateStuckTime()
 	// We're stuck, add time to connection
 	if (inactivity.Check(Vars::Misc::Movement::NavEngine::StuckTime.Value / 2))
 	{
-		std::pair<CNavArea*, CNavArea*> key = { last_crumb.navarea ? last_crumb.navarea : crumbs[0].navarea, crumbs[0].navarea };
+		std::pair<CNavArea*, CNavArea*> key = last_crumb.navarea ? std::pair<CNavArea *, CNavArea *>(last_crumb.navarea, crumbs[0].navarea) : std::pair<CNavArea *, CNavArea *>(crumbs[0].navarea, crumbs[0].navarea);
 
 		// Expires in 10 seconds
 		map->connection_stuck_time[key].expire_tick = TICKCOUNT_TIMESTAMP(Vars::Misc::Movement::NavEngine::StuckExpireTime.Value);
@@ -777,7 +769,7 @@ void CNavEngine::updateStuckTime()
 			const auto expire_tick = TICKCOUNT_TIMESTAMP(Vars::Misc::Movement::NavEngine::StuckBlacklistTime.Value);
 			SDK::Output("CNavEngine", std::format("Stuck for too long, blacklisting the node (expires on tick: {})", expire_tick).c_str(), { 255, 131, 131 }, Vars::Debug::Logging.Value, Vars::Debug::Logging.Value);
 			map->vischeck_cache[key].expire_tick = expire_tick;
-			map->vischeck_cache[key].vischeck_state = false;
+			map->vischeck_cache[key].vischeck_state = 0;
 			abandonPath();
 		}
 	}
@@ -965,8 +957,7 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 	// Ensure we do not try to walk downwards unless we are falling
 	static std::vector<float> fall_vec{};
-	Vector vel;
-	pLocal->EstimateAbsVelocity(vel);
+	Vector vel = pLocal->GetAbsVelocity();
 
 	fall_vec.push_back(vel.z);
 	if (fall_vec.size() > 10)
@@ -976,9 +967,7 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	for (const auto& entry : fall_vec)
 	{
 		if (!(entry <= 0.01f && entry >= -0.01f))
-		{
 			reset_z = false;
-		}
 	}
 
 	const auto vLocalOrigin = pLocal->GetAbsOrigin();
@@ -1024,27 +1013,21 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	{
 		last_crumb = crumbs[1];
 		crumbs.erase(crumbs.begin(), std::next(crumbs.begin()));
+		time_spent_on_crumb.Update();
 		--crumbs_amount;
 		if (!--crumbs_amount)
 			return;
 		inactivity.Update();
 	}
 	// If we make any progress at all, reset this
-	else
+	// If we spend way too long on this crumb, ignore the logic below
+	else if (!time_spent_on_crumb.Check(Vars::Misc::Movement::NavEngine::StuckDetectTime.Value))
 	{
-		// If we spend way too long on this crumb, ignore the logic below
-		if (!time_spent_on_crumb.Check(Vars::Misc::Movement::NavEngine::StuckDetectTime.Value))
-		{
-
-			Vec3 vel3d;
-			pLocal->EstimateAbsVelocity(vel3d);
-			Vector2D vel = Vector2D(vel3d.x, vel3d.y);
-			// 44.0f -> Revved brass beast, do not use z axis as jumping counts towards that. Yes this will mean long falls will trigger it, but that is not really bad.
-			if (!vel.IsZero(40.0f))
-				inactivity.Update();
-			else
-				SDK::Output("CNavEngine", std::format("Spent too much time on the crumb, assuming were stuck").c_str(), { 255, 131, 131 }, Vars::Debug::Logging.Value, Vars::Debug::Logging.Value);
-		}
+		// 44.0f -> Revved brass beast, do not use z axis as jumping counts towards that. Yes this will mean long falls will trigger it, but that is not really bad.
+		if (!vel.Get2D().IsZero(40.0f))
+			inactivity.Update();
+		else
+			SDK::Output("CNavEngine", std::format("Spent too much time on the crumb, assuming were stuck, 2Dvelocity: ({},{})", fabsf(vel.Get2D().x), fabsf(vel.Get2D().y)).c_str(), { 255, 131, 131 }, Vars::Debug::Logging.Value, Vars::Debug::Logging.Value);
 	}
 
 	auto pWeapon = pLocal->m_hActiveWeapon().Get()->As<CTFWeaponBase>();
@@ -1067,15 +1050,25 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 					bool bShouldJump = false;
 					float height_diff = crumbs[0].vec.z - pLocal->GetAbsOrigin().z;
 
-					// Check if we need to jump
-					if (height_diff > 18.0f && height_diff <= PLAYER_JUMP_HEIGHT)
-						bShouldJump = true;
-					// Also jump if we're stuck and it might help
-					else if (inactivity.Check(Vars::Misc::Movement::NavEngine::StuckTime.Value / 2))
+					bool bPreventJump = false;
+					if (crumbs.size() > 1)
 					{
-						auto pLocalNav = map->findClosestNavSquare(pLocal->GetAbsOrigin());
-						if (pLocalNav && !(pLocalNav->m_attributeFlags & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS)))
+						float next_height_diff = crumbs[0].vec.z - crumbs[1].vec.z;
+						if (next_height_diff < 0 && next_height_diff <= -PLAYER_JUMP_HEIGHT)
+							bPreventJump = true;
+					}
+					if (!bPreventJump)
+					{
+						// Check if we need to jump
+						if (height_diff > pLocal->m_flStepSize() && height_diff <= PLAYER_JUMP_HEIGHT)
 							bShouldJump = true;
+						// Also jump if we're stuck and it might help
+						else if (inactivity.Check(Vars::Misc::Movement::NavEngine::StuckTime.Value / 2))
+						{
+							auto pLocalNav = map->findClosestNavSquare(pLocal->GetAbsOrigin());
+							if (pLocalNav && !(pLocalNav->m_attributeFlags & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS)))
+								bShouldJump = true;
+						}
 					}
 					if (bShouldJump && tLastJump.Check(0.2f))
 					{
@@ -1108,8 +1101,19 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	if (G::Attacking != 1)
 	{
 		// Look at path (nav spin) (smooth nav)
-		if (Vars::Misc::Movement::NavEngine::LookAtPath.Value)
-			LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, Vars::Misc::Movement::NavEngine::LookAtPath.Value == Vars::Misc::Movement::NavEngine::LookAtPathEnum::Silent && (!Vars::AntiHack::AntiAim::Enabled.Value || !G::AntiAim));
+		switch (Vars::Misc::Movement::NavEngine::LookAtPath.Value)
+		{
+		case Vars::Misc::Movement::NavEngine::LookAtPathEnum::Off:
+			break;
+		case Vars::Misc::Movement::NavEngine::LookAtPathEnum::Silent:
+			if (G::AntiAim)
+				break;
+			[[fallthrough]];
+		case Vars::Misc::Movement::NavEngine::LookAtPathEnum::Plain:
+		default:
+			LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, Vars::Misc::Movement::NavEngine::LookAtPath.Value == Vars::Misc::Movement::NavEngine::LookAtPathEnum::Silent);
+			break;
+		}
 	}
 
 	SDK::WalkTo(pCmd, pLocal, current_vec);

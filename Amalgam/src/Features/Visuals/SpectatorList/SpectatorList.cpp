@@ -113,51 +113,51 @@ void CSpectatorList::Draw(CTFPlayer* pLocal)
 	const int boxWidth = std::max(H::Draw.Scale(220), maxTextWidth + H::Draw.Scale(40)); 
 	const int cornerRadius = H::Draw.Scale(2); 
 	
-	Color_t backgroundColor = Vars::Menu::Theme::Background.Value;
-	backgroundColor = backgroundColor.Lerp({ 127, 127, 127, backgroundColor.a }, 1.f / 9);
-	backgroundColor.a = 255; // Make fully opaque
+	Color_t tBackgroundColor = Vars::Menu::Theme::Background.Value;
+	tBackgroundColor = tBackgroundColor.Lerp({ 127, 127, 127, tBackgroundColor.a }, 1.f / 9);
+	tBackgroundColor.a = 255; // Make fully opaque
 	
-	Color_t accentColor = Vars::Menu::Theme::Accent.Value;
-	Color_t activeColor = Vars::Menu::Theme::Active.Value;
+	Color_t tAccentColor = Vars::Menu::Theme::Accent.Value;
+	Color_t tActiveColor = Vars::Menu::Theme::Active.Value;
 
-	H::Draw.FillRoundRect(x, y, boxWidth, totalHeight, cornerRadius, backgroundColor);
+	H::Draw.FillRoundRect(x, y, boxWidth, totalHeight, cornerRadius, tBackgroundColor);
 
 	const float headerHeight = H::Draw.Scale(24);
-	Color_t headerBgColor = backgroundColor;
-	headerBgColor = { 
-		static_cast<byte>(backgroundColor.r * 0.9f), 
-		static_cast<byte>(backgroundColor.g * 0.9f), 
-		static_cast<byte>(backgroundColor.b * 0.9f), 
-		backgroundColor.a 
+	Color_t tHeaderBgColor = tBackgroundColor;
+	tHeaderBgColor = { 
+		static_cast<byte>(tBackgroundColor.r * 0.9f), 
+		static_cast<byte>(tBackgroundColor.g * 0.9f), 
+		static_cast<byte>(tBackgroundColor.b * 0.9f), 
+		tBackgroundColor.a 
 	};
 	
-	H::Draw.FillRoundRect(x, y, boxWidth, headerHeight, cornerRadius, headerBgColor);
-	H::Draw.String(fFont, x + H::Draw.Scale(16), y + H::Draw.Scale(5), activeColor, ALIGN_TOPLEFT, "Spec");
+	H::Draw.FillRoundRect(x, y, boxWidth, headerHeight, cornerRadius, tHeaderBgColor);
+	H::Draw.String(fFont, x + H::Draw.Scale(16), y + H::Draw.Scale(5), tActiveColor, ALIGN_TOPLEFT, "Spec");
 	int specWidth = 0, specHeight = 0;
 	I::MatSystemSurface->GetTextSize(fFont.m_dwFont, L"Spec", specWidth, specHeight);
-	H::Draw.String(fFont, x + H::Draw.Scale(16) + specWidth, y + H::Draw.Scale(5), accentColor, ALIGN_TOPLEFT, "tators");
+	H::Draw.String(fFont, x + H::Draw.Scale(16) + specWidth, y + H::Draw.Scale(5), tAccentColor, ALIGN_TOPLEFT, "tators");
 
 	y += H::Draw.Scale(32);
 	for (auto& Spectator : m_vSpectators)
 	{
-		Color_t color = activeColor;
+		Color_t tColor = tActiveColor;
 		if (Spectator.m_bIsFriend)
-			color = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(FRIEND_TAG)].Color;
+			tColor = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(FRIEND_TAG)].m_tColor;
 		else if (Spectator.m_bInParty)
-			color = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(PARTY_TAG)].Color;
+			tColor = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(PARTY_TAG)].m_tColor;
 		else if (Spectator.m_bRespawnTimeIncreased)
-			color = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(CHEATER_TAG)].Color;
+			tColor = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(CHEATER_TAG)].m_tColor;
 		else if (FNV1A::Hash32(Spectator.m_sMode.c_str()) == FNV1A::Hash32Const("1st"))
-			color = color.Lerp({ 255, 150, 0, 255 }, 0.5f);
+			tColor = tColor.Lerp({ 255, 150, 0, 255 }, 0.5f);
 
 		if (Spectator.m_bRespawnTimeIncreased || FNV1A::Hash32(Spectator.m_sMode.c_str()) == FNV1A::Hash32Const("1st"))
 		{
-			Color_t highlightColor = backgroundColor;
-			highlightColor = highlightColor.Lerp({ 255, 255, 255, backgroundColor.a }, 0.05f);
-			H::Draw.FillRoundRect(x + H::Draw.Scale(12), y - H::Draw.Scale(2), boxWidth - H::Draw.Scale(24), nTall, H::Draw.Scale(2), highlightColor);
+			Color_t tHighlightColor = tBackgroundColor;
+			tHighlightColor = tHighlightColor.Lerp({ 255, 255, 255, tBackgroundColor.a }, 0.05f);
+			H::Draw.FillRoundRect(x + H::Draw.Scale(12), y - H::Draw.Scale(2), boxWidth - H::Draw.Scale(24), nTall, H::Draw.Scale(2), tHighlightColor);
 		}
 
-		H::Draw.String(fFont, x + H::Draw.Scale(16), y, color, ALIGN_TOPLEFT, "%s - %s (%ds)", 
+		H::Draw.String(fFont, x + H::Draw.Scale(16), y, tColor, ALIGN_TOPLEFT, "%s - %s (%ds)", 
 			Spectator.m_sName.c_str(), Spectator.m_sMode.c_str(), static_cast<int>(Spectator.m_flRespawnIn));
 		y += nTall;
 	}

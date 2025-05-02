@@ -5,6 +5,7 @@
 #include "../Features/Visuals/Glow/Glow.h"
 #include "../Features/CameraWindow/CameraWindow.h"
 #include "../Features/Visuals/Visuals.h"
+#include "../Features/Visuals/Materials/Materials.h"
 
 MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::ClientModeShared, 39), bool,
 	void* rcx, const CViewSetup* pSetup)
@@ -13,18 +14,15 @@ MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::Clie
 	if (!Vars::Hooks::CClientModeShared_DoPostScreenSpaceEffects[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pSetup);
 #endif
-	F::Chams.mEntities.clear();
-
-	if (I::EngineVGui->IsGameUIVisible() || Vars::Visuals::UI::CleanScreenshots.Value && I::EngineClient->IsTakingScreenshot() || G::Unload)
+	if (G::Unload || (Vars::Visuals::UI::CleanScreenshots.Value && I::EngineClient->IsTakingScreenshot()))
 		return CALL_ORIGINAL(rcx, pSetup);
 
 	auto pLocal = H::Entities.GetLocal();
 	auto pWeapon = H::Entities.GetWeapon();
-	if (pLocal)
+	if (pLocal && pWeapon)
 	{
 		F::Visuals.SplashRadius(pLocal);
-		if (pWeapon)
-			F::Visuals.ProjectileTrace(pLocal, pWeapon);
+		F::Visuals.ProjectileTrace(pLocal, pWeapon);
 	}
 
 	if (F::CameraWindow.m_bDrawing)
@@ -35,7 +33,8 @@ MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::Clie
 	F::Visuals.DrawPaths();
 	F::Visuals.DrawLines();
 	F::Visuals.DrawSightlines();
-	if (pLocal)
+	F::Chams.m_mEntities.clear();
+	if (!I::EngineVGui->IsGameUIVisible() && pLocal && F::Materials.m_bLoaded)
 	{
 		F::Chams.RenderMain();
 		F::Glow.RenderMain();

@@ -68,7 +68,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	auto pLocal = H::Entities.GetLocal();
 	auto pWeapon = H::Entities.GetWeapon();
 	if (pLocal && pWeapon)
-	{	// Update Global Info
+	{	// update weapon info
 		{
 			static int iStaticItemDefinitionIndex = 0;
 			int iOldItemDefinitionIndex = iStaticItemDefinitionIndex;
@@ -183,7 +183,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 		G::CanHeadshot = pWeapon->CanHeadShot() || pWeapon->AmbassadorCanHeadshot(TICKS_TO_TIME(pLocal->m_nTickBase()));
 	}
 
-	// Run Features
+	// run features
 #ifndef TEXTMODE
 	F::Spectate.CreateMove(pLocal, pCmd);
 #endif
@@ -200,9 +200,9 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	F::EnginePrediction.End(pLocal, pCmd);
 
 	F::CritHack.Run(pLocal, pWeapon, pCmd);
+	F::NoSpread.Run(pLocal, pWeapon, pCmd);
 	F::Misc.RunPost(pLocal, pCmd, *pSendPacket);
 	F::PacketManip.Run(pLocal, pWeapon, pCmd, pSendPacket);
-	F::NoSpread.Run(pLocal, pWeapon, pCmd);
 	F::Resolver.CreateMove(pLocal);
 #ifndef TEXTMODE
 	F::Visuals.CreateMove(pLocal, pWeapon);

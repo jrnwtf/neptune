@@ -19,11 +19,8 @@ ETFGameType GetGameType()
 void CGameObjectiveController::Update()
 {
 	static Timer tUpdateGameType;
-	if (m_eGameMode || tUpdateGameType.Run(1.f))
-	{
+	if (m_eGameMode == TF_GAMETYPE_UNDEFINED || tUpdateGameType.Run(1.f))
 		m_eGameMode = GetGameType();
-		SDK::Output("CGameObjectiveController", std::format("Current game mode: {}", (int)m_eGameMode).c_str(), { 60, 255, 60 }, Vars::Debug::Logging.Value, Vars::Debug::Logging.Value);
-	}
 
 	switch (m_eGameMode)
 	{
