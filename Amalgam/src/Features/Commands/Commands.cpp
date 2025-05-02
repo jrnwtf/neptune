@@ -9,24 +9,24 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/join.hpp>
 
-bool CCommands::Run(const std::string& cmd, std::deque<std::string>& args)
+bool CCommands::Run(const std::string& sCmd, std::deque<std::string>& vArgs)
 {
-	auto uHash = FNV1A::Hash32(cmd.c_str());
-	if (!CommandMap.contains(uHash))
+	auto uHash = FNV1A::Hash32(sCmd.c_str());
+	if (!m_mCommands.contains(uHash))
 		return false;
 
-	CommandMap[uHash](args);
+	m_mCommands[uHash](vArgs);
 	return true;
 }
 
-void CCommands::Register(const std::string& name, CommandCallback callback)
+void CCommands::Register(const std::string& sName, CommandCallback fCallback)
 {
-	CommandMap[FNV1A::Hash32(name.c_str())] = std::move(callback);
+	m_mCommands[FNV1A::Hash32(sName.c_str())] = std::move(fCallback);
 }
 
 void CCommands::Initialize()
 {
-	Register("cat_queue", [](const std::deque<std::string>& args)
+	Register("cat_queue", [](const std::deque<std::string>& vArgs)
 		{
 			if (!I::TFPartyClient)
 				return;
@@ -55,90 +55,90 @@ void CCommands::Initialize()
 			F::Configs.LoadConfig(args[0], true);
 		});
 
-	Register("cat_setcvar", [](const std::deque<std::string>& args)
+	Register("cat_setcvar", [](const std::deque<std::string>& vArgs)
 		{
-			if (args.size() < 2)
+			if (vArgs.size() < 2)
 			{
 				SDK::Output("Usage:\n\tcat_setcvar <cvar> <value>");
 				return;
 			}
 
-			const auto foundCVar = I::CVar->FindVar(args[0].c_str());
-			const std::string cvarName = args[0];
-			if (!foundCVar)
+			std::string sCVar = vArgs[0];
+			auto pCVar = I::CVar->FindVar(sCVar.c_str());
+			if (!pCVar)
 			{
-				SDK::Output(std::format("Could not find {}", cvarName).c_str());
+				SDK::Output(std::format("Could not find {}", sCVar).c_str());
 				return;
 			}
 
-			auto vArgs = args; vArgs.pop_front();
-			std::string newValue = boost::algorithm::join(vArgs, " ");
-			boost::replace_all(newValue, "\"", "");
-			foundCVar->SetValue(newValue.c_str());
-			SDK::Output(std::format("Set {} to {}", cvarName, newValue).c_str());
+			auto vArgs2 = vArgs; vArgs2.pop_front();
+			std::string sValue = boost::algorithm::join(vArgs2, " ");
+			boost::replace_all(sValue, "\"", "");
+			pCVar->SetValue(sValue.c_str());
+			SDK::Output(std::format("Set {} to {}", sCVar, sValue).c_str());
 		});
 
-	Register("cat_getcvar", [](const std::deque<std::string>& args)
+	Register("cat_getcvar", [](const std::deque<std::string>& vArgs)
 		{
-			if (args.size() != 1)
+			if (vArgs.size() != 1)
 			{
 				SDK::Output("Usage:\n\tcat_getcvar <cvar>");
 				return;
 			}
 
-			const auto foundCVar = I::CVar->FindVar(args[0].c_str());
-			const std::string cvarName = args[0];
-			if (!foundCVar)
+			std::string sCVar = vArgs[0];
+			auto pCVar = I::CVar->FindVar(sCVar.c_str());
+			if (!pCVar)
 			{
-				SDK::Output(std::format("Could not find {}", cvarName).c_str());
+				SDK::Output(std::format("Could not find {}", sCVar).c_str());
 				return;
 			}
 
-			SDK::Output(std::format("Value of {} is {}", cvarName, foundCVar->GetString()).c_str());
+			SDK::Output(std::format("Value of {} is {}", sCVar, pCVar->GetString()).c_str());
 		});
 
-	Register("cat_menu", [](const std::deque<std::string>& args)
+	Register("cat_menu", [](const std::deque<std::string>& vArgs)
 		{
 			I::MatSystemSurface->SetCursorAlwaysVisible(F::Menu.m_bIsOpen = !F::Menu.m_bIsOpen);
 		});
 
-	Register("cat_path_to", [](std::deque<std::string> args)
+	Register("cat_path_to", [](std::deque<std::string> vArgs)
 		{
 			// Check if the user provided at least 3 args
-			if (args.size() < 3)
+			if (vArgs.size() < 3)
 			{
 				I::CVar->ConsoleColorPrintf({ 255, 255, 255, 255 }, "Usage: cat_path_to <x> <y> <z>\n");
 				return;
 			}
 
 			// Get the Vec3
-			const auto Vec = Vec3( atoi( args[ 0 ].c_str( ) ), atoi( args[ 1 ].c_str( ) ), atoi( args[ 2 ].c_str( ) ) );
+			const auto Vec = Vec3( atoi( vArgs[ 0 ].c_str( ) ), atoi( vArgs[ 1 ].c_str( ) ), atoi( vArgs[ 2 ].c_str( ) ) );
 
 			F::NavEngine.navTo( Vec );
 		});
 
-	Register("cat_nav_search_spawnrooms", [](std::deque<std::string> args)
+	Register("cat_nav_search_spawnrooms", [](std::deque<std::string> vArgs)
 		{
 			if ( F::NavEngine.map && F::NavEngine.map->state == CNavParser::NavState::Active )
 				F::NavEngine.map->UpdateRespawnRooms( );
 		});
 
-	Register("cat_save_nav_mesh", [](std::deque<std::string> args)
+	Register("cat_save_nav_mesh", [](std::deque<std::string> vArgs)
 		{
 			if ( auto pNavFile = F::NavEngine.getNavFile( ) )
 				pNavFile->Write( );
 		});
 
-	Register("cat_detach", [](const std::deque<std::string>& args)
+	Register("cat_detach", [](const std::deque<std::string>& vArgs)
 		{
 			if (F::Menu.m_bIsOpen)
 				I::MatSystemSurface->SetCursorAlwaysVisible(F::Menu.m_bIsOpen = false);
 			U::Core.m_bUnload = true;
 		});
 
-	Register("cat_ignore", [](const std::deque<std::string>& args)
+	Register("cat_ignore", [](const std::deque<std::string>& vArgs)
 		{
-			if (args.size() < 2)
+			if (vArgs.size() < 2)
 			{
 				SDK::Output("Usage:\n\tcat_ignore <id32> <tag>");
 				return;
@@ -147,7 +147,7 @@ void CCommands::Initialize()
 			uint32_t uFriendsID = 0;
 			try
 			{
-				uFriendsID = std::stoul(args[0]);
+				uFriendsID = std::stoul(vArgs[0]);
 			}
 			catch (...)
 			{
@@ -161,7 +161,7 @@ void CCommands::Initialize()
 				return;
 			}
 
-			const std::string& sTag = args[1];
+			const std::string& sTag = vArgs[1];
 			int iTagID = F::PlayerUtils.GetTag(sTag);
 			if (iTagID == -1)
 			{
@@ -170,7 +170,7 @@ void CCommands::Initialize()
 			}
 
 			auto pTag = F::PlayerUtils.GetTag(iTagID);
-			if (!pTag || !pTag->Assignable)
+			if (!pTag || !pTag->m_bAssignable)
 			{
 				SDK::Output(std::format("Tag {} is not assignable", sTag).c_str());
 				return;
@@ -186,5 +186,19 @@ void CCommands::Initialize()
 				F::PlayerUtils.AddTag(uFriendsID, iTagID, true);
 				SDK::Output(std::format("Added tag {} to ID32 {}", sTag, uFriendsID).c_str());
 			}
+		});
+
+	Register("cat_crash", [](const std::deque<std::string>& vArgs) // if you want to time out of a server and rejoin
+		{
+			switch (vArgs.empty() ? 0 : FNV1A::Hash32(vArgs.front().c_str()))
+			{
+			case FNV1A::Hash32Const("true"):
+			case FNV1A::Hash32Const("t"):
+			case FNV1A::Hash32Const("1"):
+				break;
+			default:
+				Vars::Debug::CrashLogging.Value = false; // we are voluntarily crashing, don't give out log if we don't want one
+			}
+			reinterpret_cast<void(*)()>(0)();
 		});
 }
