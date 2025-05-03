@@ -79,7 +79,7 @@ void CMenu::DrawMenu()
 				{ "LOGS", "PLAYERLIST", "SETTINGS##", "OUTPUT" },
 				{ "SETTINGS", "CONFIG", "BINDS", "MATERIALS", "EXTRA" }
 			},
-			{ &iTab, &iAimbotTab, &iVisualsTab, &iNavEngTab, &iLogsTab, &iSettingsTab },
+			{ &iTab, &iAimbotTab, &iVisualsTab, nullptr, &iNavEngTab, &iLogsTab, &iSettingsTab },
 			{ H::Draw.Scale(flSideSize - 16), H::Draw.Scale(36) },
 			{ H::Draw.Scale(8), H::Draw.Scale(8) + flOffset },
 			FTabsEnum::Vertical | FTabsEnum::HorizontalIcons | FTabsEnum::AlignLeft | FTabsEnum::BarLeft,

@@ -149,9 +149,6 @@ bool CFollowBot::IsValidTarget(CTFPlayer* pLocal, int iEntIndex, bool ignoreIDCh
     if (pPlayer->m_iTeamNum() != pLocal->m_iTeamNum() && 
         !(Vars::NavEng::FollowBot::FollowEnemies.Value))
         return false;
-
-    if (F::PlayerUtils.IsIgnored(iEntIndex))
-        return false;
     
     // If we have a specific ID to follow and we're not ignoring that check
     if (!ignoreIDCheck && !Vars::NavEng::FollowBot::FollowID.Value.empty())
