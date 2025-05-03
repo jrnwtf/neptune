@@ -17,8 +17,6 @@ public:
 	int m_iTargetIndex = -1;
 	float m_flLastTargetTime = 0.0f;
 	float m_flLastPathUpdateTime = 0.0f;
-	
-	// Stuck detection
 	Timer m_StuckTimer{};
 	Timer m_StuckDetectionTimer{};
 	Vector m_vLastPosition = {};
