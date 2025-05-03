@@ -137,6 +137,8 @@ private:
 public:
 	void Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd);
 	void Reset();
+	void RunAutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd);
+	void RunForceWeapon(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
 };
 
 ADD_FEATURE(CNavBot, NavBot)

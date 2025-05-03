@@ -4152,6 +4152,13 @@ void CMenu::MenuNavEng(int iTab)
 						FColorPicker(Vars::Colors::NavbotArea, 1, FColorPickerEnum::Dropdown);
 						FColorPicker(Vars::Colors::NavbotBlacklist, 2, FColorPickerEnum::Dropdown);
 						FDropdown(Vars::NavEng::NavEngine::LookAtPath);
+						FDropdown(Vars::NavEng::NavBot::AutoScope);
+						PushTransparent(Transparent || !FGet(Vars::NavEng::NavBot::AutoScope));
+						{
+							FSlider(Vars::NavEng::NavBot::AutoScopeCancelTime, FSliderEnum::None);
+						}
+						PopTransparent();	
+						FDropdown(Vars::NavEng::NavBot::WeaponSlot);
 					}
 					PopTransparent();
 				} EndSection();
@@ -4208,16 +4215,9 @@ void CMenu::MenuNavEng(int iTab)
 						FToggle(Vars::NavEng::NavBot::Enabled);
 						PushTransparent(!FGet(Vars::NavEng::NavBot::Enabled) || !FGet(Vars::NavEng::NavEngine::Enabled));
 						{
-							FDropdown(Vars::NavEng::NavBot::WeaponSlot);
 							FDropdown(Vars::NavEng::NavBot::RechargeDT);
 							PushTransparent(Transparent || !FGet(Vars::NavEng::NavBot::RechargeDT));
 							FSlider(Vars::NavEng::NavBot::RechargeDTDelay, FSliderEnum::None);
-							PopTransparent();
-							FDropdown(Vars::NavEng::NavBot::AutoScope);
-							PushTransparent(Transparent || !FGet(Vars::NavEng::NavBot::AutoScope));
-							{
-								FSlider(Vars::NavEng::NavBot::AutoScopeCancelTime, FSliderEnum::None);
-							}
 							PopTransparent();
 							FDropdown(Vars::NavEng::NavBot::Preferences);
 							FDropdown(Vars::NavEng::NavBot::Blacklist);

@@ -1172,7 +1172,7 @@ namespace Vars
 			CVar(FollowID, "Follow ID", std::string(""));
 			CVar(Distance, "Follow distance", 150, SLIDER_MIN, 50, 300, 25);
 			CVarEnum(PositionMode, "Position mode", 0, NONE, nullptr,
-				VA_LIST("Behind(buggy)", "Side(buggy)", "Adaptive"),
+				VA_LIST("Behind", "Side", "Adaptive"),
 				Behind, Side, Adaptive);
 		SUBNAMESPACE_END(FollowBot);
 	NAMESPACE_END(NavEng);

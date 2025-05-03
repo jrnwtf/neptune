@@ -2933,6 +2933,43 @@ bool IsWeaponValidForDT(CTFWeaponBase* pWeapon)
 	return SDK::WeaponDoesNotUseAmmo(pWeapon, false);
 }
 
+void CNavBot::RunAutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
+{
+	if (!pLocal || !pLocal->IsAlive() || !pWeapon || !pCmd)
+		return;
+
+	if (pCmd->buttons & (IN_FORWARD | IN_BACK | IN_MOVERIGHT | IN_MOVELEFT) && !F::Misc.m_bAntiAFK)
+		return;
+
+	AutoScope(pLocal, pWeapon, pCmd);
+}
+
+void CNavBot::RunForceWeapon(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
+{
+	if (!pLocal || !pLocal->IsAlive() || !pWeapon)
+		return;
+
+	if (!Vars::NavEng::NavBot::WeaponSlot.Value)
+		return;
+
+	static Timer tSlotTimer{};
+	if (!tSlotTimer.Run(0.2f))
+		return;
+
+	m_iCurrentSlot = pWeapon->GetSlot() + 1;
+
+	// Use best slot without considering reload
+	int iNewSlot = Vars::NavEng::NavBot::WeaponSlot.Value == Vars::NavEng::NavBot::WeaponSlotEnum::Best ?
+		GetBestSlot(pLocal, static_cast<slots>(m_iCurrentSlot), GetNearestPlayerDistance(pLocal, pWeapon)) : Vars::NavEng::NavBot::WeaponSlot.Value;
+
+	if (iNewSlot > 0)
+	{
+		auto sCommand = "slot" + std::to_string(iNewSlot);
+		if (m_iCurrentSlot != iNewSlot)
+			I::EngineClient->ClientCmd_Unrestricted(sCommand.c_str());
+	}
+}
+
 void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
 	static Timer tDoubletapRecharge{};
