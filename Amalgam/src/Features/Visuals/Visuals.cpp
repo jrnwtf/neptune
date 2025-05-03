@@ -837,7 +837,7 @@ void CVisuals::DrawBoxes()
 
 void CVisuals::DrawNavEngine()
 {
-	if (!Vars::Misc::Movement::NavEngine::Draw.Value || !F::NavEngine.isReady())
+	if (!Vars::NavEng::NavEngine::Draw.Value || !F::NavEngine.isReady())
 		return;
 
 	auto pLocal = H::Entities.GetLocal();
@@ -860,7 +860,7 @@ void CVisuals::DrawNavEngine()
 		}
 	}*/
 
-	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Blacklist)
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Blacklist)
 	{
 		if (auto pBlacklist = F::NavEngine.getFreeBlacklist())
 		{
@@ -872,7 +872,7 @@ void CVisuals::DrawNavEngine()
 		}
 	}
 
-	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Area)
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Area)
 	{
 		Vector vOrigin = pLocal->GetAbsOrigin();
 		auto pArea = F::NavEngine.map->findClosestNavSquare(vOrigin);
@@ -890,7 +890,7 @@ void CVisuals::DrawNavEngine()
 		RenderLine(pArea->getSwCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
 	}
 
-	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Path && !F::NavEngine.crumbs.empty())
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Path && !F::NavEngine.crumbs.empty())
 	{
 		for (size_t i = 0; i < F::NavEngine.crumbs.size() - 1; i++)
 			RenderLine(F::NavEngine.crumbs[i].vec, F::NavEngine.crumbs[i + 1].vec, Vars::Colors::NavbotPath.Value, false);

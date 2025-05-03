@@ -6,21 +6,76 @@
 
 int CFollowBot::GetTargetIndex(CTFPlayer* pLocal)
 {
-    if (m_iTargetIndex != -1 && I::GlobalVars->curtime - m_flLastTargetTime < 1.0f)
-        return m_iTargetIndex;
-
-    m_flLastTargetTime = I::GlobalVars->curtime;
-    int iBestTarget = -1;
-    float flClosestDistance = FLT_MAX;
-    
-    // If we have a specific player ID to follow
-    std::string followID = Vars::Misc::Movement::FollowBot::FollowID.Value;
-    if (!followID.empty())
+    bool bCurrentTargetValid = false;
+    if (m_iTargetIndex != -1)
     {
-        // Check all players to find a match by SteamID
+        auto pEntity = I::ClientEntityList->GetClientEntity(m_iTargetIndex);
+        if (pEntity && pEntity->IsPlayer())
+        {
+            auto pPlayer = pEntity->As<CTFPlayer>();
+            if (pPlayer->IsAlive() && IsValidTarget(pLocal, m_iTargetIndex, true))
+            {
+                bCurrentTargetValid = true;
+                
+                if (Vars::NavEng::FollowBot::StickToTarget.Value)
+                {
+                    m_flLastTargetTime = I::GlobalVars->curtime;
+                    return m_iTargetIndex;
+                }
+            }
+        }
+    }
+    
+    if (!bCurrentTargetValid || I::GlobalVars->curtime - m_flLastTargetTime > 3.0f) 
+    {
+        m_flLastTargetTime = I::GlobalVars->curtime;
+        int iBestTarget = -1;
+        float flBestScore = -FLT_MAX; 
+        
+        std::string followID = Vars::NavEng::FollowBot::FollowID.Value;
+        if (!followID.empty())
+        {
+            for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
+            {
+                if (!IsValidTarget(pLocal, i, true))
+                    continue;
+
+                auto pEntity = I::ClientEntityList->GetClientEntity(i);
+                if (!pEntity || !pEntity->IsPlayer())
+                    continue;
+
+                auto pPlayer = pEntity->As<CTFPlayer>();
+                if (!pPlayer->IsAlive() || pPlayer == pLocal)
+                    continue;
+                    
+                PlayerInfo_t info;
+                if (I::EngineClient->GetPlayerInfo(i, &info))
+                {
+                    std::string playerID = std::to_string(info.friendsID);
+                    if (playerID == followID)
+                    {
+                        iBestTarget = i;
+                        break;
+                    }
+                }
+            }
+            
+            if (iBestTarget != -1)
+            {
+                if (iBestTarget != m_iTargetIndex)
+                {
+                    m_bIsFollowing = true;
+                    m_iTargetIndex = iBestTarget;
+                }
+                return m_iTargetIndex;
+            }
+            
+            return -1;
+        }
+
         for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
         {
-            if (!IsValidTarget(pLocal, i, true))  // Pass true to ignore FollowID check in IsValidTarget
+            if (!IsValidTarget(pLocal, i, false))
                 continue;
 
             auto pEntity = I::ClientEntityList->GetClientEntity(i);
@@ -30,59 +85,51 @@ int CFollowBot::GetTargetIndex(CTFPlayer* pLocal)
             auto pPlayer = pEntity->As<CTFPlayer>();
             if (!pPlayer->IsAlive() || pPlayer == pLocal)
                 continue;
-                
-            // Check if this player matches our target SteamID
-            PlayerInfo_t info;
-            if (I::EngineClient->GetPlayerInfo(i, &info))
+
+            float flDistance = pLocal->GetAbsOrigin().DistTo(pPlayer->GetAbsOrigin());
+            float flScore = -flDistance;
+            
+            if (Vars::NavEng::FollowBot::SmartSelection.Value)
             {
-                std::string playerID = std::to_string(info.friendsID);
-                if (playerID == followID)
-                    return i;  // Found our target by ID, return immediately
+                if (H::Entities.IsFriend(i))
+                    flScore += 5000.0f;
+                
+                if (H::Entities.InParty(i))
+                    flScore += 10000.0f;
+                
+                flScore += pPlayer->m_iHealth() * 5.0f;
+                
+                if (pPlayer->m_iClass() == pLocal->m_iClass())
+                    flScore += 2000.0f;
+                
+                if (flDistance > 1500.0f)
+                    flScore -= 10000.0f;
+                
+                if (pPlayer->GetAbsVelocity().Length() > 50.0f)
+                    flScore += 1000.0f;
             }
+            
+            if (flScore > flBestScore)
+            {
+                flBestScore = flScore;
+                iBestTarget = i;
+            }
+        }
+
+        if (iBestTarget != m_iTargetIndex)
+        {
+            if (iBestTarget != -1)
+            {
+                m_bIsFollowing = true;
+            }
+            else
+            {
+                m_bIsFollowing = false;
+            }
+            m_iTargetIndex = iBestTarget;
         }
     }
     
-    // If we get here and have a follow ID set but didn't find a match, don't follow anyone else
-    if (!followID.empty())
-        return -1;
-
-    // Otherwise, look for the closest valid player
-    for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
-    {
-        if (!IsValidTarget(pLocal, i, false))
-            continue;
-
-        auto pEntity = I::ClientEntityList->GetClientEntity(i);
-        if (!pEntity || !pEntity->IsPlayer())
-            continue;
-
-        auto pPlayer = pEntity->As<CTFPlayer>();
-        if (!pPlayer->IsAlive() || pPlayer == pLocal)
-            continue;
-
-        float flDistance = pLocal->GetAbsOrigin().DistTo(pPlayer->GetAbsOrigin());
-        
-        if (flDistance < flClosestDistance)
-        {
-            flClosestDistance = flDistance;
-            iBestTarget = i;
-        }
-    }
-
-
-    if (iBestTarget != m_iTargetIndex)
-    {
-        if (iBestTarget != -1)
-        {
-            m_bIsFollowing = true;
-        }
-        else
-        {
-            m_bIsFollowing = false;
-        }
-        m_iTargetIndex = iBestTarget;
-    }
-
     return m_iTargetIndex;
 }
 
@@ -100,20 +147,20 @@ bool CFollowBot::IsValidTarget(CTFPlayer* pLocal, int iEntIndex, bool ignoreIDCh
         return false;
 
     if (pPlayer->m_iTeamNum() != pLocal->m_iTeamNum() && 
-        !(Vars::Misc::Movement::FollowBot::FollowEnemies.Value))
+        !(Vars::NavEng::FollowBot::FollowEnemies.Value))
         return false;
 
     if (F::PlayerUtils.IsIgnored(iEntIndex))
         return false;
     
     // If we have a specific ID to follow and we're not ignoring that check
-    if (!ignoreIDCheck && !Vars::Misc::Movement::FollowBot::FollowID.Value.empty())
+    if (!ignoreIDCheck && !Vars::NavEng::FollowBot::FollowID.Value.empty())
     {
         PlayerInfo_t info;
         if (I::EngineClient->GetPlayerInfo(iEntIndex, &info))
         {
             std::string playerID = std::to_string(info.friendsID);
-            if (playerID != Vars::Misc::Movement::FollowBot::FollowID.Value)
+            if (playerID != Vars::NavEng::FollowBot::FollowID.Value)
                 return false;  // Not the player we want to follow
         }
         else
@@ -123,13 +170,13 @@ bool CFollowBot::IsValidTarget(CTFPlayer* pLocal, int iEntIndex, bool ignoreIDCh
     }
 
     // Only follow friends if that option is enabled
-    if (Vars::Misc::Movement::FollowBot::OnlyFriends.Value)
+    if (Vars::NavEng::FollowBot::OnlyFriends.Value)
     {
         return H::Entities.IsFriend(iEntIndex) || H::Entities.InParty(iEntIndex);
     }
     
     // Only follow party members if that option is enabled
-    if (Vars::Misc::Movement::FollowBot::OnlyParty.Value)
+    if (Vars::NavEng::FollowBot::OnlyParty.Value)
     {
         return H::Entities.InParty(iEntIndex);
     }
@@ -140,7 +187,7 @@ bool CFollowBot::IsValidTarget(CTFPlayer* pLocal, int iEntIndex, bool ignoreIDCh
 float CFollowBot::GetFollowDistance()
 {
 
-    return static_cast<float>(Vars::Misc::Movement::FollowBot::Distance.Value);
+    return static_cast<float>(Vars::NavEng::FollowBot::Distance.Value);
 }
 
 std::optional<Vector> CFollowBot::GetFollowPosition(CTFPlayer* pLocal, CTFPlayer* pTarget)
@@ -155,7 +202,7 @@ std::optional<Vector> CFollowBot::GetFollowPosition(CTFPlayer* pLocal, CTFPlayer
 
     float flDistance = GetFollowDistance();
     
-    if (Vars::Misc::Movement::FollowBot::PositionMode.Value == 0) // Behind
+    if (Vars::NavEng::FollowBot::PositionMode.Value == 0) // Behind
     {
 
         Vector vForward;
@@ -163,7 +210,7 @@ std::optional<Vector> CFollowBot::GetFollowPosition(CTFPlayer* pLocal, CTFPlayer
         vForward *= -flDistance;
         return vTargetPos + vForward;
     }
-    else if (Vars::Misc::Movement::FollowBot::PositionMode.Value == 1) // Side
+    else if (Vars::NavEng::FollowBot::PositionMode.Value == 1) // Side
     {
 
         Vector vRight;
@@ -203,7 +250,7 @@ std::optional<Vector> CFollowBot::GetFollowPosition(CTFPlayer* pLocal, CTFPlayer
 void CFollowBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
 
-    if (!Vars::Misc::Movement::FollowBot::Enabled.Value)
+    if (!Vars::NavEng::FollowBot::Enabled.Value)
     {
 
         if (m_bIsFollowing)

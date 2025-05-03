@@ -884,7 +884,7 @@ void CMisc::ChatSpam(CTFPlayer* pLocal)
 			
 			std::vector<std::string> pathsToTry = {
 				"cat_chatspam.txt",
-				gameDir + "\\tf\\cat_chatspam.txt"
+				gameDir + "\\amalgam\\cat_chatspam.txt"
 			};
 			
 			bool fileLoaded = false;
@@ -921,13 +921,13 @@ void CMisc::ChatSpam(CTFPlayer* pLocal)
 			{
 				try
 				{
-					std::string defaultPath = gameDir + "\\tf\\cat_chatspam.txt";
+					std::string defaultPath = gameDir + "\\amalgam\\cat_chatspam.txt";
 					std::ofstream newFile(defaultPath);
 					
 					if (newFile.is_open())
 					{
 						newFile << "This is a default message from cat_chatspam.txt\n";
-						newFile << "Edit this file tf/cat_chatspam.txt\n";
+						newFile << "Edit this file amalgam/cat_chatspam.txt\n";
 						newFile << "Each line will be sent as a separate message\n";
 						newFile << "[Amalgam] Chat Spam is working!\n";
 						newFile << "Put your chat spam lines in this file\n";

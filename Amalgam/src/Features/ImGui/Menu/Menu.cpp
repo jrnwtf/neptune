@@ -68,25 +68,26 @@ void CMenu::DrawMenu()
 			PopStyleColor();
 		}
 
-		static int iTab = 0, iAimbotTab = 0, iVisualsTab = 0, iMiscTab = 0, iLogsTab = 0, iSettingsTab = 0;
+		static int iTab = 0, iAimbotTab = 0, iVisualsTab = 0, iMiscTab = 0, iNavEngTab = 0, iLogsTab = 0, iSettingsTab = 0;
 		PushFont(F::Render.FontBold);
 		FTabs(
 			{
 				{ "AIMBOT", "GENERAL", "HVH" },
 				{ "VISUALS", "ESP", "CHAMS", "GLOW", "MISC##", "RADAR", "MENU" },
 				{ "MISC" },
+				{ "NAVENG", "GENERAL" },
 				{ "LOGS", "PLAYERLIST", "SETTINGS##", "OUTPUT" },
 				{ "SETTINGS", "CONFIG", "BINDS", "MATERIALS", "EXTRA" }
 			},
-			{ &iTab, &iAimbotTab, &iVisualsTab, nullptr, &iLogsTab, &iSettingsTab },
+			{ &iTab, &iAimbotTab, &iVisualsTab, &iNavEngTab, &iLogsTab, &iSettingsTab },
 			{ H::Draw.Scale(flSideSize - 16), H::Draw.Scale(36) },
 			{ H::Draw.Scale(8), H::Draw.Scale(8) + flOffset },
 			FTabsEnum::Vertical | FTabsEnum::HorizontalIcons | FTabsEnum::AlignLeft | FTabsEnum::BarLeft,
-			{ { ICON_MD_PERSON }, { ICON_MD_VISIBILITY }, { ICON_MD_ARTICLE }, { ICON_MD_IMPORT_CONTACTS }, { ICON_MD_SETTINGS } },
+			{ { ICON_MD_PERSON }, { ICON_MD_VISIBILITY }, { ICON_MD_ARTICLE }, { ICON_MD_NAVIGATE_NEXT }, { ICON_MD_IMPORT_CONTACTS }, { ICON_MD_SETTINGS } },
 			{ H::Draw.Scale(10), 0 }, {},
 			{}, { H::Draw.Scale(22), 0 }
 		);
-		PopFont();
+			PopFont();
 
 		static std::string sSearch = "";
 		SetCursorPos({ H::Draw.Scale(8), vWindowSize.y - H::Draw.Scale(37) });
@@ -112,8 +113,9 @@ void CMenu::DrawMenu()
 				case 0: MenuAimbot(iAimbotTab); break;
 				case 1: MenuVisuals(iVisualsTab); break;
 				case 2: MenuMisc(iMiscTab); break;
-				case 3: MenuLogs(iLogsTab); break;
-				case 4: MenuSettings(iSettingsTab); break;
+				case 3: MenuNavEng(iNavEngTab); break;
+				case 4: MenuLogs(iLogsTab); break;
+				case 5: MenuSettings(iSettingsTab); break;
 				}
 			}
 			else
@@ -443,6 +445,7 @@ void CMenu::MenuAimbot(int iTab)
 				} EndSection();
 				if (Section("Cheater Detection"))
 				{
+					FToggle(Vars::CheaterDetection::AutoIgnoreThai);
 					PushTransparent(!FGet(Vars::CheaterDetection::Methods));
 					{
 						FDropdown(Vars::CheaterDetection::Methods);
@@ -1445,36 +1448,6 @@ void CMenu::MenuMisc(int iTab)
 						FSlider(Vars::Misc::Movement::ApplyAbove);
 					} EndSection();
 				}
-				if (Section("Nav Engine", 8))
-				{
-					FToggle(Vars::Misc::Movement::NavEngine::Enabled);
-					PushTransparent(!FGet(Vars::Misc::Movement::NavEngine::Enabled));
-					{
-						FToggle(Vars::Misc::Movement::NavEngine::PathInSetup);
-						FDropdown(Vars::Misc::Movement::NavEngine::Draw, FDropdownEnum::Multi, -50);
-						SameLine(); DebugDummy({ H::Draw.Scale(2), 0 });
-						FColorPicker(Vars::Colors::NavbotPath, 0, FColorPickerEnum::Dropdown);
-						FColorPicker(Vars::Colors::NavbotArea, 1, FColorPickerEnum::Dropdown);
-						FColorPicker(Vars::Colors::NavbotBlacklist, 2, FColorPickerEnum::Dropdown);
-						FDropdown(Vars::Misc::Movement::NavEngine::LookAtPath);
-					}
-					PopTransparent();
-				} EndSection();
-				if (Vars::Debug::Options.Value)
-				{
-					if (Section("##Debug Nav engine"))
-					{
-						FToggle(Vars::Misc::Movement::NavEngine::SafePathing);
-						FSlider(Vars::Misc::Movement::NavEngine::StickyIgnoreTime, FSliderEnum::Left);
-						FSlider(Vars::Misc::Movement::NavEngine::StuckDetectTime, FSliderEnum::Right);
-						FSlider(Vars::Misc::Movement::NavEngine::StuckBlacklistTime, FSliderEnum::Left);
-						FSlider(Vars::Misc::Movement::NavEngine::StuckExpireTime, FSliderEnum::Right);
-						FSlider(Vars::Misc::Movement::NavEngine::StuckTime, FSliderEnum::None);
-						FToggle(Vars::Misc::Movement::NavEngine::VischeckEnabled);
-						FSlider(Vars::Misc::Movement::NavEngine::VischeckTime, FSliderEnum::Left);
-						FSlider(Vars::Misc::Movement::NavEngine::VischeckCacheTime, FSliderEnum::Right);
-					} EndSection();
-				}
 				if (Section("Exploits", true))
 				{
 					FToggle(Vars::Misc::Exploits::CheatsBypass, FToggleEnum::Left);
@@ -1488,7 +1461,6 @@ void CMenu::MenuMisc(int iTab)
 						FSlider(Vars::Misc::Exploits::PingTarget);
 					}
 					PopTransparent();
-
 				} EndSection();
 				if (Section("Automation"))
 				{
@@ -1558,77 +1530,6 @@ void CMenu::MenuMisc(int iTab)
 					}
 					PopTransparent();
 				} EndSection();
-				if (Section("Navbot", 8))
-				{
-					PushTransparent(!FGet(Vars::Misc::Movement::NavEngine::Enabled));
-					{
-						FToggle(Vars::Misc::Movement::NavBot::Enabled);
-						PushTransparent(!FGet(Vars::Misc::Movement::NavBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
-						{
-							FDropdown(Vars::Misc::Movement::NavBot::WeaponSlot);
-							FDropdown(Vars::Misc::Movement::NavBot::RechargeDT);
-							PushTransparent(Transparent || !FGet(Vars::Misc::Movement::NavBot::RechargeDT));
-							FSlider(Vars::Misc::Movement::NavBot::RechargeDTDelay, FSliderEnum::None);
-							PopTransparent();
-							FDropdown(Vars::Misc::Movement::NavBot::AutoScope);
-							PushTransparent(Transparent || !FGet(Vars::Misc::Movement::NavBot::AutoScope));
-							{
-								FSlider(Vars::Misc::Movement::NavBot::AutoScopeCancelTime, FSliderEnum::None);
-							}
-							PopTransparent();
-							FDropdown(Vars::Misc::Movement::NavBot::Preferences);
-							FDropdown(Vars::Misc::Movement::NavBot::Blacklist);
-							PushTransparent(Transparent || !(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::NormalThreats));
-							{
-								FSlider(Vars::Misc::Movement::NavBot::BlacklistDelay, FSliderEnum::Left);
-							}
-							PopTransparent();
-							PushTransparent(Transparent || !(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::DormantThreats));
-							{
-								FSlider(Vars::Misc::Movement::NavBot::BlacklistDormantDelay, FSliderEnum::Right);
-							}
-							PopTransparent();
-							PushTransparent(Transparent || !(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::NormalThreats)
-											&& !(FGet(Vars::Misc::Movement::NavBot::Blacklist) & Vars::Misc::Movement::NavBot::BlacklistEnum::DormantThreats));
-							{
-								FSlider(Vars::Misc::Movement::NavBot::BlacklistSlightDangerLimit);
-							}
-							PopTransparent();
-						}
-						PopTransparent();
-					}
-					PopTransparent();
-				} EndSection();
-				if (Vars::Debug::Options.Value)
-				{
-					if (Section("##Debug Navbot"))
-					{
-						FSlider(Vars::Misc::Movement::NavBot::StickyDangerRange);
-						FSlider(Vars::Misc::Movement::NavBot::ProjectileDangerRange);
-						FToggle(Vars::Misc::Movement::NavBot::AutoScopeUseCachedResults);
-						FTooltip("should double the performance of the movesim method by only checking every 2nd tick");
-					} EndSection();
-				}
-				if (Section("FollowBot", 8))
-				{
-					PushTransparent(!FGet(Vars::Misc::Movement::NavEngine::Enabled));
-					FToggle(Vars::Misc::Movement::FollowBot::Enabled);
-					PushTransparent(!FGet(Vars::Misc::Movement::FollowBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
-					FToggle(Vars::Misc::Movement::FollowBot::OnlyFriends, FToggleEnum::Left);
-					FToggle(Vars::Misc::Movement::FollowBot::OnlyParty, FToggleEnum::Right);
-					FToggle(Vars::Misc::Movement::FollowBot::FollowEnemies, FToggleEnum::Left);
-					FSlider(Vars::Misc::Movement::FollowBot::Distance, FSliderEnum::Left);
-					FDropdown(Vars::Misc::Movement::FollowBot::PositionMode, FSliderEnum::Right);
-					FText("put SteamID32 to follow only that player");
-					// a temporary string to handle the input text
-					static std::string sTempFollowID = FGet(Vars::Misc::Movement::FollowBot::FollowID);
-					if (FInputText("SteamID32", sTempFollowID))
-					{
-						FSet(Vars::Misc::Movement::FollowBot::FollowID, sTempFollowID);
-					}
-					PopTransparent();
-					PopTransparent();
-				} EndSection();
 				if (Section("Mann vs. Machine", 8))
 				{
 					FToggle(Vars::Misc::MannVsMachine::InstantRespawn, FToggleEnum::Left);
@@ -1646,7 +1547,7 @@ void CMenu::MenuMisc(int iTab)
 			}
 			EndTable();
 		}
-	}
+	} break;
 	}
 }
 
@@ -3108,7 +3009,7 @@ void CMenu::MenuSettings(int iTab)
 							break;
 						}
 						if (_tBind.m_bNot && (_tBind.m_iType != BindEnum::Key || _tBind.m_iInfo == BindEnum::KeyEnum::Hold))
-							sType = std::format("not {}", sType);
+							sInfo = std::format("not {}", sInfo);
 
 						ImVec2 vOriginalPos = { H::Draw.Scale(8) + H::Draw.Scale(28) * std::min(x, 3), H::Draw.Scale(108) + H::Draw.Scale(36) * y };
 
@@ -4224,4 +4125,135 @@ void CMenu::AddOutput(const std::string& sFunction, const std::string& sLog, con
 	m_vOutput.emplace_back(sFunction, sLog, iID++, tColor);
 	while (m_vOutput.size() > m_iMaxOutputSize)
 		m_vOutput.pop_front();
+}
+
+void CMenu::MenuNavEng(int iTab)
+{
+	using namespace ImGui;
+
+	switch (iTab)
+	{
+	case 0:
+	{
+		if (BeginTable("NavEngTable", 2))
+		{
+			/* Column 1 */
+			TableNextColumn();
+			{
+				if (Section("Nav Engine", 8))
+				{
+					FToggle(Vars::NavEng::NavEngine::Enabled);
+					PushTransparent(!FGet(Vars::NavEng::NavEngine::Enabled));
+					{
+						FToggle(Vars::NavEng::NavEngine::PathInSetup);
+						FDropdown(Vars::NavEng::NavEngine::Draw, FDropdownEnum::Multi, -50);
+						SameLine(); DebugDummy({ H::Draw.Scale(2), 0 });
+						FColorPicker(Vars::Colors::NavbotPath, 0, FColorPickerEnum::Dropdown);
+						FColorPicker(Vars::Colors::NavbotArea, 1, FColorPickerEnum::Dropdown);
+						FColorPicker(Vars::Colors::NavbotBlacklist, 2, FColorPickerEnum::Dropdown);
+						FDropdown(Vars::NavEng::NavEngine::LookAtPath);
+					}
+					PopTransparent();
+				} EndSection();
+				if (Vars::Debug::Options.Value)
+				{
+					if (Section("##Debug Nav engine"))
+					{
+						FToggle(Vars::NavEng::NavEngine::SafePathing);
+						FSlider(Vars::NavEng::NavEngine::StickyIgnoreTime, FSliderEnum::Left);
+						FSlider(Vars::NavEng::NavEngine::StuckDetectTime, FSliderEnum::Right);
+						FSlider(Vars::NavEng::NavEngine::StuckBlacklistTime, FSliderEnum::Left);
+						FSlider(Vars::NavEng::NavEngine::StuckExpireTime, FSliderEnum::Right);
+						FSlider(Vars::NavEng::NavEngine::StuckTime, FSliderEnum::None);
+						FToggle(Vars::NavEng::NavEngine::VischeckEnabled);
+						FSlider(Vars::NavEng::NavEngine::VischeckTime, FSliderEnum::Left);
+						FSlider(Vars::NavEng::NavEngine::VischeckCacheTime, FSliderEnum::Right);
+					} EndSection();
+				}
+			}
+
+			/* Column 2 */
+			TableNextColumn();
+			{
+				if (Section("Navbot", 8))
+				{
+					PushTransparent(!FGet(Vars::NavEng::NavEngine::Enabled));
+					{
+						FToggle(Vars::NavEng::NavBot::Enabled);
+						PushTransparent(!FGet(Vars::NavEng::NavBot::Enabled) || !FGet(Vars::NavEng::NavEngine::Enabled));
+						{
+							FDropdown(Vars::NavEng::NavBot::WeaponSlot);
+							FDropdown(Vars::NavEng::NavBot::RechargeDT);
+							PushTransparent(Transparent || !FGet(Vars::NavEng::NavBot::RechargeDT));
+							FSlider(Vars::NavEng::NavBot::RechargeDTDelay, FSliderEnum::None);
+							PopTransparent();
+							FDropdown(Vars::NavEng::NavBot::AutoScope);
+							PushTransparent(Transparent || !FGet(Vars::NavEng::NavBot::AutoScope));
+							{
+								FSlider(Vars::NavEng::NavBot::AutoScopeCancelTime, FSliderEnum::None);
+							}
+							PopTransparent();
+							FDropdown(Vars::NavEng::NavBot::Preferences);
+							FDropdown(Vars::NavEng::NavBot::Blacklist);
+							PushTransparent(Transparent || !(FGet(Vars::NavEng::NavBot::Blacklist) & Vars::NavEng::NavBot::BlacklistEnum::NormalThreats));
+							{
+								FSlider(Vars::NavEng::NavBot::BlacklistDelay, FSliderEnum::Left);
+							}
+							PopTransparent();
+							PushTransparent(Transparent || !(FGet(Vars::NavEng::NavBot::Blacklist) & Vars::NavEng::NavBot::BlacklistEnum::DormantThreats));
+							{
+								FSlider(Vars::NavEng::NavBot::BlacklistDormantDelay, FSliderEnum::Right);
+							}
+							PopTransparent();
+							PushTransparent(Transparent || !(FGet(Vars::NavEng::NavBot::Blacklist) & Vars::NavEng::NavBot::BlacklistEnum::NormalThreats)
+											&& !(FGet(Vars::NavEng::NavBot::Blacklist) & Vars::NavEng::NavBot::BlacklistEnum::DormantThreats));
+							{
+								FSlider(Vars::NavEng::NavBot::BlacklistSlightDangerLimit);
+							}
+							PopTransparent();
+						}
+						PopTransparent();
+					}
+					PopTransparent();
+				} EndSection();
+				if (Vars::Debug::Options.Value)
+				{
+					if (Section("##Debug Navbot"))
+					{
+						FSlider(Vars::NavEng::NavBot::StickyDangerRange);
+						FSlider(Vars::NavEng::NavBot::ProjectileDangerRange);
+						FToggle(Vars::NavEng::NavBot::AutoScopeUseCachedResults);
+						FTooltip("should double the performance of the movesim method by only checking every 2nd tick");
+					} EndSection();
+				}
+				if (Section("Followbot", 8))
+				{
+					PushTransparent(!FGet(Vars::NavEng::NavEngine::Enabled));
+					FToggle(Vars::NavEng::FollowBot::Enabled);
+					PushTransparent(!FGet(Vars::NavEng::FollowBot::Enabled) || !FGet(Vars::NavEng::NavEngine::Enabled));
+					FToggle(Vars::NavEng::FollowBot::OnlyFriends, FToggleEnum::Left);
+					FToggle(Vars::NavEng::FollowBot::OnlyParty, FToggleEnum::Right);
+					FToggle(Vars::NavEng::FollowBot::FollowEnemies, FToggleEnum::Left);
+					FToggle(Vars::NavEng::FollowBot::StickToTarget, FToggleEnum::Right);
+					FToggle(Vars::NavEng::FollowBot::SmartSelection, FToggleEnum::Left);
+					FSlider(Vars::NavEng::FollowBot::Distance, FSliderEnum::Left);
+					FDropdown(Vars::NavEng::FollowBot::PositionMode, FSliderEnum::Right);
+					PopTransparent();
+					PopTransparent();
+				} EndSection();
+				if (Section("Followbot only", 8))
+				{
+					FText("put SteamID32 to follow only that player");
+					// a temporary string to handle the input text
+					static std::string sTempFollowID = FGet(Vars::NavEng::FollowBot::FollowID);
+					if (FInputText("SteamID32", sTempFollowID))
+					{
+						FSet(Vars::NavEng::FollowBot::FollowID, sTempFollowID);
+					}
+				} EndSection();
+			}
+			EndTable();
+		}
+	} break;
+	}
 }

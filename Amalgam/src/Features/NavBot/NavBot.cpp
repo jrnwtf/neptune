@@ -15,7 +15,7 @@
 
 bool CNavBot::ShouldSearchHealth(CTFPlayer* pLocal, bool bLowPrio)
 {
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::SearchHealth))
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::SearchHealth))
 		return false;
 
 	// Priority too high
@@ -33,7 +33,7 @@ bool CNavBot::ShouldSearchHealth(CTFPlayer* pLocal, bool bLowPrio)
 
 bool CNavBot::ShouldSearchAmmo(CTFPlayer* pLocal)
 {
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::SearchAmmo))
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::SearchAmmo))
 		return false;
 
 	// Priority too high
@@ -168,7 +168,7 @@ bool CNavBot::ShouldAssist(CTFPlayer* pLocal, int iTargetIdx)
 	if (!pEntity || pEntity->As<CBaseEntity>()->m_iTeamNum() != pLocal->m_iTeamNum())
 		return false;
 
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::HelpFriendlyCaptureObjectives))
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::HelpFriendlyCaptureObjectives))
 		return true;
 
 	if (F::PlayerUtils.IsIgnored(iTargetIdx)
@@ -463,7 +463,7 @@ ClosestEnemy_t CNavBot::GetNearestPlayerDistance(CTFPlayer* pLocal, CTFWeaponBas
 
 bool CNavBot::IsEngieMode(CTFPlayer* pLocal)
 {
-	return Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::AutoEngie && (Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value || Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value) && pLocal && pLocal->IsAlive() && pLocal->m_iClass() == TF_CLASS_ENGINEER;
+	return Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::AutoEngie && (Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value || Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value) && pLocal && pLocal->IsAlive() && pLocal->m_iClass() == TF_CLASS_ENGINEER;
 }
 
 bool CNavBot::BlacklistedFromBuilding(CNavArea* pArea)
@@ -640,13 +640,13 @@ bool CNavBot::NavToSentrySpot()
 
 void CNavBot::UpdateEnemyBlacklist(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iSlot)
 {
-	if (!pLocal || !pLocal->IsAlive() || !pWeapon || !(Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::Players))
+	if (!pLocal || !pLocal->IsAlive() || !pWeapon || !(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Players))
 		return;
 
-	if (!(Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::DormantThreats))
+	if (!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::DormantThreats))
 		F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_DORMANT));
 
-	if (!(Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::NormalThreats))
+	if (!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::NormalThreats))
 	{
 		F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_NORMAL));
 		return;
@@ -656,8 +656,8 @@ void CNavBot::UpdateEnemyBlacklist(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, in
 	static Timer tDormantUpdateTimer{};
 	static int iLastSlotBlacklist = primary;
 
-	bool bShouldRunNormal = tBlacklistUpdateTimer.Run(Vars::Misc::Movement::NavBot::BlacklistDelay.Value) || iLastSlotBlacklist != iSlot;
-	bool bShouldRunDormant = Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::DormantThreats && (tDormantUpdateTimer.Run(Vars::Misc::Movement::NavBot::BlacklistDormantDelay.Value) || iLastSlotBlacklist != iSlot);
+	bool bShouldRunNormal = tBlacklistUpdateTimer.Run(Vars::NavEng::NavBot::BlacklistDelay.Value) || iLastSlotBlacklist != iSlot;
+	bool bShouldRunDormant = Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::DormantThreats && (tDormantUpdateTimer.Run(Vars::NavEng::NavBot::BlacklistDormantDelay.Value) || iLastSlotBlacklist != iSlot);
 	// Don't run since we do not care here
 	if (!bShouldRunNormal && !bShouldRunDormant)
 		return;
@@ -748,7 +748,7 @@ void CNavBot::UpdateEnemyBlacklist(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, in
 					for (auto& pArea : (*mToLoop)[pCheckedPlayer])
 					{
 						(*mToMark)[pArea]++;
-						if ((*mToMark)[pArea] >= Vars::Misc::Movement::NavBot::BlacklistSlightDangerLimit.Value)
+						if ((*mToMark)[pArea] >= Vars::NavEng::NavBot::BlacklistSlightDangerLimit.Value)
 							(*F::NavEngine.getFreeBlacklist())[pArea] = bDormant ? BlacklistReason_enum::BR_ENEMY_DORMANT : BlacklistReason_enum::BR_ENEMY_NORMAL;
 						// pointers scare me..
 					}
@@ -785,10 +785,10 @@ void CNavBot::UpdateEnemyBlacklist(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, in
 				(*mToLoop)[pPlayer].push_back(&tArea);
 
 				// Just slightly dangerous, only mark as such if it's clear
-				if (flDist >= pow(flFullDangerDist, 2) && (Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::SafeCapping || F::NavEngine.current_priority != capture))
+				if (flDist >= pow(flFullDangerDist, 2) && (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::SafeCapping || F::NavEngine.current_priority != capture))
 				{
 					(*mToMark)[&tArea]++;
-					if ((*mToMark)[&tArea] < Vars::Misc::Movement::NavBot::BlacklistSlightDangerLimit.Value)
+					if ((*mToMark)[&tArea] < Vars::NavEng::NavBot::BlacklistSlightDangerLimit.Value)
 						continue;
 				}
 				(*F::NavEngine.getFreeBlacklist())[&tArea] = bDormant ? BlacklistReason_enum::BR_ENEMY_DORMANT : BlacklistReason_enum::BR_ENEMY_NORMAL;
@@ -927,7 +927,7 @@ bool CNavBot::RunReload(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	if (!G::Reloading && pWeapon->m_iClip1())
 		return false;
 
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::StalkEnemies))
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::StalkEnemies))
 		return false;
 
 	// Too high priority, so don't try
@@ -978,7 +978,7 @@ bool CNavBot::RunReload(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 
 slots CNavBot::GetReloadWeaponSlot(CTFPlayer* pLocal, ClosestEnemy_t tClosestEnemy)
 {
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::ReloadWeapons))
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::ReloadWeapons))
 		return slots();
 
 	// Priority too high
@@ -1030,7 +1030,7 @@ slots CNavBot::GetReloadWeaponSlot(CTFPlayer* pLocal, ClosestEnemy_t tClosestEne
 bool CNavBot::RunSafeReload(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
 	static Timer tReloadrunCooldown{};
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::ReloadWeapons) || !m_eLastReloadSlot && !G::Reloading)
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::ReloadWeapons) || !m_eLastReloadSlot && !G::Reloading)
 	{
 		if (F::NavEngine.current_priority == run_safe_reload)
 			F::NavEngine.cancelPath();
@@ -1105,7 +1105,7 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	constexpr int MAX_STAYNEAR_CHECKS_CLOSE = 2;
 
 	// Stay near is off
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::StalkEnemies))
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::StalkEnemies))
 	{
 		iStayNearTargetIdx = -1;
 		return false;
@@ -1368,11 +1368,11 @@ bool CNavBot::SnipeSentries(CTFPlayer* pLocal)
 	static Timer tInvalidTargetTimer{};
 	static int iPreviousTargetIdx = -1;
 
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::TargetSentries))
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::TargetSentries))
 		return false;
 
 	// Make sure we don't try to do it on shortrange classes unless specified
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::TargetSentriesLowRange)
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::TargetSentriesLowRange)
 		&& (pLocal->m_iClass() == TF_CLASS_SCOUT || pLocal->m_iClass() == TF_CLASS_PYRO))
 		return false;
 
@@ -1620,7 +1620,7 @@ std::optional<Vector> CNavBot::GetCtfGoal(CTFPlayer* pLocal, int iOurTeam, int i
 			return F::FlagController.GetSpawnPosition(iOurTeam);
 		}
 		// Assist with capturing
-		else if (Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::HelpCaptureObjectives)
+		else if (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::HelpCaptureObjectives)
 		{
 			if (ShouldAssist(pLocal, iCarrierIdx))
 			{
@@ -1843,7 +1843,7 @@ std::optional<Vector> CNavBot::GetDoomsdayGoal(CTFPlayer* pLocal, int iOurTeam, 
 				}
 
 				// If enemies are near the rocket, stay back a bit until teammates can help
-				if (bEnemiesNearRocket && (Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::DefendObjectives))
+				if (bEnemiesNearRocket && (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::DefendObjectives))
 				{
 					// Find a safer approach path or wait for teammates
 					auto vPathToRocket = *vRocket - pLocal->GetAbsOrigin();
@@ -1863,7 +1863,7 @@ std::optional<Vector> CNavBot::GetDoomsdayGoal(CTFPlayer* pLocal, int iOurTeam, 
 			}
 		}
 		// Help friendly carrier
-		else if (Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::HelpCaptureObjectives)
+		else if (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::HelpCaptureObjectives)
 		{
 			if (ShouldAssist(pLocal, iCarrierIdx))
 			{
@@ -1958,7 +1958,7 @@ bool CNavBot::CaptureObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	static Timer tCaptureTimer;
 	static Vector vPreviousTarget;
 
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::CaptureObjectives))
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::CaptureObjectives))
 		return false;
 
 	if (const auto& pGameRules = I::TFGameRules())
@@ -2054,7 +2054,7 @@ bool CNavBot::Roam(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		return false;
 
 	// Defend our objective if possible
-	if (Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::DefendObjectives)
+	if (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::DefendObjectives)
 	{
 		int iEnemyTeam = pLocal->m_iTeamNum() == TF_TEAM_BLUE ? TF_TEAM_RED : TF_TEAM_BLUE;
 
@@ -2215,8 +2215,8 @@ bool CNavBot::Roam(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 // Check if a position is safe from stickies and projectiles
 static bool IsPositionSafe(Vector vPos, int iLocalTeam)
 {
-	if (!(Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::Stickies) &&
-		!(Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::Projectiles))
+	if (!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Stickies) &&
+		!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Projectiles))
 		return true;
 
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::WORLD_PROJECTILES))
@@ -2226,25 +2226,25 @@ static bool IsPositionSafe(Vector vPos, int iLocalTeam)
 
 		auto iClassId = pEntity->GetClassID();
 		// Check for stickies
-		if (Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::Stickies && iClassId == ETFClassID::CTFGrenadePipebombProjectile)
+		if (Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Stickies && iClassId == ETFClassID::CTFGrenadePipebombProjectile)
 		{
 			// Skip non-sticky projectiles
 			if (pEntity->As<CTFGrenadePipebombProjectile>()->m_iType() != TF_GL_MODE_REMOTE_DETONATE)
 				continue;
 
 			float flDist = pEntity->m_vecOrigin().DistToSqr(vPos);
-			if (flDist < pow(Vars::Misc::Movement::NavBot::StickyDangerRange.Value, 2))
+			if (flDist < pow(Vars::NavEng::NavBot::StickyDangerRange.Value, 2))
 				return false;
 		}
 
 		// Check for rockets and pipes
-		if (Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::Projectiles)
+		if (Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Projectiles)
 		{
 			if (iClassId == ETFClassID::CTFProjectile_Rocket ||
 				(iClassId == ETFClassID::CTFGrenadePipebombProjectile && pEntity->As<CTFGrenadePipebombProjectile>()->m_iType() == TF_GL_MODE_REGULAR))
 			{
 				float flDist = pEntity->m_vecOrigin().DistToSqr(vPos);
-				if (flDist < pow(Vars::Misc::Movement::NavBot::ProjectileDangerRange.Value, 2))
+				if (flDist < pow(Vars::NavEng::NavBot::ProjectileDangerRange.Value, 2))
 					return false;
 			}
 		}
@@ -2254,8 +2254,8 @@ static bool IsPositionSafe(Vector vPos, int iLocalTeam)
 
 bool CNavBot::EscapeProjectiles(CTFPlayer* pLocal)
 {
-	if (!(Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::Stickies) &&
-		!(Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::Projectiles))
+	if (!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Stickies) &&
+		!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Projectiles))
 		return false;
 
 	// Don't interrupt higher priority tasks
@@ -2312,11 +2312,11 @@ bool CNavBot::EscapeProjectiles(CTFPlayer* pLocal)
 
 bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 {
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::EscapeDanger))
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::EscapeDanger))
 		return false;
 
 	// Don't escape while we have the intel
-	if (Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::DontEscapeDangerIntel && F::GameObjectiveController.m_eGameMode == TF_GAMETYPE_CTF)
+	if (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::DontEscapeDangerIntel && F::GameObjectiveController.m_eGameMode == TF_GAMETYPE_CTF)
 	{
 		auto iFlagCarrierIdx = F::FlagController.GetCarrier(pLocal->m_iTeamNum());
 		if (iFlagCarrierIdx == pLocal->entindex())
@@ -2555,8 +2555,8 @@ bool CNavBot::EscapeSpawn(CTFPlayer* pLocal)
 
 slots CNavBot::GetBestSlot(CTFPlayer* pLocal, slots eActiveSlot, ClosestEnemy_t tClosestEnemy)
 {
-	if (Vars::Misc::Movement::NavBot::WeaponSlot.Value != Vars::Misc::Movement::NavBot::WeaponSlotEnum::Best)
-		return static_cast<slots>(Vars::Misc::Movement::NavBot::WeaponSlot.Value - 1);
+	if (Vars::NavEng::NavBot::WeaponSlot.Value != Vars::NavEng::NavBot::WeaponSlotEnum::Best)
+		return static_cast<slots>(Vars::NavEng::NavBot::WeaponSlot.Value - 1);
 
 	if (pLocal && pLocal->IsAlive())
 	{
@@ -2724,7 +2724,7 @@ void CNavBot::UpdateSlot(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, ClosestEnemy
 	int iReloadSlot = GetReloadWeaponSlot(pLocal, tClosestEnemy);
 	m_eLastReloadSlot = static_cast<slots>(iReloadSlot);
 
-	int iNewSlot = iReloadSlot ? iReloadSlot : (Vars::Misc::Movement::NavBot::WeaponSlot.Value ? GetBestSlot(pLocal, static_cast<slots>(m_iCurrentSlot), tClosestEnemy) : -1);
+	int iNewSlot = iReloadSlot ? iReloadSlot : (Vars::NavEng::NavBot::WeaponSlot.Value ? GetBestSlot(pLocal, static_cast<slots>(m_iCurrentSlot), tClosestEnemy) : -1);
 	if (iNewSlot > -1)
 	{
 		auto sCommand = "slot" + std::to_string(iNewSlot);
@@ -2739,14 +2739,14 @@ void CNavBot::AutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 	static bool bShouldClearCache = false;
 	static Timer tScopeTimer{};
 	bool bIsClassic = pWeapon->GetWeaponID() == TF_WEAPON_SNIPERRIFLE_CLASSIC;
-	if (!Vars::Misc::Movement::NavBot::AutoScope.Value || pWeapon->GetWeaponID() != TF_WEAPON_SNIPERRIFLE && !bIsClassic && pWeapon->GetWeaponID() != TF_WEAPON_SNIPERRIFLE_DECAP)
+	if (!Vars::NavEng::NavBot::AutoScope.Value || pWeapon->GetWeaponID() != TF_WEAPON_SNIPERRIFLE && !bIsClassic && pWeapon->GetWeaponID() != TF_WEAPON_SNIPERRIFLE_DECAP)
 	{
 		bKeep = false;
 		m_mAutoScopeCache.clear();
 		return;
 	}
 
-	if (!Vars::Misc::Movement::NavBot::AutoScopeUseCachedResults.Value)
+	if (!Vars::NavEng::NavBot::AutoScopeUseCachedResults.Value)
 		bShouldClearCache = true;
 
 	if (bShouldClearCache)
@@ -2763,7 +2763,7 @@ void CNavBot::AutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 		{
 			if (!(pCmd->buttons & IN_ATTACK))
 				pCmd->buttons |= IN_ATTACK;
-			if (tScopeTimer.Check(Vars::Misc::Movement::NavBot::AutoScopeCancelTime.Value)) // cancel classic charge
+			if (tScopeTimer.Check(Vars::NavEng::NavBot::AutoScopeCancelTime.Value)) // cancel classic charge
 				pCmd->buttons |= IN_JUMP;
 		}
 		if (!pLocal->OnSolid() && !(pCmd->buttons & IN_ATTACK))
@@ -2775,7 +2775,7 @@ void CNavBot::AutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 		{
 			if (pLocal->InCond(TF_COND_ZOOMED))
 			{
-				if (tScopeTimer.Check(Vars::Misc::Movement::NavBot::AutoScopeCancelTime.Value))
+				if (tScopeTimer.Check(Vars::NavEng::NavBot::AutoScopeCancelTime.Value))
 				{
 					bKeep = false;
 					pCmd->buttons |= IN_ATTACK2;
@@ -2857,13 +2857,13 @@ void CNavBot::AutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 			return false;
 		};
 
-	bool bSimple = Vars::Misc::Movement::NavBot::AutoScope.Value == Vars::Misc::Movement::NavBot::AutoScopeEnum::Simple;
+	bool bSimple = Vars::NavEng::NavBot::AutoScope.Value == Vars::NavEng::NavBot::AutoScopeEnum::Simple;
 
 	int iMaxTicks = TIME_TO_TICKS(0.5f);
 	PlayerStorage tStorage;
 	for (auto [pEnemy, _] : vEnemiesSorted)
 	{
-		int iEntIndex = Vars::Misc::Movement::NavBot::AutoScopeUseCachedResults.Value ? pEnemy->entindex() : -1;
+		int iEntIndex = Vars::NavEng::NavBot::AutoScopeUseCachedResults.Value ? pEnemy->entindex() : -1;
 		if (m_mAutoScopeCache.contains(iEntIndex))
 		{
 			if (m_mAutoScopeCache[iEntIndex])
@@ -2936,7 +2936,7 @@ bool IsWeaponValidForDT(CTFWeaponBase* pWeapon)
 void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
 	static Timer tDoubletapRecharge{};
-	if (!Vars::Misc::Movement::NavBot::Enabled.Value || !Vars::Misc::Movement::NavEngine::Enabled.Value || !F::NavEngine.isReady())
+	if (!Vars::NavEng::NavBot::Enabled.Value || !Vars::NavEng::NavEngine::Enabled.Value || !F::NavEngine.isReady())
 	{
 		m_iStayNearTargetIdx = -1;
 		m_mAutoScopeCache.clear();
@@ -2959,12 +2959,12 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 
 	UpdateLocalBotPositions(pLocal);
 	//Recharge doubletap every n seconds
-	if (Vars::Misc::Movement::NavBot::RechargeDT.Value && IsWeaponValidForDT(pWeapon))
+	if (Vars::NavEng::NavBot::RechargeDT.Value && IsWeaponValidForDT(pWeapon))
 	{
 		if (!F::Ticks.m_bRechargeQueue &&
-			(Vars::Misc::Movement::NavBot::RechargeDT.Value != Vars::Misc::Movement::NavBot::RechargeDTEnum::WaitForFL || !Vars::Fakelag::Fakelag.Value || !F::FakeLag.m_iGoal) &&
+			(Vars::NavEng::NavBot::RechargeDT.Value != Vars::NavEng::NavBot::RechargeDTEnum::WaitForFL || !Vars::Fakelag::Fakelag.Value || !F::FakeLag.m_iGoal) &&
 			G::Attacking != 1 &&
-			(F::Ticks.m_iShiftedTicks < F::Ticks.m_iShiftedGoal) && tDoubletapRecharge.Check(Vars::Misc::Movement::NavBot::RechargeDTDelay.Value))
+			(F::Ticks.m_iShiftedTicks < F::Ticks.m_iShiftedGoal) && tDoubletapRecharge.Check(Vars::NavEng::NavBot::RechargeDTDelay.Value))
 			F::Ticks.m_bRechargeQueue = true;
 		else if (F::Ticks.m_iShiftedTicks >= F::Ticks.m_iShiftedGoal)
 			tDoubletapRecharge.Update();
@@ -3228,7 +3228,7 @@ std::optional<Vector> CNavBot::GetFormationOffset(CTFPlayer* pLocal, int positio
 
 bool CNavBot::MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
-	if (!(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::GroupWithOthers))
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::GroupWithOthers))
 		return false;
 		
 	// UpdateLocalBotPositions is called from Run(), so we don't need to call it here

@@ -25,7 +25,7 @@ bool CNavParser::IsSetupTime()
 {
 	static Timer tCheckTimer{};
 	static bool bSetupTime = false;
-	if (Vars::Misc::Movement::NavEngine::PathInSetup.Value)
+	if (Vars::NavEng::NavEngine::PathInSetup.Value)
 		return false;
 
 	auto pLocal = H::Entities.GetLocal();
@@ -207,7 +207,7 @@ void CNavParser::Map::updateIgnores()
 	// Clear the blacklist
 	F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_SENTRY));
 	F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_INVULN));
-	if (Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::Players)
+	if (Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Players)
 	{
 		for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
 		{
@@ -251,7 +251,7 @@ void CNavParser::Map::updateIgnores()
 		}
 	}
 
-	if (Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::Sentries)
+	if (Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Sentries)
 	{
 		for (auto pEntity : H::Entities.GetGroup(EGroupType::BUILDINGS_ENEMIES))
 		{
@@ -344,8 +344,8 @@ void CNavParser::Map::updateIgnores()
 		}
 	}
 
-	auto stickytimestamp = TICKCOUNT_TIMESTAMP(Vars::Misc::Movement::NavEngine::StickyIgnoreTime.Value);
-	if (Vars::Misc::Movement::NavBot::Blacklist.Value & Vars::Misc::Movement::NavBot::BlacklistEnum::Stickies)
+	auto stickytimestamp = TICKCOUNT_TIMESTAMP(Vars::NavEng::NavEngine::StickyIgnoreTime.Value);
+	if (Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Stickies)
 	{
 		for (auto pEntity : H::Entities.GetGroup(EGroupType::WORLD_PROJECTILES))
 		{
@@ -553,7 +553,7 @@ NavPoints CNavParser::determinePoints(CNavArea* current, CNavArea* next)
 	}
 
 	// If safepathing is enabled, adjust points to stay more centered and avoid corners
-	if (Vars::Misc::Movement::NavEngine::SafePathing.Value)
+	if (Vars::NavEng::NavEngine::SafePathing.Value)
 	{
 		// Move points more towards the center of the areas
 		Vector to_next = (next_center - area_center);
@@ -665,10 +665,10 @@ void CNavEngine::vischeckPath()
 {
 	static Timer vischeck_timer{};
 	// No crumbs to check, or vischeck timer should not run yet, bail.
-	if (crumbs.size() < 2 || !vischeck_timer.Run(Vars::Misc::Movement::NavEngine::VischeckTime.Value))
+	if (crumbs.size() < 2 || !vischeck_timer.Run(Vars::NavEng::NavEngine::VischeckTime.Value))
 		return;
 
-	const auto timestamp = TICKCOUNT_TIMESTAMP(Vars::Misc::Movement::NavEngine::VischeckCacheTime.Value);
+	const auto timestamp = TICKCOUNT_TIMESTAMP(Vars::NavEng::NavEngine::VischeckCacheTime.Value);
 
 	// Iterate all the crumbs
 	for (auto it = crumbs.begin(), next = it + 1; next != crumbs.end(); it++, next++)
@@ -754,19 +754,19 @@ void CNavEngine::updateStuckTime()
 		return;
 
 	// We're stuck, add time to connection
-	if (inactivity.Check(Vars::Misc::Movement::NavEngine::StuckTime.Value / 2))
+	if (inactivity.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2))
 	{
 		std::pair<CNavArea*, CNavArea*> key = last_crumb.navarea ? std::pair<CNavArea *, CNavArea *>(last_crumb.navarea, crumbs[0].navarea) : std::pair<CNavArea *, CNavArea *>(crumbs[0].navarea, crumbs[0].navarea);
 
 		// Expires in 10 seconds
-		map->connection_stuck_time[key].expire_tick = TICKCOUNT_TIMESTAMP(Vars::Misc::Movement::NavEngine::StuckExpireTime.Value);
+		map->connection_stuck_time[key].expire_tick = TICKCOUNT_TIMESTAMP(Vars::NavEng::NavEngine::StuckExpireTime.Value);
 		// Stuck for one tick
 		map->connection_stuck_time[key].time_stuck += 1;
 
 		// We are stuck for too long, blastlist node for a while and repath
-		if (map->connection_stuck_time[key].time_stuck > TIME_TO_TICKS(Vars::Misc::Movement::NavEngine::StuckDetectTime.Value))
+		if (map->connection_stuck_time[key].time_stuck > TIME_TO_TICKS(Vars::NavEng::NavEngine::StuckDetectTime.Value))
 		{
-			const auto expire_tick = TICKCOUNT_TIMESTAMP(Vars::Misc::Movement::NavEngine::StuckBlacklistTime.Value);
+			const auto expire_tick = TICKCOUNT_TIMESTAMP(Vars::NavEng::NavEngine::StuckBlacklistTime.Value);
 			SDK::Output("CNavEngine", std::format("Stuck for too long, blacklisting the node (expires on tick: {})", expire_tick).c_str(), { 255, 131, 131 }, Vars::Debug::Logging.Value, Vars::Debug::Logging.Value);
 			map->vischeck_cache[key].expire_tick = expire_tick;
 			map->vischeck_cache[key].vischeck_state = 0;
@@ -811,7 +811,7 @@ void CNavEngine::Reset(bool bForced)
 bool CNavEngine::isReady(bool bRoundCheck)
 {
 	static Timer tRestartTimer{};
-	if (!Vars::Misc::Movement::NavEngine::Enabled.Value)
+	if (!Vars::NavEng::NavEngine::Enabled.Value)
 	{
 		tRestartTimer.Update();
 		return false;
@@ -838,7 +838,7 @@ bool CNavEngine::isReady(bool bRoundCheck)
 void CNavEngine::Run(CUserCmd* pCmd)
 {
 	static bool bWasOn = false;
-	if (!Vars::Misc::Movement::NavEngine::Enabled.Value)
+	if (!Vars::NavEng::NavEngine::Enabled.Value)
 		bWasOn = false;
 	else if (I::EngineClient->IsInGame() && !bWasOn)
 	{
@@ -857,7 +857,7 @@ void CNavEngine::Run(CUserCmd* pCmd)
 	}
 
 	if ((current_priority == engineer && ((!Vars::Aimbot::Melee::AutoEngie::AutoRepair.Value && !Vars::Aimbot::Melee::AutoEngie::AutoUpgrade.Value) || pLocal->m_iClass() != TF_CLASS_ENGINEER)) ||
-		(current_priority == capture && !(Vars::Misc::Movement::NavBot::Preferences.Value & Vars::Misc::Movement::NavBot::PreferencesEnum::CaptureObjectives)))
+		(current_priority == capture && !(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::CaptureObjectives)))
 	{
 		cancelPath();
 		return;
@@ -874,7 +874,7 @@ void CNavEngine::Run(CUserCmd* pCmd)
 		return;
 	}
 
-	if (Vars::Misc::Movement::NavEngine::VischeckEnabled.Value && !F::Ticks.m_bWarp && !F::Ticks.m_bDoubletap)
+	if (Vars::NavEng::NavEngine::VischeckEnabled.Value && !F::Ticks.m_bWarp && !F::Ticks.m_bDoubletap)
 		vischeckPath();
 
 	checkBlacklist();
@@ -1021,7 +1021,7 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	}
 	// If we make any progress at all, reset this
 	// If we spend way too long on this crumb, ignore the logic below
-	else if (!time_spent_on_crumb.Check(Vars::Misc::Movement::NavEngine::StuckDetectTime.Value))
+	else if (!time_spent_on_crumb.Check(Vars::NavEng::NavEngine::StuckDetectTime.Value))
 	{
 		// 44.0f -> Revved brass beast, do not use z axis as jumping counts towards that. Yes this will mean long falls will trigger it, but that is not really bad.
 		if (!vel.Get2D().IsZero(40.0f))
@@ -1063,7 +1063,7 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 						if (height_diff > pLocal->m_flStepSize() && height_diff <= PLAYER_JUMP_HEIGHT)
 							bShouldJump = true;
 						// Also jump if we're stuck and it might help
-						else if (inactivity.Check(Vars::Misc::Movement::NavEngine::StuckTime.Value / 2))
+						else if (inactivity.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2))
 						{
 							auto pLocalNav = map->findClosestNavSquare(pLocal->GetAbsOrigin());
 							if (pLocalNav && !(pLocalNav->m_attributeFlags & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS)))
@@ -1101,17 +1101,17 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	if (G::Attacking != 1)
 	{
 		// Look at path (nav spin) (smooth nav)
-		switch (Vars::Misc::Movement::NavEngine::LookAtPath.Value)
+		switch (Vars::NavEng::NavEngine::LookAtPath.Value)
 		{
-		case Vars::Misc::Movement::NavEngine::LookAtPathEnum::Off:
+		case Vars::NavEng::NavEngine::LookAtPathEnum::Off:
 			break;
-		case Vars::Misc::Movement::NavEngine::LookAtPathEnum::Silent:
+		case Vars::NavEng::NavEngine::LookAtPathEnum::Silent:
 			if (G::AntiAim)
 				break;
 			[[fallthrough]];
-		case Vars::Misc::Movement::NavEngine::LookAtPathEnum::Plain:
+		case Vars::NavEng::NavEngine::LookAtPathEnum::Plain:
 		default:
-			LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, Vars::Misc::Movement::NavEngine::LookAtPath.Value == Vars::Misc::Movement::NavEngine::LookAtPathEnum::Silent);
+			LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, Vars::NavEng::NavEngine::LookAtPath.Value == Vars::NavEng::NavEngine::LookAtPathEnum::Silent);
 			break;
 		}
 	}

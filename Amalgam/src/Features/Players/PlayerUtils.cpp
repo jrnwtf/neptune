@@ -79,7 +79,7 @@ void CPlayerlistUtils::ProcessSpecialCharsInName(uint32_t friendsID, const std::
 	if (!friendsID || name.empty())
 		return;
 
-	if (ContainsSpecialChars(name) && !HasTags(friendsID))
+	if (Vars::CheaterDetection::AutoIgnoreThai.Value && ContainsSpecialChars(name) && !HasTags(friendsID))
 	{
 		AddTag(friendsID, TagToIndex(IGNORED_TAG), true, name);
 		SDK::Output("Amalgam", std::format("Auto-ignored player with special characters: {}", name).c_str(), { 255, 100, 100, 255 });
