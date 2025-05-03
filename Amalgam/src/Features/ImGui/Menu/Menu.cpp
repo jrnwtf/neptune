@@ -4170,7 +4170,33 @@ void CMenu::MenuNavEng(int iTab)
 						FSlider(Vars::NavEng::NavEngine::VischeckCacheTime, FSliderEnum::Right);
 					} EndSection();
 				}
+				if (Section("Followbot", 8))
+				{
+					PushTransparent(!FGet(Vars::NavEng::NavEngine::Enabled));
+					FToggle(Vars::NavEng::FollowBot::Enabled);
+					PushTransparent(!FGet(Vars::NavEng::FollowBot::Enabled) || !FGet(Vars::NavEng::NavEngine::Enabled));
+					FToggle(Vars::NavEng::FollowBot::OnlyFriends, FToggleEnum::Left);
+					FToggle(Vars::NavEng::FollowBot::OnlyParty, FToggleEnum::Right);
+					FToggle(Vars::NavEng::FollowBot::FollowEnemies, FToggleEnum::Left);
+					FToggle(Vars::NavEng::FollowBot::StickToTarget, FToggleEnum::Right);
+					FToggle(Vars::NavEng::FollowBot::SmartSelection, FToggleEnum::Left);
+					FSlider(Vars::NavEng::FollowBot::Distance, FSliderEnum::Left);
+					FDropdown(Vars::NavEng::FollowBot::PositionMode, FSliderEnum::Right);
+					PopTransparent();
+					PopTransparent();
+				} EndSection();
+				if (Section("Followbot only", 8))
+				{
+					FText("put SteamID32 to follow only that player");
+					// a temporary string to handle the input text
+					static std::string sTempFollowID = FGet(Vars::NavEng::FollowBot::FollowID);
+					if (FInputText("SteamID32", sTempFollowID))
+					{
+						FSet(Vars::NavEng::FollowBot::FollowID, sTempFollowID);
+					}
+				} EndSection();
 			}
+			
 
 			/* Column 2 */
 			TableNextColumn();
@@ -4226,31 +4252,6 @@ void CMenu::MenuNavEng(int iTab)
 						FTooltip("should double the performance of the movesim method by only checking every 2nd tick");
 					} EndSection();
 				}
-				if (Section("Followbot", 8))
-				{
-					PushTransparent(!FGet(Vars::NavEng::NavEngine::Enabled));
-					FToggle(Vars::NavEng::FollowBot::Enabled);
-					PushTransparent(!FGet(Vars::NavEng::FollowBot::Enabled) || !FGet(Vars::NavEng::NavEngine::Enabled));
-					FToggle(Vars::NavEng::FollowBot::OnlyFriends, FToggleEnum::Left);
-					FToggle(Vars::NavEng::FollowBot::OnlyParty, FToggleEnum::Right);
-					FToggle(Vars::NavEng::FollowBot::FollowEnemies, FToggleEnum::Left);
-					FToggle(Vars::NavEng::FollowBot::StickToTarget, FToggleEnum::Right);
-					FToggle(Vars::NavEng::FollowBot::SmartSelection, FToggleEnum::Left);
-					FSlider(Vars::NavEng::FollowBot::Distance, FSliderEnum::Left);
-					FDropdown(Vars::NavEng::FollowBot::PositionMode, FSliderEnum::Right);
-					PopTransparent();
-					PopTransparent();
-				} EndSection();
-				if (Section("Followbot only", 8))
-				{
-					FText("put SteamID32 to follow only that player");
-					// a temporary string to handle the input text
-					static std::string sTempFollowID = FGet(Vars::NavEng::FollowBot::FollowID);
-					if (FInputText("SteamID32", sTempFollowID))
-					{
-						FSet(Vars::NavEng::FollowBot::FollowID, sTempFollowID);
-					}
-				} EndSection();
 			}
 			EndTable();
 		}
