@@ -1609,6 +1609,26 @@ void CMenu::MenuMisc(int iTab)
 						FTooltip("should double the performance of the movesim method by only checking every 2nd tick");
 					} EndSection();
 				}
+				if (Section("FollowBot", 8))
+				{
+					PushTransparent(!FGet(Vars::Misc::Movement::NavEngine::Enabled));
+					FToggle(Vars::Misc::Movement::FollowBot::Enabled);
+					PushTransparent(!FGet(Vars::Misc::Movement::FollowBot::Enabled) || !FGet(Vars::Misc::Movement::NavEngine::Enabled));
+					FToggle(Vars::Misc::Movement::FollowBot::OnlyFriends, FToggleEnum::Left);
+					FToggle(Vars::Misc::Movement::FollowBot::OnlyParty, FToggleEnum::Right);
+					FToggle(Vars::Misc::Movement::FollowBot::FollowEnemies, FToggleEnum::Left);
+					FSlider(Vars::Misc::Movement::FollowBot::Distance, FSliderEnum::Left);
+					FDropdown(Vars::Misc::Movement::FollowBot::PositionMode, FSliderEnum::Right);
+					FText("put SteamID32 to follow only that player");
+					// a temporary string to handle the input text
+					static std::string sTempFollowID = FGet(Vars::Misc::Movement::FollowBot::FollowID);
+					if (FInputText("SteamID32", sTempFollowID))
+					{
+						FSet(Vars::Misc::Movement::FollowBot::FollowID, sTempFollowID);
+					}
+					PopTransparent();
+					PopTransparent();
+				} EndSection();
 				if (Section("Mann vs. Machine", 8))
 				{
 					FToggle(Vars::Misc::MannVsMachine::InstantRespawn, FToggleEnum::Left);

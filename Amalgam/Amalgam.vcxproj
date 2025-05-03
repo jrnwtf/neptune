@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="DebugAVX2|Win32">
@@ -1065,6 +1065,7 @@
     <ClCompile Include="src\Features\ImGui\Menu\Menu.cpp" />
     <ClCompile Include="src\Features\Misc\AutoVote\AutoVote.cpp" />
     <ClCompile Include="src\Features\NavBot\NavBot.cpp" />
+    <ClCompile Include="src\Features\NavBot\FollowBot.cpp" />
     <ClCompile Include="src\Features\NavBot\NavEngine\Controllers\Controller.cpp" />
     <ClCompile Include="src\Features\NavBot\NavEngine\Controllers\CPController\CPController.cpp" />
     <ClCompile Include="src\Features\NavBot\NavEngine\Controllers\FlagController\FlagController.cpp" />
@@ -1384,6 +1385,7 @@
     <ClInclude Include="src\Features\Misc\AutoVote\AutoVote.h" />
     <ClInclude Include="src\Features\Misc\Misc.h" />
     <ClInclude Include="src\Features\NavBot\NavBot.h" />
+    <ClInclude Include="src\Features\NavBot\FollowBot.h" />
     <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\Controller.h" />
     <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\CPController\CPController.h" />
     <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\FlagController\FlagController.h" />

@@ -15,6 +15,7 @@
 #include "../Features/NavBot/NavEngine/Controllers/Controller.h"
 #include "../Features/NavBot/NavEngine/NavEngine.h"
 #include "../Features/NavBot/NavBot.h"
+#include "../Features/NavBot/FollowBot.h"
 #include "../Features/AutoJoin/AutoJoin.h"
 
 #define MATH_EPSILON (1.f / 16)
@@ -196,6 +197,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	F::EnginePrediction.Start(pLocal, pCmd);
 	F::Aimbot.Run(pLocal, pWeapon, pCmd);
 	F::NavBot.Run(pLocal, pWeapon, pCmd);
+	F::FollowBot.Run(pLocal, pWeapon, pCmd);
 	F::NavEngine.Run(pCmd);
 	F::EnginePrediction.End(pLocal, pCmd);
 

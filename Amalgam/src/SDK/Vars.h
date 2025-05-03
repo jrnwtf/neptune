@@ -1041,6 +1041,18 @@ namespace Vars
 				CVar(AutoScopeUseCachedResults, "Auto scope use cached results", true, NOSAVE | DEBUGVAR);
 			SUBNAMESPACE_END(NavBot);
 
+			SUBNAMESPACE_BEGIN(FollowBot)
+				CVar(Enabled, VA_LIST("Enabled", "FollowBot enabled"), false);
+				CVar(OnlyFriends, "Only follow friends", false);
+				CVar(OnlyParty, "Only follow party members", false);
+				CVar(FollowEnemies, "Follow enemies", false);
+				CVar(FollowID, "Follow ID", std::string(""));
+				CVar(Distance, "Follow distance", 150, SLIDER_MIN, 50, 300, 25);
+				CVarEnum(PositionMode, "Position mode", 0, NONE, nullptr,
+					VA_LIST("Behind(buggy)", "Side(buggy)", "Adaptive"),
+					Behind, Side, Adaptive);
+			SUBNAMESPACE_END(FollowBot);
+
 			CVar(TimingOffset, "Timing offset", 0, NOSAVE | DEBUGVAR, 0, 3);
 			CVar(ChokeCount, "Choke count", 1, NOSAVE | DEBUGVAR, 0, 3);
 			CVar(ApplyAbove, "Apply timing offset above", 0, NOSAVE | DEBUGVAR, 0, 8);
