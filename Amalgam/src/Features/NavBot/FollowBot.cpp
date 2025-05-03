@@ -246,10 +246,8 @@ std::optional<Vector> CFollowBot::GetFollowPosition(CTFPlayer* pLocal, CTFPlayer
 
 void CFollowBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
-
     if (!Vars::NavEng::FollowBot::Enabled.Value)
     {
-
         if (m_bIsFollowing)
         {
             Reset();
@@ -257,17 +255,14 @@ void CFollowBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
         return;
     }
 
-
     if (!pLocal->IsAlive() || !F::NavEngine.isReady(true))
     {
         return;
     }
 
-
     int iTargetIndex = GetTargetIndex(pLocal);
     if (iTargetIndex == -1)
     {
-
         if (m_bIsFollowing)
         {
             F::NavEngine.cancelPath();
@@ -284,31 +279,76 @@ void CFollowBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
     if (!pPlayerTarget->IsAlive())
         return;
 
-
     auto vFollowPos = GetFollowPosition(pLocal, pPlayerTarget);
     if (!vFollowPos)
         return;
 
-
     if (vFollowPos->DistTo(pLocal->GetAbsOrigin()) < 50.0f)
         return;
-
-    // Update our path at a reasonable rate
-    bool bShouldUpdatePath = (I::GlobalVars->curtime - m_flLastPathUpdateTime > 0.5f);
+    
+    Vector vCurrentPos = pLocal->GetAbsOrigin();
+    
+    if (m_vLastPosition.IsZero())
+    {
+        m_vLastPosition = vCurrentPos;
+        m_StuckTimer.Update();
+        m_StuckDetectionTimer.Update();
+    }
+    
+    float flDistanceMoved = vCurrentPos.DistTo(m_vLastPosition);
+    
+    const float MIN_MOVEMENT = 20.0f;
+    
+    if (flDistanceMoved < MIN_MOVEMENT && F::NavEngine.isPathing())
+    {
+        if (m_StuckTimer.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2))
+        {
+            m_iStuckCount++;
+            
+            if (m_iStuckCount > TIME_TO_TICKS(Vars::NavEng::NavEngine::StuckDetectTime.Value))
+            {
+                m_bWasStuck = true;
+                
+                SDK::Output("CFollowBot", "Stuck detected, replanning path", { 255, 131, 131 }, 
+                           Vars::Debug::Logging.Value, Vars::Debug::Logging.Value);
+                
+                F::NavEngine.cancelPath();
+                
+                m_iStuckCount = 0;
+                m_StuckTimer.Update();
+                m_StuckDetectionTimer.Update();
+            }
+        }
+    }
+    else
+    {
+        m_iStuckCount = 0;
+        m_StuckTimer.Update();
+        m_bWasStuck = false;
+    }
+    
+    m_vLastPosition = vCurrentPos;
+    
+    bool bShouldUpdatePath = (I::GlobalVars->curtime - m_flLastPathUpdateTime > 0.5f) || m_bWasStuck;
     if (bShouldUpdatePath)
     {
-        // Follow with normal priority
         F::NavEngine.navTo(*vFollowPos, 5);
         m_flLastPathUpdateTime = I::GlobalVars->curtime;
+        m_bWasStuck = false;
     }
 }
 
 void CFollowBot::Reset()
 {
-    // Cancel the current path
     F::NavEngine.cancelPath();
     m_bIsFollowing = false;
     m_iTargetIndex = -1;
+    
+    m_StuckTimer.Update();
+    m_StuckDetectionTimer.Update();
+    m_vLastPosition = Vector();
+    m_iStuckCount = 0;
+    m_bWasStuck = false;
     m_flLastTargetTime = 0.0f;
     m_flLastPathUpdateTime = 0.0f;
 }
