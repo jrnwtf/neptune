@@ -857,7 +857,7 @@ int MicroPather::Solve(void* startNode, void* endNode, MP_VECTOR<void*>* path, f
     if (startNode == endNode)
         return START_END_SAME;
 
-    if (pathCache)
+    if (pathCache != nullptr)
     {
         int cacheResult = pathCache->Solve(startNode, endNode, path, cost);
         if (cacheResult == SOLVED || cacheResult == NO_SOLUTION)
