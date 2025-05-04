@@ -126,15 +126,7 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 		{
 			if (vischeck_cache[key].vischeck_state)
 			{
-				// Calculate direct distance (favors simpler paths)
-				const float directDistance = tConnection.area->m_center.DistTo(tArea.m_center);
-				
-				// Penalize areas that cause significant directional changes
-				float directionPenalty = 1.0f;
-				
-				// Calculate final cost (prioritizing direct paths)
-				const float cost = directDistance * directionPenalty;
-				
+				const float cost = tConnection.area->m_center.DistToSqr(tArea.m_center);
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
 			}
 		}
@@ -146,12 +138,7 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 			{
 				vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), 1 };
 
-				// Use direct distance for line-of-sight paths to strongly prefer straight paths
-				const float directDistance = points.next.DistTo(points.current);
-				
-				// Apply significant discount to direct paths with line of sight
-				const float cost = directDistance * 0.8f;
-				
+				const float cost = points.next.DistToSqr(points.current);
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
 			}
 			else
@@ -551,40 +538,67 @@ Vector CNavParser::handleDropdown(Vector current_pos, Vector next_pos)
 
 NavPoints CNavParser::determinePoints(CNavArea* current, CNavArea* next)
 {
-	// Get middle, end point for each area (they dont generate all permutoations)
-	Vector a, b, c, d;
-
-	a = current->m_center;
-	c = next->m_center;
-
-	// Calculate center - for direct paths, try to find the most direct path between areas
-	Vector current_center = a, next_center = c;
-	
+	auto area_center = current->m_center;
+	auto next_center = next->m_center;
 	// Gets a vector on the edge of the current area that is as close as possible to the center of the next area
 	auto area_closest = current->getNearestPoint(Vector2D(next_center.x, next_center.y));
 	// Do the same for the other area
-	auto next_closest = next->getNearestPoint(Vector2D(current_center.x, current_center.y));
+	auto next_closest = next->getNearestPoint(Vector2D(area_center.x, area_center.y));
 
 	// Use one of them as a center point, the one that is either x or y alligned with a center
 	// Of the areas. This will avoid walking into walls.
 	auto center_point = area_closest;
 
 	// Determine if alligned, if not, use the other one as the center point
-	if (center_point.x != current_center.x && center_point.y != current_center.y && center_point.x != next_center.x && center_point.y != next_center.y)
+	if (center_point.x != area_center.x && center_point.y != area_center.y && center_point.x != next_center.x && center_point.y != next_center.y)
 	{
 		center_point = next_closest;
 		// Use the point closest to next_closest on the "original" mesh for z
 		center_point.z = current->getNearestPoint(Vector2D(next_closest.x, next_closest.y)).z;
 	}
-	
+
+	// If safepathing is enabled, adjust points to stay more centered and avoid corners
+	if (Vars::NavEng::NavEngine::SafePathing.Value)
+	{
+		// Move points more towards the center of the areas
+		Vector to_next = (next_center - area_center);
+		to_next.z = 0.0f;
+		to_next.Normalize();
+
+		// Calculate center point as a weighted average between area centers
+		// Use a 60/40 split to favor the current area more
+		center_point = area_center + (next_center - area_center) * 0.4f;
+
+		// Add extra safety margin near corners
+		float corner_margin = PLAYER_WIDTH * 0.75f;
+
+		// Check if we're near a corner by comparing distances to area edges
+		bool near_corner = false;
+		Vector area_mins = current->m_nwCorner; // Northwest corner
+		Vector area_maxs = current->m_seCorner; // Southeast corner
+
+		if (center_point.x - area_mins.x < corner_margin ||
+			area_maxs.x - center_point.x < corner_margin ||
+			center_point.y - area_mins.y < corner_margin ||
+			area_maxs.y - center_point.y < corner_margin)
+		{
+			near_corner = true;
+		}
+
+		// If near corner, move point more towards center
+		if (near_corner)
+		{
+			center_point = center_point + (area_center - center_point).Normalized() * corner_margin;
+		}
+
+		// Ensure the point is within the current area
+		center_point = current->getNearestPoint(Vector2D(center_point.x, center_point.y));
+	}
+
 	// Nearest point to center on "next", used for height checks
 	auto center_next = next->getNearestPoint(Vector2D(center_point.x, center_point.y));
 
-	// Calculate midpoint along the direct line between area centers for even more direct paths
-	b = center_point;
-	d = next_center;
-
-	return NavPoints(a, b, center_next, d);
+	return NavPoints(area_center, center_point, center_next, next_center);
 }
 
 static Timer inactivity;
@@ -675,7 +689,7 @@ void CNavEngine::vischeckPath()
 		next_center.z += PLAYER_JUMP_HEIGHT;
 		
 		// Check if we can pass, if not, abort pathing and mark as bad
-		if (!F::NavParser.IsPlayerPassableNavigation(current_center, next_center, MASK_PLAYERSOLID))
+		if (!F::NavParser.IsPlayerPassableNavigation(current_center, next_center))
 		{
 			// Mark as invalid for a while
 			map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, -1 };
@@ -825,6 +839,104 @@ bool CNavEngine::isReady(bool bRoundCheck)
 	return true;
 }
 
+void CNavEngine::calculateLegitViewAngles(CTFPlayer* pLocal, CUserCmd* pCmd)
+{
+	if (!pLocal || !pCmd || !isPathing() || crumbs.empty())
+		return;
+	
+	QAngle currentViewAngles;
+	I::EngineClient->GetViewAngles(currentViewAngles);
+	Vector vLocalOrigin = pLocal->GetAbsOrigin();
+	Vector vLookTarget;
+	
+	size_t targetCrumbIndex = 0;
+	if (crumbs.size() > 2)
+		targetCrumbIndex = 2; // Look two crumbs ahead if possible
+	else if (crumbs.size() > 1)
+		targetCrumbIndex = 1; // Look one crumb ahead if possible
+	
+	vLookTarget = crumbs[targetCrumbIndex].vec;
+	
+	PlayerStorage tStorage;
+	F::MoveSim.Initialize(pLocal, tStorage, false);
+	if (!tStorage.m_bFailed)
+	{
+		for (int i = 0; i < 10; i++)
+		{
+			F::MoveSim.RunTick(tStorage);
+		}
+		
+		Vector vPredictedPos = tStorage.m_vPredictedOrigin;
+		Vector vDirection = (vLookTarget - vPredictedPos).Normalized();
+		vLookTarget = vPredictedPos + vDirection * 200.0f;
+	}
+
+	QAngle aimAngle;
+	Math::VectorAngles(vLookTarget - (vLocalOrigin + Vector(0, 0, pLocal->GetViewOffset().z)), aimAngle);
+	Math::ClampAngles(aimAngle);
+	
+	static Timer tVariationTimer;
+	static float flRandomYawOffset = 0.0f;
+	if (tVariationTimer.Check(inactivity.Check(1.0f) ? 0.3f : 1.0f)) // More frequent changes when stuck
+	{
+		flRandomYawOffset = SDK::RandomFloat(-5.0f, 5.0f);
+	}
+	aimAngle.y += flRandomYawOffset;
+	
+	float speed = inactivity.Check(1.0f) ? 3.0f : 5.0f;
+	F::NavParser.DoSlowAim(aimAngle, speed, currentViewAngles);
+	pCmd->viewangles = aimAngle;
+	float flYaw = DEG2RAD(pCmd->viewangles.y - currentViewAngles.y);
+	float flCos = cosf(flYaw);
+	float flSin = sinf(flYaw);
+	float flNewForward = (flCos * pCmd->forwardmove) - (flSin * pCmd->sidemove);
+	float flNewSide = (flSin * pCmd->forwardmove) + (flCos * pCmd->sidemove);
+	pCmd->forwardmove = flNewForward;
+	pCmd->sidemove = flNewSide;
+}
+
+void CNavEngine::calculateSimpleViewAngles(CTFPlayer* pLocal, CUserCmd* pCmd)
+{
+	if (!pLocal || !pCmd || !isPathing() || crumbs.empty())
+		return;
+	
+	QAngle currentViewAngles;
+	I::EngineClient->GetViewAngles(currentViewAngles);
+	Vector vLocalOrigin = pLocal->GetAbsOrigin();
+	Vector vLookTarget;
+	
+	size_t lookAheadIndex = std::min(size_t(1), crumbs.size() - 1);
+	vLookTarget = crumbs[lookAheadIndex].vec;
+	
+	static Timer tJitterTimer;
+	static Vector vJitter(0, 0, 0);
+	if (tJitterTimer.Check(0.8f))
+	{
+		vJitter = Vector(
+			SDK::RandomFloat(-15.0f, 15.0f),
+			SDK::RandomFloat(-15.0f, 15.0f),
+			0.0f
+		);
+	}
+	
+	vLookTarget += vJitter;
+	QAngle aimAngle;
+	Math::VectorAngles(vLookTarget - (vLocalOrigin + Vector(0, 0, pLocal->GetViewOffset().z)), aimAngle);
+	Math::ClampAngles(aimAngle);
+	float speed = inactivity.Check(1.0f) ? 3.0f : 5.0f;
+	F::NavParser.DoSlowAim(aimAngle, speed, currentViewAngles);
+	
+	pCmd->viewangles = aimAngle;
+	
+	float flYaw = DEG2RAD(pCmd->viewangles.y - currentViewAngles.y);
+	float flCos = cosf(flYaw);
+	float flSin = sinf(flYaw);
+	float flNewForward = (flCos * pCmd->forwardmove) - (flSin * pCmd->sidemove);
+	float flNewSide = (flSin * pCmd->forwardmove) + (flCos * pCmd->sidemove);
+	pCmd->forwardmove = flNewForward;
+	pCmd->sidemove = flNewSide;
+}
+
 bool CNavEngine::findNearestNavNode(CTFPlayer* pLocal)
 {
 	if (!pLocal || !pLocal->IsAlive() || !map || !isReady() || !I::EngineClient || !I::EngineClient->IsInGame())
@@ -933,21 +1045,170 @@ bool CanJumpIfScoped(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	return iWeaponID == TF_WEAPON_SNIPERRIFLE_CLASSIC ? !pWeapon->As<CTFSniperRifleClassic>()->m_bCharging() : !pLocal->InCond(TF_COND_ZOOMED);
 }
 
-static Vec3 LastAngles{};
+static bool g_bWasAimingLastFrame = false;
+static Vec3 g_vLastAimbotAngles{};
+static Vec3 g_vLastNavAngles{};
+static float g_flTransitionTime = 0.0f; // 0.0 = full NavBot, 1.0 = full Aimbot
 
-void LookAtPath(CUserCmd* pCmd, const Vec2 vDest, const Vec3 vLocalEyePos, bool bSilent)
+void LookAtPath(CUserCmd* pCmd, const Vec2 vDest, const Vec3 vLocalEyePos, bool bSilent, bool bLegit = false)
 {
-	Vec3 next{ vDest.x, vDest.y, vLocalEyePos.z };
-	next = Math::CalcAngle(vLocalEyePos, next);
-
-	const int aim_speed = 25; // how smooth nav is/ im cringing at this damn speed.
-	// activate nav spin and smoothen
+	static Vec3 LastAngles{};
+	static Vec3 TargetAngles{};
+	static Timer tRandomTimer{};
+	static Timer tLookAroundTimer{};
+	static Timer tLookChangeTimer{};
+	static Vec3 vRandomOffset{};
+	static bool bLookingAround = false;
+	static bool bNeedNewTarget = true;
+	static int iLookMode = 0; // 0 = path, 1 = left, 2 = right, 3 = up
+	
+	// Check if aiming is active
+	bool bIsAiming = G::Attacking == 1 || F::Aimbot.m_bRan || (pCmd->buttons & (IN_ATTACK | IN_ATTACK2));
+	
+	// If aimbot is active, don't modify angles at all
+	if (bIsAiming)
+		return;
+	
+	// Update transition state
+	if (bIsAiming != g_bWasAimingLastFrame)
+	{
+		// Just started aiming, save nav angles
+		if (bIsAiming)
+		{
+			g_vLastNavAngles = LastAngles.IsZero() ? pCmd->viewangles : LastAngles;
+		}
+		// Just stopped aiming, save aimbot angles
+		else
+		{
+			g_vLastAimbotAngles = pCmd->viewangles;
+		}
+		g_bWasAimingLastFrame = bIsAiming;
+	}
+	
+	// Update transition time
+	if (bIsAiming)
+	{
+		g_flTransitionTime = std::min(g_flTransitionTime + 0.15f, 1.0f); // Transition to aimbot faster
+	}
+	else
+	{
+		g_flTransitionTime = std::max(g_flTransitionTime - 0.08f, 0.0f); // Transition back to nav slower
+	}
+	if (g_flTransitionTime >= 1.0f || !Vars::NavEng::NavEngine::Enabled.Value)
+	{
+		return;
+	}
+	
+	Vec3 vPathAngle{ vDest.x, vDest.y, vLocalEyePos.z };
+	vPathAngle = Math::CalcAngle(vLocalEyePos, vPathAngle);
+	
+	if (bLegit)
+	{
+		if (tRandomTimer.Check(0.5f)) 
+		{
+			vRandomOffset = Vec3(
+				SDK::StdRandomFloat(-2.0f, 2.0f),
+				SDK::StdRandomFloat(-3.0f, 3.0f),
+				0.0f
+			);
+			tRandomTimer.Update();
+		}
+		
+		if (tLookAroundTimer.Check(SDK::StdRandomFloat(4.0f, 8.0f)))
+		{
+			bLookingAround = !bLookingAround;
+			
+			if (bLookingAround)
+			{
+				tLookChangeTimer.Update();
+				iLookMode = SDK::StdRandomInt(1, 3);
+				bNeedNewTarget = true;
+			}
+			
+			tLookAroundTimer.Update();
+		}
+		
+		if (bLookingAround && tLookChangeTimer.Check(SDK::StdRandomFloat(1.5f, 3.0f)))
+		{
+			iLookMode = SDK::StdRandomInt(1, 3);
+			tLookChangeTimer.Update();
+			bNeedNewTarget = true;
+		}
+	}
+	
+	if (bNeedNewTarget)
+	{
+		TargetAngles = vPathAngle;
+		
+		if (bLegit && bLookingAround)
+		{
+			switch (iLookMode)
+			{
+			case 1: // Look left
+				TargetAngles.y += SDK::StdRandomFloat(40.0f, 60.0f);
+				break;
+			case 2: // Look right
+				TargetAngles.y -= SDK::StdRandomFloat(40.0f, 60.0f);
+				break;
+			case 3: // Look up slightly
+				TargetAngles.x -= SDK::StdRandomFloat(5.0f, 15.0f);
+				TargetAngles.y += SDK::StdRandomFloat(-20.0f, 20.0f);
+				break;
+			}
+			
+			// Normalize angles
+			Math::ClampAngles(TargetAngles);
+		}
+		
+		bNeedNewTarget = false;
+	}
+	Vec3 next = TargetAngles;
+	
+	if (bLegit && !bLookingAround)
+		next += vRandomOffset;
+	
+	const float flDiff = Math::CalcFov(LastAngles, next);
+	
+	int aim_speed;
+	if (bLegit)
+	{
+		if (flDiff > 60.0f)
+			aim_speed = 20;
+		else if (flDiff > 30.0f)
+			aim_speed = 25;
+		else
+			aim_speed = 30;
+	}
+	else
+	{
+		aim_speed = 25; // Default for non-legit mode
+	}
+	
+	F::NavParser.DoSlowAim(next, aim_speed, LastAngles);
+	
+	if (!bLookingAround && Math::CalcFov(vPathAngle, TargetAngles) > 45.0f)
+		bNeedNewTarget = true;
+	
+	Vec3 vPureNavAngles = next;
+	
+	if (g_flTransitionTime > 0.0f)
+	{
+		if (!g_vLastAimbotAngles.IsZero())
+		{
+			Vec3 vDelta = g_vLastAimbotAngles - next;
+			while (vDelta.y > 180.0f) vDelta.y -= 360.0f;
+			while (vDelta.y < -180.0f) vDelta.y += 360.0f;
+			next = next + vDelta * g_flTransitionTime;
+			Math::ClampAngles(next);
+		}
+	}
+	
 	if (bSilent)
 		pCmd->viewangles = next;
 	else
 		I::EngineClient->SetViewAngles(next);
 
-	LastAngles = next;
+	LastAngles = vPureNavAngles;
 }
 
 void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
@@ -955,6 +1216,22 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	static Timer tLastJump;
 	static int iTicksSinceJump{ 0 };
 	static bool bCrouch{ false }; // Used to determine if we want to jump or if we want to crouch
+
+	if (Vars::NavEng::NavEngine::LookAtPath.Value == Vars::NavEng::NavEngine::LookAtPathEnum::Legit)
+	{
+		// Don't interfere with the aimbot
+		if (!(G::Attacking == 1 || F::Aimbot.m_bRan || (pCmd->buttons & (IN_ATTACK | IN_ATTACK2))))
+		{
+			if (Vars::NavEng::NavEngine::LegitPathView.Value == Vars::NavEng::NavEngine::LegitPathViewEnum::Advanced)
+			{
+				calculateLegitViewAngles(pLocal, pCmd); // Advanced method with MoveSim
+			}
+			else if (Vars::NavEng::NavEngine::LegitPathView.Value == Vars::NavEng::NavEngine::LegitPathViewEnum::Simple)
+			{
+				calculateSimpleViewAngles(pLocal, pCmd); // Simple optimized method
+			}
+		}
+	}
 
 	size_t crumbs_amount = crumbs.size();
 	// No more crumbs, reset status
@@ -1126,10 +1403,14 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 		case Vars::NavEng::NavEngine::LookAtPathEnum::Silent:
 			if (G::AntiAim)
 				break;
-				[[fallthrough]];
+			LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, true, false);
+			break;
+		case Vars::NavEng::NavEngine::LookAtPathEnum::Legit:
+			LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, false, true);
+			break;
 		case Vars::NavEng::NavEngine::LookAtPathEnum::Plain:
 		default:
-		LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, Vars::NavEng::NavEngine::LookAtPath.Value == Vars::NavEng::NavEngine::LookAtPathEnum::Silent);
+			LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, false, false);
 			break;
 		}
 	}
