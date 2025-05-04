@@ -940,16 +940,12 @@ void LookAtPath(CUserCmd* pCmd, const Vec2 vDest, const Vec3 vLocalEyePos, bool 
 	Vec3 next{ vDest.x, vDest.y, vLocalEyePos.z };
 	next = Math::CalcAngle(vLocalEyePos, next);
 
-	const int aim_speed = FGet(Vars::NavEng::NavEngine::LookSmooth);
-	
+	const int aim_speed = 25; // how smooth nav is/ im cringing at this damn speed.
+	// activate nav spin and smoothen
 	if (bSilent)
 		pCmd->viewangles = next;
 	else
-	{
-		I::EngineClient->GetViewAngles(pCmd->viewangles);
-		F::NavParser.DoSlowAim(next, aim_speed, pCmd->viewangles);
-		pCmd->viewangles = next;
-	}
+		I::EngineClient->SetViewAngles(next);
 
 	LastAngles = next;
 }

@@ -1150,7 +1150,6 @@ namespace Vars
 			CVarEnum(LookAtPath, "Look at path", 0, NONE, nullptr,
 				VA_LIST("Off", "Plain", "Silent"),
 				Off, Plain, Silent);
-			CVar(LookSmooth, "Look smooth", 25, SLIDER_MIN, 5, 100, 5, "%i");
 			CVar(StickyIgnoreTime, "Sticky ignore time", 15, NOSAVE | DEBUGVAR | SLIDER_MIN, 15, 100, 5, "%is");
 			CVar(StuckDetectTime, "Stuck detect time", 2, NOSAVE | DEBUGVAR | SLIDER_MIN, 2, 26, 2, "%is");
 			CVar(StuckBlacklistTime, "Stuck blacklist time", 120, NOSAVE | DEBUGVAR | SLIDER_MIN, 20, 600, 20, "%is");
