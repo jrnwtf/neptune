@@ -940,7 +940,7 @@ void LookAtPath(CUserCmd* pCmd, const Vec2 vDest, const Vec3 vLocalEyePos, bool 
 	Vec3 next{ vDest.x, vDest.y, vLocalEyePos.z };
 	next = Math::CalcAngle(vLocalEyePos, next);
 
-	const int aim_speed = Vars::NavEng::NavEngine::LookSmooth.Value;
+	const int aim_speed = FGet(Vars::NavEng::NavEngine::LookSmooth);
 	
 	if (bSilent)
 		pCmd->viewangles = next;
