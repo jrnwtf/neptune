@@ -272,6 +272,7 @@ namespace Vars
 		CVar(NavbotPath, "Navbot path color", Color_t(255, 255, 0, 255), VISUAL);
 		CVar(NavbotArea, "Navbot area color", Color_t(0, 255, 0, 255), VISUAL);
 		CVar(NavbotBlacklist, "Navbot blacklisted color", Color_t(255, 0, 0, 255), VISUAL);
+		CVar(NavbotCool, "Cool areas color", Color_t(0, 150, 255, 180), VISUAL);
 	NAMESPACE_END(Colors);
 
 	NAMESPACE_BEGIN(Aimbot)
@@ -1118,12 +1119,13 @@ namespace Vars
 		SUBNAMESPACE_BEGIN(NavEngine)
 			CVar(Enabled, VA_LIST("Enabled", "Nav engine enabled"), false);
 			CVar(PathInSetup, "Path in setup time", false);
-			CVarEnum(Draw, "Draw", 0b011, VISUAL | DROPDOWN_MULTI, nullptr,
-				VA_LIST("Path", "Areas", "Blacklisted zones"),
-				Path = 1 << 0, Area = 1 << 1, Blacklist = 1 << 2);
+			CVarEnum(Draw, "Draw", 0b0111, VISUAL | DROPDOWN_MULTI, nullptr,
+				VA_LIST("Path", "Cool", "Areas", "Blacklisted zones"),
+				Path = 1 << 0, Cool = 1 << 1, Area = 1 << 2, Blacklist = 1 << 3);
+			CVar(CoolRange, "Cool Range", 500, VISUAL | SLIDER_MIN, 100, 1000, 50, "%i units");
 			CVarEnum(LookAtPath, "Look at path", 0, NONE, nullptr,
-				VA_LIST("Off", "Plain", "Silent"),
-				Off, Plain, Silent);
+				VA_LIST("Off", "Plain", "Silent", "Legit"),
+				Off, Plain, Silent, Legit);
 			CVar(SafePathing, "Safe pathing", false, NOSAVE | DEBUGVAR);
 			CVar(StickyIgnoreTime, "Sticky ignore time", 15, NOSAVE | DEBUGVAR | SLIDER_MIN, 15, 100, 5, "%is");
 			CVar(StuckDetectTime, "Stuck detect time", 2, NOSAVE | DEBUGVAR | SLIDER_MIN, 2, 26, 2, "%is");

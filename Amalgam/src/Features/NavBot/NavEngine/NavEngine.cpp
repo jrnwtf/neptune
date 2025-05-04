@@ -1,6 +1,7 @@
 #include "NavEngine.h"
 #include "../../TickHandler/TickHandler.h"
 #include "../../Misc/Misc.h"
+#include "../../Aimbot/Aimbot.h"
 #include <direct.h>
 
 std::optional<Vector> CNavParser::GetDormantOrigin(int iIndex)
@@ -917,20 +918,166 @@ bool CanJumpIfScoped(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	return iWeaponID == TF_WEAPON_SNIPERRIFLE_CLASSIC ? !pWeapon->As<CTFSniperRifleClassic>()->m_bCharging() : !pLocal->InCond(TF_COND_ZOOMED);
 }
 
-void LookAtPath(CUserCmd* pCmd, const Vec2 vDest, const Vec3 vLocalEyePos, bool bSilent)
+static bool g_bWasAimingLastFrame = false;
+static Vec3 g_vLastAimbotAngles{};
+static Vec3 g_vLastNavAngles{};
+static float g_flTransitionTime = 0.0f; // 0.0 = full NavBot, 1.0 = full Aimbot
+
+void LookAtPath(CUserCmd* pCmd, const Vec2 vDest, const Vec3 vLocalEyePos, bool bSilent, bool bLegit = false)
 {
 	static Vec3 LastAngles{};
-	Vec3 next{ vDest.x, vDest.y, vLocalEyePos.z };
-	next = Math::CalcAngle(vLocalEyePos, next);
-
-	const int aim_speed = 25; // how smooth nav is/ im cringing at this damn speed.
-	// activate nav spin and smoothen
+	static Vec3 TargetAngles{};
+	static Timer tRandomTimer{};
+	static Timer tLookAroundTimer{};
+	static Timer tLookChangeTimer{};
+	static Vec3 vRandomOffset{};
+	static bool bLookingAround = false;
+	static bool bNeedNewTarget = true;
+	static int iLookMode = 0; // 0 = path, 1 = left, 2 = right, 3 = up
+	
+	// Check if aiming is active
+	bool bIsAiming = G::Attacking == 1 || F::Aimbot.m_bRan || (pCmd->buttons & (IN_ATTACK | IN_ATTACK2));
+	
+	// Update transition state
+	if (bIsAiming != g_bWasAimingLastFrame)
+	{
+		// Just started aiming, save nav angles
+		if (bIsAiming)
+		{
+			g_vLastNavAngles = LastAngles.IsZero() ? pCmd->viewangles : LastAngles;
+		}
+		// Just stopped aiming, save aimbot angles
+		else
+		{
+			g_vLastAimbotAngles = pCmd->viewangles;
+		}
+		g_bWasAimingLastFrame = bIsAiming;
+	}
+	
+	// Update transition time
+	if (bIsAiming)
+	{
+		g_flTransitionTime = std::min(g_flTransitionTime + 0.15f, 1.0f); // Transition to aimbot faster
+	}
+	else
+	{
+		g_flTransitionTime = std::max(g_flTransitionTime - 0.08f, 0.0f); // Transition back to nav slower
+	}
+	if (g_flTransitionTime >= 1.0f || !Vars::NavEng::NavEngine::Enabled.Value)
+	{
+		return;
+	}
+	
+	Vec3 vPathAngle{ vDest.x, vDest.y, vLocalEyePos.z };
+	vPathAngle = Math::CalcAngle(vLocalEyePos, vPathAngle);
+	
+	if (bLegit)
+	{
+		if (tRandomTimer.Check(0.5f)) 
+		{
+			vRandomOffset = Vec3(
+				SDK::StdRandomFloat(-2.0f, 2.0f),
+				SDK::StdRandomFloat(-3.0f, 3.0f),
+				0.0f
+			);
+			tRandomTimer.Update();
+		}
+		
+		if (tLookAroundTimer.Check(SDK::StdRandomFloat(4.0f, 8.0f)))
+		{
+			bLookingAround = !bLookingAround;
+			
+			if (bLookingAround)
+			{
+				tLookChangeTimer.Update();
+				iLookMode = SDK::StdRandomInt(1, 3);
+				bNeedNewTarget = true;
+			}
+			
+			tLookAroundTimer.Update();
+		}
+		
+		if (bLookingAround && tLookChangeTimer.Check(SDK::StdRandomFloat(1.5f, 3.0f)))
+		{
+			iLookMode = SDK::StdRandomInt(1, 3);
+			tLookChangeTimer.Update();
+			bNeedNewTarget = true;
+		}
+	}
+	
+	if (bNeedNewTarget)
+	{
+		TargetAngles = vPathAngle;
+		
+		if (bLegit && bLookingAround)
+		{
+			switch (iLookMode)
+			{
+			case 1: // Look left
+				TargetAngles.y += SDK::StdRandomFloat(40.0f, 60.0f);
+				break;
+			case 2: // Look right
+				TargetAngles.y -= SDK::StdRandomFloat(40.0f, 60.0f);
+				break;
+			case 3: // Look up slightly
+				TargetAngles.x -= SDK::StdRandomFloat(5.0f, 15.0f);
+				TargetAngles.y += SDK::StdRandomFloat(-20.0f, 20.0f);
+				break;
+			}
+			
+			// Normalize angles
+			Math::ClampAngles(TargetAngles);
+		}
+		
+		bNeedNewTarget = false;
+	}
+	Vec3 next = TargetAngles;
+	
+	if (bLegit && !bLookingAround)
+		next += vRandomOffset;
+	
+	const float flDiff = Math::CalcFov(LastAngles, next);
+	
+	int aim_speed;
+	if (bLegit)
+	{
+		if (flDiff > 60.0f)
+			aim_speed = 20;
+		else if (flDiff > 30.0f)
+			aim_speed = 25;
+		else
+			aim_speed = 30;
+	}
+	else
+	{
+		aim_speed = 25; // Default for non-legit mode
+	}
+	
 	F::NavParser.DoSlowAim(next, aim_speed, LastAngles);
+	
+	if (!bLookingAround && Math::CalcFov(vPathAngle, TargetAngles) > 45.0f)
+		bNeedNewTarget = true;
+	
+	Vec3 vPureNavAngles = next;
+	
+	if (g_flTransitionTime > 0.0f)
+	{
+		if (!g_vLastAimbotAngles.IsZero())
+		{
+			Vec3 vDelta = g_vLastAimbotAngles - next;
+			while (vDelta.y > 180.0f) vDelta.y -= 360.0f;
+			while (vDelta.y < -180.0f) vDelta.y += 360.0f;
+			next = next + vDelta * g_flTransitionTime;
+			Math::ClampAngles(next);
+		}
+	}
+	
 	if (bSilent)
 		pCmd->viewangles = next;
 	else
 		I::EngineClient->SetViewAngles(next);
-	LastAngles = next;
+
+	LastAngles = vPureNavAngles;
 }
 
 void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
@@ -1098,7 +1245,8 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 	const auto vLocalEyePos = pLocal->GetEyePosition();
 
-	if (G::Attacking != 1)
+	// Always call LookAtPath when NavEngine is enabled
+	if (Vars::NavEng::NavEngine::Enabled.Value)
 	{
 		// Look at path (nav spin) (smooth nav)
 		switch (Vars::NavEng::NavEngine::LookAtPath.Value)
@@ -1108,10 +1256,14 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 		case Vars::NavEng::NavEngine::LookAtPathEnum::Silent:
 			if (G::AntiAim)
 				break;
-			[[fallthrough]];
+			LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, true, false);
+			break;
+		case Vars::NavEng::NavEngine::LookAtPathEnum::Legit:
+			LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, false, true);
+			break;
 		case Vars::NavEng::NavEngine::LookAtPathEnum::Plain:
 		default:
-			LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, Vars::NavEng::NavEngine::LookAtPath.Value == Vars::NavEng::NavEngine::LookAtPathEnum::Silent);
+			LookAtPath(pCmd, { crumbs[0].vec.x, crumbs[0].vec.y }, vLocalEyePos, false, false);
 			break;
 		}
 	}

@@ -4151,6 +4151,8 @@ void CMenu::MenuNavEng(int iTab)
 						FColorPicker(Vars::Colors::NavbotPath, 0, FColorPickerEnum::Dropdown);
 						FColorPicker(Vars::Colors::NavbotArea, 1, FColorPickerEnum::Dropdown);
 						FColorPicker(Vars::Colors::NavbotBlacklist, 2, FColorPickerEnum::Dropdown);
+						FColorPicker(Vars::Colors::NavbotCool, 3, FColorPickerEnum::Dropdown);
+						FSlider(Vars::NavEng::NavEngine::CoolRange, FSliderEnum::None);
 						FDropdown(Vars::NavEng::NavEngine::LookAtPath);
 						FDropdown(Vars::NavEng::NavBot::AutoScope);
 						PushTransparent(Transparent || !FGet(Vars::NavEng::NavBot::AutoScope));

@@ -1070,6 +1070,7 @@
     <ClCompile Include="src\Features\NavBot\NavEngine\Controllers\CPController\CPController.cpp" />
     <ClCompile Include="src\Features\NavBot\NavEngine\Controllers\FlagController\FlagController.cpp" />
     <ClCompile Include="src\Features\NavBot\NavEngine\Controllers\PLController\PLController.cpp" />
+    <ClCompile Include="src\Features\NavBot\NavEngine\Controllers\MPController\MPController.cpp" />
     <ClCompile Include="src\Features\NavBot\NavEngine\MicroPather\micropather.cpp" />
     <ClCompile Include="src\Features\NavBot\NavEngine\NavEngine.cpp" />
     <ClCompile Include="src\Features\Misc\NamedPipe\NamedPipe.cpp" />
@@ -1390,6 +1391,7 @@
     <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\CPController\CPController.h" />
     <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\FlagController\FlagController.h" />
     <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\PLController\PLController.h" />
+    <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\MPController\MPController.h" />
     <ClInclude Include="src\Features\NavBot\NavEngine\FileReader\CNavFile.h" />
     <ClInclude Include="src\Features\NavBot\NavEngine\FileReader\nav.h" />
     <ClInclude Include="src\Features\NavBot\NavEngine\MicroPather\micropather.h" />

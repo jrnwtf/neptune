@@ -13,6 +13,8 @@
 #include "../TickHandler/TickHandler.h"
 #include "../NavBot/NavBot.h"
 #include "../CritHack/CritHack.h"
+#include "../Misc/NamedPipe/Namedpipe.h"
+#include <queue>
 
 MAKE_SIGNATURE(RenderLine, "engine.dll", "48 89 5C 24 ? 48 89 74 24 ? 44 89 44 24", 0x0);
 MAKE_SIGNATURE(RenderBox, "engine.dll", "48 83 EC ? 8B 84 24 ? ? ? ? 4D 8B D8", 0x0);
@@ -868,6 +870,105 @@ void CVisuals::DrawNavEngine()
 			{
 				for (auto& tBlacklistedArea : *pBlacklist)
 					RenderBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, Vars::Colors::NavbotBlacklist.Value, false);
+			}
+		}
+	}
+
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Cool)
+	{
+		Vector vLocalOrigin = pLocal->GetAbsOrigin();
+		auto pLocalArea = F::NavEngine.map->findClosestNavSquare(vLocalOrigin);
+		
+		if (!pLocalArea)
+			return;
+		
+		const float flMaxDistance = static_cast<float>(Vars::NavEng::NavEngine::CoolRange.Value);
+		
+		std::vector<CNavArea*> areasToRender;
+		std::vector<CNavArea*> checkedAreas;
+		std::queue<CNavArea*> areaQueue;
+		
+		areaQueue.push(pLocalArea);
+		checkedAreas.push_back(pLocalArea);
+		
+		while (!areaQueue.empty())
+		{
+			CNavArea* pCurrentArea = areaQueue.front();
+			areaQueue.pop();
+			
+			float flDistance = (pCurrentArea->m_center - vLocalOrigin).Length();
+			if (flDistance <= flMaxDistance)
+			{
+				areasToRender.push_back(pCurrentArea);
+				
+				for (NavConnect& tConnection : pCurrentArea->m_connections)
+				{
+					if (!tConnection.area)
+						continue;
+					
+					bool alreadyChecked = false;
+					for (auto pCheckedArea : checkedAreas)
+					{
+						if (pCheckedArea == tConnection.area)
+						{
+							alreadyChecked = true;
+							break;
+						}
+					}
+					
+					if (!alreadyChecked)
+					{
+						areaQueue.push(tConnection.area);
+						checkedAreas.push_back(tConnection.area);
+					}
+				}
+			}
+		}
+		
+		for (auto pArea : areasToRender)
+		{
+			float flDistance = (pArea->m_center - vLocalOrigin).Length();
+			int alpha = 255 - static_cast<int>((flDistance / flMaxDistance) * 200);
+			
+			Color_t baseColor = Vars::Colors::NavbotCool.Value;
+			Color_t areaColor = Color_t(baseColor.r, baseColor.g, baseColor.b, alpha);
+			
+			RenderBox(pArea->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), 
+				Vector(), areaColor, areaColor, false);
+			
+			// Nw -> Ne
+			RenderLine(pArea->m_nwCorner, pArea->getNeCorner(), areaColor, true);
+			// Nw -> Sw
+			RenderLine(pArea->m_nwCorner, pArea->getSwCorner(), areaColor, true);
+			// Ne -> Se
+			RenderLine(pArea->getNeCorner(), pArea->m_seCorner, areaColor, true);
+			// Sw -> Se
+			RenderLine(pArea->getSwCorner(), pArea->m_seCorner, areaColor, true);
+			
+			for (NavConnect& tConnection : pArea->m_connections)
+			{
+				if (!tConnection.area)
+					continue;
+					
+				bool isInRenderList = false;
+				for (auto pRenderArea : areasToRender)
+				{
+					if (pRenderArea == tConnection.area)
+					{
+						isInRenderList = true;
+						break;
+					}
+				}
+				
+				if (isInRenderList)
+				{
+					Color_t connectionColor = Color_t(
+						std::min(255, baseColor.r + 50),
+						std::min(255, baseColor.g + 50),
+						std::min(255, baseColor.b + 50),
+						alpha - 50);
+					RenderLine(pArea->m_center, tConnection.area->m_center, connectionColor, false);
+				}
 			}
 		}
 	}
