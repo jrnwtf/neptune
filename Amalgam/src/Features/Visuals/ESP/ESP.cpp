@@ -1267,52 +1267,62 @@ void CESP::DrawPlayers()
 		if (tCache.m_bYawArrows || (pEntity->entindex() == I::EngineClient->GetLocalPlayer() && (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::YawArrows)))
 		{
 			auto pPlayer = pEntity->As<CTFPlayer>();
+			if (!pPlayer || !pPlayer->IsAlive())
+				continue;
+				
 			const int iEntIndex = pPlayer->entindex();
 			
 			if (iEntIndex == I::EngineClient->GetLocalPlayer())
 			{
-				const float flArrowLength = 40.0f; // Real-world unit length
-				const float flArrowThickness = 2.0f; // Thickness of arrow in world units
-				const float flHeadSize = 15.0f;     // Arrow head size in world units
-				const float flHeightOffset = 5.0f;   // Height from ground
-
-				Vec3 vOrigin = pPlayer->GetAbsOrigin();
-				vOrigin.z += flHeightOffset; // Offset from ground
-
-				// Check if player is visible on screen
-				Vec3 vScreenOrigin;
-				if (SDK::W2S(vOrigin, vScreenOrigin))
+				// Only draw yaw arrows if we're in thirdperson mode to avoid crashes
+				if (Vars::Visuals::Thirdperson::Enabled.Value)
 				{
-					Color_t realColor = { 0, 255, 0, 255 }; // Bright green for real yaw
-					Color_t fakeColor = { 255, 0, 0, 255 }; // Bright red for fake yaw
-					Color_t realOutline = { 0, 0, 0, 255 }; // Black outline for real yaw
-					Color_t fakeOutline = { 0, 0, 0, 255 }; // Black outline for fake yaw
+					const float flArrowLength = 40.0f; // Real-world unit length
+					const float flArrowThickness = 2.0f; // Thickness of arrow in world units
+					const float flHeadSize = 15.0f;     // Arrow head size in world units
+					const float flHeightOffset = 5.0f;   // Height from ground
 
-					realColor.a = 255;
-					fakeColor.a = 255;
-					realOutline.a = 255;
-					fakeOutline.a = 255;
-					float flRealYaw = 0.0f;
-					float flFakeYaw = 0.0f;
+					Vec3 vOrigin = pPlayer->GetAbsOrigin();
+					vOrigin.z += flHeightOffset; // Offset from ground
 
-					if (G::AntiAim)
+					Vec3 vScreenOrigin;
+					if (SDK::W2S(vOrigin, vScreenOrigin))
 					{
-						flRealYaw = F::AntiAim.vRealAngles.y;
-						flFakeYaw = F::AntiAim.vFakeAngles.y;
-					}
-					else
-					{
-						flRealYaw = I::EngineClient->GetViewAngles().y;
+						Color_t realColor = { 0, 255, 0, 255 }; // Bright green for real yaw
+						Color_t fakeColor = { 255, 0, 0, 255 }; // Bright red for fake yaw
+						Color_t realOutline = { 0, 0, 0, 255 }; // Black outline for real yaw
+						Color_t fakeOutline = { 0, 0, 0, 255 }; // Black outline for fake yaw
+
+						realColor.a = 210; // Slightly transparent to avoid visual clutter
+						fakeColor.a = 210;
+						realOutline.a = 255;
+						fakeOutline.a = 255;
+						float flRealYaw = 0.0f;
+						float flFakeYaw = 0.0f;
+
+						if (G::AntiAim)
+						{
+							flRealYaw = F::AntiAim.vRealAngles.y;
+							flFakeYaw = F::AntiAim.vFakeAngles.y;
+						}
+						else
+						{
+							flRealYaw = I::EngineClient->GetViewAngles().y;
 							flFakeYaw = flRealYaw + 120.0f; // Add an offset to demonstrate
 						}
 
-					int iArrowStyle = Vars::ESP::YawArrowsStyle.Value;
-					
-					DrawYawArrow(vOrigin, flRealYaw, flArrowLength, flHeadSize, flHeightOffset, 
-								realColor, realOutline, vScreenOrigin, static_cast<Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum>(iArrowStyle), true);
-					iArrowStyle = Vars::ESP::YawArrowsStyle.Value;
-					DrawYawArrow(vOrigin, flFakeYaw, flArrowLength, flHeadSize, flHeightOffset, 
-								fakeColor, fakeOutline, vScreenOrigin, static_cast<Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum>(iArrowStyle), false);
+						int iArrowStyle = Vars::ESP::YawArrowsStyle.Value;
+						
+						try {
+							DrawYawArrow(vOrigin, flRealYaw, flArrowLength, flHeadSize, flHeightOffset, 
+										realColor, realOutline, vScreenOrigin, static_cast<Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum>(iArrowStyle), true);
+							
+							DrawYawArrow(vOrigin, flFakeYaw, flArrowLength, flHeadSize, flHeightOffset, 
+										fakeColor, fakeOutline, vScreenOrigin, static_cast<Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum>(iArrowStyle), false);
+						} catch (...) {
+							// Silently fail if drawing causes an exception
+						}
+					}
 				}
 			}
 		}
