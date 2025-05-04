@@ -20,6 +20,7 @@ class CMisc
 	void CheatsBypass();
 	void PingReducer();
 	void WeaponSway();
+	void AutoReport();
 
 	void TauntKartControl(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void FastMovement(CTFPlayer* pLocal, CUserCmd* pCmd);

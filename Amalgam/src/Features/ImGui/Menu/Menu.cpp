@@ -1531,6 +1531,7 @@ void CMenu::MenuMisc(int iTab)
 					FToggle(Vars::Misc::Automation::AutoF1Priority, FToggleEnum::Right);
 					FToggle(Vars::Misc::Automation::RandomVotekick, FToggleEnum::Left);
 					FToggle(Vars::Misc::Automation::ChatSpam::Enable, FToggleEnum::Right);
+					FToggle(Vars::Misc::Automation::AutoReport, FToggleEnum::Left);
 					PushTransparent(!Vars::Misc::Automation::ChatSpam::Enable.Value);
 					{
 						FSlider(Vars::Misc::Automation::ChatSpam::Interval, FSliderEnum::Left | FSliderEnum::Clamp);

@@ -15,6 +15,7 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 	CheatsBypass();
 	PingReducer();
 	WeaponSway();
+	AutoReport();
 	
 	if (I::EngineClient && I::EngineClient->IsInGame() && I::EngineClient->IsConnected())
 	{
@@ -1048,5 +1049,52 @@ void CMisc::ChatSpam(CTFPlayer* pLocal)
 	{
 		// Silently fail if we encounter any exception during command execution
 		return;
+	}
+}
+
+void CMisc::AutoReport()
+{
+	if (!Vars::Misc::Automation::AutoReport.Value)
+		return;
+	
+	static Timer reportTimer{};
+	if (!reportTimer.Run(5.0f))
+		return;
+
+	static auto reportFunc = reinterpret_cast<void(*)(uint64_t, int)>(U::Memory.FindSignature("client.dll", "48 89 5C 24 ? 57 48 83 EC 60 48 8B D9 8B FA"));
+	if (!reportFunc)
+		return;
+	
+	if (!I::EngineClient || !I::EngineClient->IsInGame() || !I::EngineClient->IsConnected())
+		return;
+	
+	CTFPlayer* pLocal = H::Entities.GetLocal();
+	if (!pLocal)
+		return;
+	
+	for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
+	{
+		if (i == I::EngineClient->GetLocalPlayer())
+			continue;
+		
+		CTFPlayer* pPlayer = reinterpret_cast<CTFPlayer*>(I::ClientEntityList->GetClientEntity(i));
+		if (!pPlayer || !pPlayer->IsAlive())
+			continue;
+		
+		PlayerInfo_t playerInfo{};
+		if (!I::EngineClient->GetPlayerInfo(i, &playerInfo))
+			continue;
+		
+		if (playerInfo.fakeplayer)
+			continue;
+		
+		if (F::PlayerUtils.HasTag(i, FRIEND_TAG) || F::PlayerUtils.HasTag(i, IGNORED_TAG))
+			continue;
+		
+		if (F::PlayerUtils.HasTag(i, PARTY_TAG))
+			continue;
+		
+		uint64_t steamID64 = ((uint64_t)1 << 56) | ((uint64_t)1 << 52) | ((uint64_t)1 << 32) | playerInfo.friendsID;
+		reportFunc(steamID64, 1);
 	}
 }

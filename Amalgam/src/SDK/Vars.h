@@ -1029,6 +1029,7 @@ namespace Vars
 				VA_LIST("Off", "Yaw", "Pitch", "Fake"),
 				Off, Yaw, Pitch, Fake);
 			CVar(NoiseSpam, "Noise spam", false);
+			CVar(AutoReport, "Auto report players", false);
 			CVar(AntiAFK, "Anti-AFK", false);
 			CVar(AntiAutobalance, "Anti-autobalance", false);
 			CVar(TauntControl, "Taunt control", false);
