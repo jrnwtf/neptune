@@ -248,6 +248,7 @@ public:
 
 	CNavParser::Crumb current_crumb;
 	void followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd);
+	bool findNearestNavNode(CTFPlayer* pLocal);
 
 	void vischeckPath();
 	void checkBlacklist();

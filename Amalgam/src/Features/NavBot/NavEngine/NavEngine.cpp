@@ -835,6 +835,28 @@ bool CNavEngine::isReady(bool bRoundCheck)
 	return true;
 }
 
+bool CNavEngine::findNearestNavNode(CTFPlayer* pLocal)
+{
+	if (!pLocal || !pLocal->IsAlive() || !map || !isReady() || !I::EngineClient || !I::EngineClient->IsInGame())
+		return false;
+
+	if (isPathing())
+		return false;
+
+	Vector vLocalOrigin = pLocal->GetAbsOrigin();
+
+	CNavArea* pClosestNav = map->findClosestNavSquare(vLocalOrigin);
+	if (!pClosestNav)
+		return false;
+
+	if (pClosestNav->IsOverlapping(vLocalOrigin))
+		return false;
+
+	Vector vDestination = pClosestNav->m_center;
+
+	SDK::Output("CNavEngine", "Bot is not on any navmesh, navigating to nearest node", { 255, 200, 100 }, Vars::Debug::Logging.Value, Vars::Debug::Logging.Value);
+	return navTo(vDestination, Priority_list::danger, true, true, false);
+}
 
 void CNavEngine::Run(CUserCmd* pCmd)
 {
@@ -879,6 +901,9 @@ void CNavEngine::Run(CUserCmd* pCmd)
 		vischeckPath();
 
 	checkBlacklist();
+
+	if (!isPathing())
+		findNearestNavNode(pLocal);
 
 	followCrumbs(pLocal, pCmd);
 

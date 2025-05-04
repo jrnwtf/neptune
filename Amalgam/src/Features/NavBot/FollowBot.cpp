@@ -223,6 +223,9 @@ std::optional<Vector> CFollowBot::GetFollowPosition(CTFPlayer* pLocal, CTFPlayer
         
 
         Vector vBehindPos = vTargetPos - (vForward * flDistance);
+        if (!F::NavEngine.map)
+            return vTargetPos;
+            
         CNavArea* pBehindArea = F::NavEngine.map->findClosestNavSquare(vBehindPos);
         if (pBehindArea && F::NavParser.IsVectorVisibleNavigation(pLocal->GetAbsOrigin(), vBehindPos))
             return vBehindPos;
@@ -238,14 +241,16 @@ std::optional<Vector> CFollowBot::GetFollowPosition(CTFPlayer* pLocal, CTFPlayer
         CNavArea* pLeftArea = F::NavEngine.map->findClosestNavSquare(vLeftPos);
         if (pLeftArea && F::NavParser.IsVectorVisibleNavigation(pLocal->GetAbsOrigin(), vLeftPos))
             return vLeftPos;
-        
-
+            
         return vTargetPos;
     }
 }
 
 void CFollowBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
+    if (!pLocal || !pCmd)
+        return;
+        
     if (!Vars::NavEng::FollowBot::Enabled.Value)
     {
         if (m_bIsFollowing)
@@ -255,10 +260,14 @@ void CFollowBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
         return;
     }
 
-    if (!pLocal->IsAlive() || !F::NavEngine.isReady(true))
-    {
+    if (!pLocal->IsAlive())
         return;
-    }
+    
+    if (!F::NavEngine.map)
+        return;
+    
+    if (!F::NavEngine.isReady(true))
+        return;
 
     int iTargetIndex = GetTargetIndex(pLocal);
     if (iTargetIndex == -1)
@@ -330,7 +339,7 @@ void CFollowBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
     m_vLastPosition = vCurrentPos;
     
     bool bShouldUpdatePath = (I::GlobalVars->curtime - m_flLastPathUpdateTime > 0.5f) || m_bWasStuck;
-    if (bShouldUpdatePath)
+    if (bShouldUpdatePath && F::NavEngine.map)
     {
         F::NavEngine.navTo(*vFollowPos, 5);
         m_flLastPathUpdateTime = I::GlobalVars->curtime;
