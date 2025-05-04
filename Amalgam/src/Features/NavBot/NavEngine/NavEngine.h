@@ -208,6 +208,9 @@ public:
 	// Is the Nav engine ready to run?
 	bool isReady(bool bRoundCheck = false);
 
+	// Check if the nav mesh is properly loaded
+	bool IsNavMeshLoaded() { return map && map->state == CNavParser::NavState::Active && !map->navfile.m_areas.empty(); }
+
 	// Are we currently pathing?
 	bool isPathing() { return !crumbs.empty(); }
 

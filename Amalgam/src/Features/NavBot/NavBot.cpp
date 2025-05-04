@@ -2791,6 +2791,9 @@ void CNavBot::AutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 		pCurrentDestinationArea = pCrumbs->at(4).navarea;
 
 	auto vLocalOrigin = pLocal->GetAbsOrigin();
+	if (!F::NavEngine.IsNavMeshLoaded())
+		return;
+
 	auto pLocalNav = pCurrentDestinationArea ? pCurrentDestinationArea : F::NavEngine.findClosestNavSquare(vLocalOrigin);
 	if (!pLocalNav)
 		return;

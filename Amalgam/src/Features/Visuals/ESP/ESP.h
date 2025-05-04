@@ -10,6 +10,7 @@ struct PlayerCache
 	Color_t m_tColor = {};
 	bool m_bBox = false;
 	bool m_bBones = false;
+	bool m_bYawArrows = false;
 
 	bool m_bHealthBar = false;
 	bool m_bUberBar = false;
@@ -50,6 +51,9 @@ private:
 	void DrawPlayers();
 	void DrawBuildings();
 	void DrawWorld();
+	void DrawYawArrow(const Vec3& vOrigin, float flYaw, float flArrowLength, float flHeadSize, float flHeightOffset, 
+				const Color_t& mainColor, const Color_t& outlineColor, const Vec3& vScreenOrigin, 
+				Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum style, bool isReal);
 
 	Color_t GetColor(CTFPlayer* pLocal, CBaseEntity* pEntity);
 	bool GetDrawBounds(CBaseEntity* pEntity, float& x, float& y, float& w, float& h);

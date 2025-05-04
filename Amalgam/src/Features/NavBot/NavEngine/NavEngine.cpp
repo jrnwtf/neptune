@@ -153,6 +153,9 @@ CNavArea* CNavParser::Map::findClosestNavSquare(const Vector& vec)
 	if (!pLocal || !pLocal->IsAlive())
 		return nullptr;
 
+	if (navfile.m_areas.empty())
+		return nullptr;
+
 	auto vec_corrected = vec;
 	vec_corrected.z += PLAYER_JUMP_HEIGHT;
 	float overall_best_dist = FLT_MAX, best_dist = FLT_MAX;
