@@ -10,6 +10,7 @@
 #include "../../Features/Resolver/Resolver.h"
 #include "../../Features/Visuals/Visuals.h"
 #include "../../Features/Killstreak/Killstreak.h"
+#include "../../Features/Aimbot/AutoHeal/AutoHeal.h"
 
 bool CEventListener::Initialize()
 {
@@ -50,6 +51,7 @@ void CEventListener::FireGameEvent(IGameEvent* pEvent)
 
 	F::CritHack.Event(pEvent, uHash, pLocal);
 	F::Misc.Event(pEvent, uHash);
+	F::AutoHeal.Event(pEvent, uHash, pLocal);
 #ifndef TEXTMODE
 	F::Visuals.Event(pEvent, uHash);
 #endif

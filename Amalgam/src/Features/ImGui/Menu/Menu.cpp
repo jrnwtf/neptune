@@ -195,7 +195,57 @@ void CMenu::MenuAimbot(int iTab)
 				{
 					FToggle(Vars::Aimbot::Healing::AutoHeal, FToggleEnum::Left);
 					FToggle(Vars::Aimbot::Healing::FriendsOnly, FToggleEnum::Right);
-					FToggle(Vars::Aimbot::Healing::ActivateOnVoice);
+					FToggle(Vars::Aimbot::Healing::FBotTargetOnly);
+					FToggle(Vars::Aimbot::Healing::ActivateOnVoice, FToggleEnum::Left);
+					FToggle(Vars::Aimbot::Healing::AutoUber, FToggleEnum::Right);
+					
+					PushTransparent(!FGet(Vars::Aimbot::Healing::AutoUber));
+					{
+						FToggle(Vars::Aimbot::Healing::PreserveUber, FToggleEnum::Left);
+						FToggle(Vars::Aimbot::Healing::PatientLowHealth, FToggleEnum::Right);
+						
+						FToggle(Vars::Aimbot::Healing::SelfLowHealth, FToggleEnum::Left);
+						FSlider(Vars::Aimbot::Healing::HealthThreshold, FSliderEnum::Right);
+						
+						FToggle(Vars::Aimbot::Healing::PopOnMultipleEnemies, FToggleEnum::Left);
+						FSlider(Vars::Aimbot::Healing::EnemyCountThreshold, FSliderEnum::Right);
+						
+						FToggle(Vars::Aimbot::Healing::PopOnDangerProjectiles);
+					}
+					PopTransparent();
+					
+					FToggle(Vars::Aimbot::Healing::AutoVaccinator, FToggleEnum::Left);
+					PushTransparent(!FGet(Vars::Aimbot::Healing::AutoVaccinator));
+					{
+						FDropdown(Vars::Aimbot::Healing::VaccinatorMode, FDropdownEnum::Right);
+
+						PushTransparent(FGet(Vars::Aimbot::Healing::VaccinatorMode) != Vars::Aimbot::Healing::VaccinatorModeEnum::Auto);
+						{
+							FToggle(Vars::Aimbot::Healing::VaccinatorSmart, FToggleEnum::Left);
+							FToggle(Vars::Aimbot::Healing::VaccinatorClassBased, FToggleEnum::Right);
+						}
+						PopTransparent();
+
+						PushTransparent(FGet(Vars::Aimbot::Healing::VaccinatorMode) != Vars::Aimbot::Healing::VaccinatorModeEnum::Auto);
+						{
+							FToggle(Vars::Aimbot::Healing::VaccinatorMultiResist, FToggleEnum::Left);
+							FSlider(Vars::Aimbot::Healing::VaccinatorDelay, FSliderEnum::Right);
+						}
+						PopTransparent();
+
+						PushTransparent(FGet(Vars::Aimbot::Healing::VaccinatorMode) != Vars::Aimbot::Healing::VaccinatorModeEnum::Auto);
+						{
+							FSlider(Vars::Aimbot::Healing::VaccinatorRange);
+						}
+						PopTransparent();
+
+						PushTransparent(FGet(Vars::Aimbot::Healing::VaccinatorMode) != Vars::Aimbot::Healing::VaccinatorModeEnum::Manual);
+						{
+							FDropdown(Vars::Aimbot::Healing::VaccinatorResist);
+						}
+						PopTransparent();
+					}
+					PopTransparent();
 				} EndSection();
 			}
 

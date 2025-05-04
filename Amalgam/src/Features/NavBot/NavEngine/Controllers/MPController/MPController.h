@@ -26,7 +26,7 @@ private:
 public:
 	std::vector<PowerupInfo> GetPowerups() { return m_vPowerups; }
 	std::optional<Vector> GetPowerupPosition(PowerupBottleType_t type);
-	std::optional<PowerupInfo> GetClosestPowerup(const Vector& vPosition);)
+	std::optional<PowerupInfo> GetClosestPowerup(const Vector& vPosition);
 	FlagInfo GetFlag(int team);
 	Vector GetPosition(CCaptureFlag* pFlag);
 	std::optional<Vector> GetPosition(int iTeam);

@@ -433,7 +433,28 @@ namespace Vars
 		SUBNAMESPACE_BEGIN(Healing)
 			CVar(AutoHeal, "Auto heal", false);
 			CVar(FriendsOnly, VA_LIST("Friends only", "Heal friends only"), false);
+			CVar(FBotTargetOnly, "FBot target only", false);
 			CVar(ActivateOnVoice, "Activate on voice", false);
+			CVar(AutoUber, "Auto uber", false);
+			CVar(PreserveUber, "Preserve uber when safe", true);
+			CVar(PatientLowHealth, "Pop on patient low health", true);
+			CVar(SelfLowHealth, "Pop on self low health", true);
+			CVar(HealthThreshold, "Health threshold %", 30, SLIDER_CLAMP, 10, 50, 5);
+			CVar(PopOnMultipleEnemies, "Pop on multiple enemies", true);
+			CVar(EnemyCountThreshold, "Enemy count threshold", 3, SLIDER_CLAMP, 2, 6, 1);
+			CVar(PopOnDangerProjectiles, "Pop on danger projectiles", true);
+			CVar(AutoVaccinator, "Auto vaccinator", false);
+			CVarEnum(VaccinatorMode, "Vaccinator mode", 0, 0, nullptr, 
+				VA_LIST("Auto", "Manual"),
+				Auto = 0, Manual = 1);
+			CVarEnum(VaccinatorResist, "Manual resistance", 0, 0, nullptr, 
+				VA_LIST("Bullet", "Blast", "Fire"),
+				Bullet = 0, Blast = 1, Fire = 2);
+			CVar(VaccinatorSmart, "Smart detection (analyze damage)", true);
+			CVar(VaccinatorClassBased, "Consider nearby enemy classes", true);
+			CVar(VaccinatorMultiResist, "Cycle between multiple resistances", false);
+			CVar(VaccinatorDelay, "Resistance switch delay", 0.5f, SLIDER_MIN | SLIDER_PRECISION, 0.1f, 2.0f, 0.1f);
+			CVar(VaccinatorRange, "Enemy detection range", 1000.0f, SLIDER_CLAMP, 500.0f, 2000.0f, 100.0f);
 		SUBNAMESPACE_END(Healing);
 	NAMESPACE_END(Aimbot);
 	
