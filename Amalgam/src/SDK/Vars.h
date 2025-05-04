@@ -1147,6 +1147,9 @@ namespace Vars
 			CVarEnum(LookAtPath, "Look at path", 0, NONE, nullptr,
 				VA_LIST("Off", "Plain", "Silent", "Legit"),
 				Off, Plain, Silent, Legit);
+			CVarEnum(LegitPathView, "Legit path view", 1, NONE, nullptr,
+				VA_LIST("Off", "Simple", "Advanced"),
+				Off, Simple, Advanced);
 			CVar(SafePathing, "Safe pathing", false, NOSAVE | DEBUGVAR);
 			CVar(StickyIgnoreTime, "Sticky ignore time", 15, NOSAVE | DEBUGVAR | SLIDER_MIN, 15, 100, 5, "%is");
 			CVar(StuckDetectTime, "Stuck detect time", 2, NOSAVE | DEBUGVAR | SLIDER_MIN, 2, 26, 2, "%is");

@@ -2,6 +2,7 @@
 #include "../../TickHandler/TickHandler.h"
 #include "../../Misc/Misc.h"
 #include "../../Aimbot/Aimbot.h"
+#include "../../Simulation/MovementSimulation/MovementSimulation.h"
 #include <direct.h>
 
 std::optional<Vector> CNavParser::GetDormantOrigin(int iIndex)
@@ -835,6 +836,104 @@ bool CNavEngine::isReady(bool bRoundCheck)
 	return true;
 }
 
+void CNavEngine::calculateLegitViewAngles(CTFPlayer* pLocal, CUserCmd* pCmd)
+{
+	if (!pLocal || !pCmd || !isPathing() || crumbs.empty())
+		return;
+	
+	QAngle currentViewAngles;
+	I::EngineClient->GetViewAngles(currentViewAngles);
+	Vector vLocalOrigin = pLocal->GetAbsOrigin();
+	Vector vLookTarget;
+	
+	size_t targetCrumbIndex = 0;
+	if (crumbs.size() > 2)
+		targetCrumbIndex = 2; // Look two crumbs ahead if possible
+	else if (crumbs.size() > 1)
+		targetCrumbIndex = 1; // Look one crumb ahead if possible
+	
+	vLookTarget = crumbs[targetCrumbIndex].vec;
+	
+	PlayerStorage tStorage;
+	F::MoveSim.Initialize(pLocal, tStorage, false);
+	if (!tStorage.m_bFailed)
+	{
+		for (int i = 0; i < 10; i++)
+		{
+			F::MoveSim.RunTick(tStorage);
+		}
+		
+		Vector vPredictedPos = tStorage.m_vPredictedOrigin;
+		Vector vDirection = (vLookTarget - vPredictedPos).Normalized();
+		vLookTarget = vPredictedPos + vDirection * 200.0f;
+	}
+
+	QAngle aimAngle;
+	Math::VectorAngles(vLookTarget - (vLocalOrigin + Vector(0, 0, pLocal->GetViewOffset().z)), aimAngle);
+	Math::ClampAngles(aimAngle);
+	
+	static Timer tVariationTimer;
+	static float flRandomYawOffset = 0.0f;
+	if (tVariationTimer.Check(inactivity.Check(1.0f) ? 0.3f : 1.0f)) // More frequent changes when stuck
+	{
+		flRandomYawOffset = SDK::RandomFloat(-5.0f, 5.0f);
+	}
+	aimAngle.y += flRandomYawOffset;
+	
+	float speed = inactivity.Check(1.0f) ? 3.0f : 5.0f;
+	F::NavParser.DoSlowAim(aimAngle, speed, currentViewAngles);
+	pCmd->viewangles = aimAngle;
+	float flYaw = DEG2RAD(pCmd->viewangles.y - currentViewAngles.y);
+	float flCos = cosf(flYaw);
+	float flSin = sinf(flYaw);
+	float flNewForward = (flCos * pCmd->forwardmove) - (flSin * pCmd->sidemove);
+	float flNewSide = (flSin * pCmd->forwardmove) + (flCos * pCmd->sidemove);
+	pCmd->forwardmove = flNewForward;
+	pCmd->sidemove = flNewSide;
+}
+
+void CNavEngine::calculateSimpleViewAngles(CTFPlayer* pLocal, CUserCmd* pCmd)
+{
+	if (!pLocal || !pCmd || !isPathing() || crumbs.empty())
+		return;
+	
+	QAngle currentViewAngles;
+	I::EngineClient->GetViewAngles(currentViewAngles);
+	Vector vLocalOrigin = pLocal->GetAbsOrigin();
+	Vector vLookTarget;
+	
+	size_t lookAheadIndex = std::min(size_t(1), crumbs.size() - 1);
+	vLookTarget = crumbs[lookAheadIndex].vec;
+	
+	static Timer tJitterTimer;
+	static Vector vJitter(0, 0, 0);
+	if (tJitterTimer.Check(0.8f))
+	{
+		vJitter = Vector(
+			SDK::RandomFloat(-15.0f, 15.0f),
+			SDK::RandomFloat(-15.0f, 15.0f),
+			0.0f
+		);
+	}
+	
+	vLookTarget += vJitter;
+	QAngle aimAngle;
+	Math::VectorAngles(vLookTarget - (vLocalOrigin + Vector(0, 0, pLocal->GetViewOffset().z)), aimAngle);
+	Math::ClampAngles(aimAngle);
+	float speed = inactivity.Check(1.0f) ? 3.0f : 5.0f;
+	F::NavParser.DoSlowAim(aimAngle, speed, currentViewAngles);
+	
+	pCmd->viewangles = aimAngle;
+	
+	float flYaw = DEG2RAD(pCmd->viewangles.y - currentViewAngles.y);
+	float flCos = cosf(flYaw);
+	float flSin = sinf(flYaw);
+	float flNewForward = (flCos * pCmd->forwardmove) - (flSin * pCmd->sidemove);
+	float flNewSide = (flSin * pCmd->forwardmove) + (flCos * pCmd->sidemove);
+	pCmd->forwardmove = flNewForward;
+	pCmd->sidemove = flNewSide;
+}
+
 bool CNavEngine::findNearestNavNode(CTFPlayer* pLocal)
 {
 	if (!pLocal || !pLocal->IsAlive() || !map || !isReady() || !I::EngineClient || !I::EngineClient->IsInGame())
@@ -962,6 +1061,10 @@ void LookAtPath(CUserCmd* pCmd, const Vec2 vDest, const Vec3 vLocalEyePos, bool 
 	
 	// Check if aiming is active
 	bool bIsAiming = G::Attacking == 1 || F::Aimbot.m_bRan || (pCmd->buttons & (IN_ATTACK | IN_ATTACK2));
+	
+	// If aimbot is active, don't modify angles at all
+	if (bIsAiming)
+		return;
 	
 	// Update transition state
 	if (bIsAiming != g_bWasAimingLastFrame)
@@ -1110,6 +1213,22 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	static Timer tLastJump;
 	static int iTicksSinceJump{ 0 };
 	static bool bCrouch{ false }; // Used to determine if we want to jump or if we want to crouch
+
+	if (Vars::NavEng::NavEngine::LookAtPath.Value == Vars::NavEng::NavEngine::LookAtPathEnum::Legit)
+	{
+		// Don't interfere with the aimbot
+		if (!(G::Attacking == 1 || F::Aimbot.m_bRan || (pCmd->buttons & (IN_ATTACK | IN_ATTACK2))))
+		{
+			if (Vars::NavEng::NavEngine::LegitPathView.Value == Vars::NavEng::NavEngine::LegitPathViewEnum::Advanced)
+			{
+				calculateLegitViewAngles(pLocal, pCmd); // Advanced method with MoveSim
+			}
+			else if (Vars::NavEng::NavEngine::LegitPathView.Value == Vars::NavEng::NavEngine::LegitPathViewEnum::Simple)
+			{
+				calculateSimpleViewAngles(pLocal, pCmd); // Simple optimized method
+			}
+		}
+	}
 
 	size_t crumbs_amount = crumbs.size();
 	// No more crumbs, reset status
