@@ -4209,11 +4209,6 @@ void CMenu::MenuNavEng(int iTab)
 						FColorPicker(Vars::Colors::NavbotCool, 3, FColorPickerEnum::Dropdown);
 						FSlider(Vars::NavEng::NavEngine::CoolRange, FSliderEnum::None);
 						FDropdown(Vars::NavEng::NavEngine::LookAtPath);
-						PushTransparent(Transparent || FGet(Vars::NavEng::NavEngine::LookAtPath) != Vars::NavEng::NavEngine::LookAtPathEnum::Legit);
-						{
-							FDropdown(Vars::NavEng::NavEngine::LegitPathView);
-						}
-						PopTransparent();
 						FDropdown(Vars::NavEng::NavBot::AutoScope);
 						PushTransparent(Transparent || !FGet(Vars::NavEng::NavBot::AutoScope));
 						{
@@ -4228,7 +4223,6 @@ void CMenu::MenuNavEng(int iTab)
 				{
 					if (Section("##Debug Nav engine"))
 					{
-						FToggle(Vars::NavEng::NavEngine::SafePathing);
 						FSlider(Vars::NavEng::NavEngine::StickyIgnoreTime, FSliderEnum::Left);
 						FSlider(Vars::NavEng::NavEngine::StuckDetectTime, FSliderEnum::Right);
 						FSlider(Vars::NavEng::NavEngine::StuckBlacklistTime, FSliderEnum::Left);

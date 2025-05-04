@@ -203,7 +203,6 @@ public:
 	bool repath_on_fail = false;
 	Vector last_destination;
 	bool m_bPathing = false;
-	Timer inactivity;
 
 	// Is the Nav engine ready to run?
 	bool isReady(bool bRoundCheck = false);
@@ -253,8 +252,6 @@ public:
 	CNavParser::Crumb current_crumb;
 	void followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd);
 	bool findNearestNavNode(CTFPlayer* pLocal);
-	void calculateLegitViewAngles(CTFPlayer* pLocal, CUserCmd* pCmd);
-	void calculateSimpleViewAngles(CTFPlayer* pLocal, CUserCmd* pCmd);
 
 	void vischeckPath();
 	void checkBlacklist();
