@@ -185,8 +185,13 @@ public:
 			pather.Reset();
 		}
 
-		// Unnecessary thing that is sadly necessary
-		void PrintStateInfo(void*) {}
+		// Unnecessary interface method for micropather::Graph that is sadly neccesary
+		void PrintStateInfo(void* state) 
+		{
+			if (!state)
+				return;
+			// The actual implementation isn't needed but the function signature must match the interface
+		}
 	};
 };
 

@@ -341,92 +341,96 @@ namespace F::NamedPipe
 
     void SendHealthUpdate(int health)
     {
-        // Queue health update with medium priority
+            return;
+        
+        auto pLocal = H::Entities.GetLocal();
+        if (!pLocal)
+            return;
+        
+        health = pLocal->m_iHealth();
         QueueMessage("Health", std::to_string(health), false);
     }
 
     int GetCurrentPlayerClass()
     {
-        Log("GetCurrentPlayerClass called");
-        if (I::EngineClient && I::EngineClient->IsInGame())
-        {
-            Log("In game");
-            auto pLocal = H::Entities.GetLocal();
-            if (pLocal)
-            {
-                Log("Local player found");
-                int playerClass = pLocal->As<CTFPlayer>()->m_iClass();
-                Log("Player class: " + std::to_string(playerClass));
-                return playerClass;
-            }
-            else
-            {
-                Log("Local player not found");
-            }
-        }
-        else
-        {
-            Log("Not in game or EngineClient not available");
-        }
-        return -1;
+        if (!I::EngineClient || !I::EngineClient->IsInGame())
+            return -1;
+        
+        auto pLocal = H::Entities.GetLocal();
+        if (!pLocal)
+            return -1;
+        
+        return pLocal->As<CTFPlayer>()->m_iClass();
     }
 
     void SendPlayerClassUpdate(int playerClass)
     {
-        static int lastSentClass = -1;
-
-        if (playerClass == lastSentClass || playerClass < 1 || playerClass > 9)
+        if (!I::EngineClient || !I::EngineClient->IsInGame())
             return;
-
-        lastSentClass = playerClass;
-
-        std::string className;
-        switch (playerClass)
-        {
-            case 1: className = "Scout"; break;
-            case 2: className = "Sniper"; break;
-            case 3: className = "Soldier"; break;
-            case 4: className = "Demoman"; break;
-            case 5: className = "Medic"; break;
-            case 6: className = "Heavy"; break;
-            case 7: className = "Pyro"; break;
-            case 8: className = "Spy"; break;
-            case 9: className = "Engineer"; break;
-            default: className = "Unknown"; break;
-        }
-
-        // Queue player class update
+        
+        if (playerClass == -1)
+            playerClass = GetCurrentPlayerClass();
+        
+        if (playerClass == -1)
+            return;
+        
+        std::string className = "Unknown";
+        const char* classStr = SDK::GetClassByIndex(playerClass);
+        if (classStr)
+            className = classStr;
         QueueMessage("PlayerClass", className, false);
     }
 
     std::string GetCurrentLevelName()
     {
+        if (!I::EngineClient || !I::EngineClient->IsInGame())
+            return "Unknown";
+        
         return SDK::GetLevelName();
     }
 
     void SendMapUpdate()
     {
+        if (!I::EngineClient || !I::EngineClient->IsInGame())
+            return;
+        
         static std::string lastSentMap = "";
         std::string currentMap = GetCurrentLevelName();
-
-        if (currentMap == lastSentMap)
+        
+        if (currentMap == lastSentMap || currentMap == "Unknown")
             return;
-
+        
         lastSentMap = currentMap;
-
-        // Queue map update
         QueueMessage("Map", currentMap, false);
     }
 
     void SendServerInfo()
     {
-        // Queue server info update
-        QueueMessage("ServerInfo", "Player", false);
+        if (!I::EngineClient || !I::EngineClient->IsInGame() || I::EngineClient->IsPlayingDemo())
+            return;
+        
+        std::string serverInfo = "Offline";
+        
+        INetChannelInfo* netInfo = I::EngineClient->GetNetChannelInfo();
+        if (netInfo)
+        {
+            // Format: IP:Port
+            const char* address = netInfo->GetAddress();
+            if (address && *address)
+            {
+                serverInfo = address;
+            }
+        }
+        QueueMessage("ServerInfo", serverInfo, false);
     }
 
     void UpdateBotInfo()
     {
-        SendPlayerClassUpdate(GetCurrentPlayerClass());
+        if (!I::EngineClient)
+            return;
+        
+        SendHealthUpdate(0); // Health param will be ignored in the updated function
+        SendPlayerClassUpdate(-1); // Will retrieve class directly
         SendMapUpdate();
         SendServerInfo();
     }
