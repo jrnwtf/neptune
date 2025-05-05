@@ -341,6 +341,7 @@ namespace F::NamedPipe
 
     void SendHealthUpdate(int health)
     {
+        if (!I::EngineClient || !I::EngineClient->IsInGame())
             return;
         
         auto pLocal = H::Entities.GetLocal();
