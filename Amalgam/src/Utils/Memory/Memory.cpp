@@ -1,6 +1,13 @@
 #include "Memory.h"
 #include <format>
 #include <Psapi.h>
+#include <exception>
+
+#ifdef _TEXTMODE
+#define TEXTMODE_CRASH_PROTECT(code) try { code } catch (...) { return nullptr; }
+#else
+#define TEXTMODE_CRASH_PROTECT(code) code
+#endif
 
 #define INRANGE(x, a, b) (x >= a && x <= b) 
 #define GetBits(x) (INRANGE((x & (~0x20)),'A','F') ? ((x & (~0x20)) - 'A' + 0xA) : (INRANGE(x,'0','9') ? x - '0' : 0))
@@ -14,6 +21,22 @@ struct InterfaceInit_t
 	const char* m_pszInterfaceName = nullptr;
 	InterfaceInit_t* m_pNextInterface = nullptr;
 };
+
+template<typename Func>
+auto SafeExecute(Func&& func) -> decltype(func())
+{
+    try {
+        return func();
+    }
+    catch (const std::exception& e) {
+        // Optional: Log exception
+        return {};
+    }
+    catch (...) {
+        // Handle any exception
+        return {};
+    }
+}
 
 std::vector<byte> CMemory::PatternToByte(const char* szPattern)
 {
@@ -103,13 +126,30 @@ using CreateInterfaceFn = void* (*)(const char* pName, int* pReturnCode);
 
 PVOID CMemory::FindInterface(const char* szModule, const char* szObject)
 {
-	const auto hModule = GetModuleHandleA(szModule);
-	if (!hModule)
-		return nullptr;
+    // Basic parameter validation
+    if (!szModule || !szObject)
+        return nullptr;
 
-	const auto createFn = reinterpret_cast<CreateInterfaceFn>(GetProcAddress(hModule, "CreateInterface"));
-	if (!createFn)
-		return nullptr;
+    // Use our safe execution wrapper for all interface operations
+    return SafeExecute([&]() -> PVOID {
+        const auto hModule = GetModuleHandleA(szModule);
+        if (!hModule)
+            return nullptr;
 
-	return createFn(szObject, nullptr);
+        const auto createFn = reinterpret_cast<CreateInterfaceFn>(GetProcAddress(hModule, "CreateInterface"));
+        if (!createFn)
+            return nullptr;
+
+        // Extra protection for TextMode builds where CreateInterface might fail
+        TEXTMODE_CRASH_PROTECT({
+            void* result = createFn(szObject, nullptr);
+            // Validate the result - make sure it's a valid pointer
+            if (!result || result == reinterpret_cast<void*>(0x1) || 
+                reinterpret_cast<uintptr_t>(result) < 0x1000)
+                return nullptr;
+            return result;
+        });
+
+        return nullptr;
+    });
 }

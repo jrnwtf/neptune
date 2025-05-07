@@ -11,32 +11,104 @@ MAKE_SIGNATURE(Get_SteamNetworkingUtils, "client.dll", "40 53 48 83 EC ? 48 8B D
 
 bool CNullInterfaces::Initialize()
 {
-	I::TFPartyClient = S::Get_TFPartyClient.Call<CTFPartyClient*>();
-	Validate(I::TFPartyClient);
+	try {
+		if (S::Get_TFPartyClient.IsValid()) {
+			try {
+				I::TFPartyClient = S::Get_TFPartyClient.Call<CTFPartyClient*>();
+				Validate(I::TFPartyClient);
+			}
+			catch (...) {
+				U::Core.AppendFailText("CNullInterfaces::Initialize() exception calling Get_TFPartyClient");
+				I::TFPartyClient = nullptr;
+				m_bFailed = true;
+			}
+		}
+		else {
+			U::Core.AppendFailText("CNullInterfaces::Initialize() Get_TFPartyClient signature invalid");
+			m_bFailed = true;
+		}
+		
+		// Steam Client
+		if (!I::SteamClient) {
+			U::Core.AppendFailText("CNullInterfaces::Initialize() SteamClient is null");
+			m_bFailed = true;
+			return !m_bFailed;
+		}
 
-	const HSteamPipe hsNewPipe = I::SteamClient->CreateSteamPipe();
-	Validate(hsNewPipe);
+		HSteamPipe hsNewPipe = 0;
+		try {
+			hsNewPipe = I::SteamClient->CreateSteamPipe();
+		}
+		catch (...) {
+			U::Core.AppendFailText("CNullInterfaces::Initialize() exception in CreateSteamPipe");
+			m_bFailed = true;
+			return !m_bFailed;
+		}
 
-	const HSteamPipe hsNewUser = I::SteamClient->ConnectToGlobalUser(hsNewPipe);
-	Validate(hsNewUser);
+		if (!hsNewPipe) {
+			U::Core.AppendFailText("CNullInterfaces::Initialize() CreateSteamPipe failed");
+			m_bFailed = true;
+			return !m_bFailed;
+		}
 
-	I::SteamFriends = I::SteamClient->GetISteamFriends(hsNewUser, hsNewPipe, STEAMFRIENDS_INTERFACE_VERSION);
-	Validate(I::SteamFriends);
+		HSteamPipe hsNewUser = 0;
+		try {
+			hsNewUser = I::SteamClient->ConnectToGlobalUser(hsNewPipe);
+		}
+		catch (...) {
+			U::Core.AppendFailText("CNullInterfaces::Initialize() exception in ConnectToGlobalUser");
+			m_bFailed = true;
+			return !m_bFailed;
+		}
 
-	I::SteamUtils = I::SteamClient->GetISteamUtils(hsNewUser, STEAMUTILS_INTERFACE_VERSION);
-	Validate(I::SteamUtils);
+		if (!hsNewUser) {
+			U::Core.AppendFailText("CNullInterfaces::Initialize() ConnectToGlobalUser failed");
+			m_bFailed = true;
+			return !m_bFailed;
+		}
 
-	I::SteamApps = I::SteamClient->GetISteamApps(hsNewUser, hsNewPipe, STEAMAPPS_INTERFACE_VERSION);
-	ValidateNonLethal(I::SteamApps);
+		try {
+			I::SteamFriends = I::SteamClient->GetISteamFriends(hsNewUser, hsNewPipe, STEAMFRIENDS_INTERFACE_VERSION);
+			Validate(I::SteamFriends);
 
-	I::SteamUserStats = I::SteamClient->GetISteamUserStats(hsNewUser, hsNewPipe, STEAMUSERSTATS_INTERFACE_VERSION);
-	Validate(I::SteamUserStats);
+			I::SteamUtils = I::SteamClient->GetISteamUtils(hsNewUser, STEAMUTILS_INTERFACE_VERSION);
+			Validate(I::SteamUtils);
 
-	I::SteamUser = I::SteamClient->GetISteamUser(hsNewUser, hsNewPipe, STEAMUSER_INTERFACE_VERSION);
-	Validate(I::SteamUser);
+			I::SteamApps = I::SteamClient->GetISteamApps(hsNewUser, hsNewPipe, STEAMAPPS_INTERFACE_VERSION);
+			ValidateNonLethal(I::SteamApps);
 
-	S::Get_SteamNetworkingUtils.Call<ISteamNetworkingUtils*>(&I::SteamNetworkingUtils);
-	Validate(I::SteamNetworkingUtils);
+			I::SteamUserStats = I::SteamClient->GetISteamUserStats(hsNewUser, hsNewPipe, STEAMUSERSTATS_INTERFACE_VERSION);
+			Validate(I::SteamUserStats);
+
+			I::SteamUser = I::SteamClient->GetISteamUser(hsNewUser, hsNewPipe, STEAMUSER_INTERFACE_VERSION);
+			Validate(I::SteamUser);
+		}
+		catch (...) {
+			U::Core.AppendFailText("CNullInterfaces::Initialize() exception getting Steam interfaces");
+			m_bFailed = true;
+			return !m_bFailed;
+		}
+
+		if (S::Get_SteamNetworkingUtils.IsValid()) {
+			try {
+				S::Get_SteamNetworkingUtils.Call<ISteamNetworkingUtils*>(&I::SteamNetworkingUtils);
+				Validate(I::SteamNetworkingUtils);
+			}
+			catch (...) {
+				U::Core.AppendFailText("CNullInterfaces::Initialize() exception calling Get_SteamNetworkingUtils");
+				I::SteamNetworkingUtils = nullptr;
+				m_bFailed = true;
+			}
+		}
+		else {
+			U::Core.AppendFailText("CNullInterfaces::Initialize() Get_SteamNetworkingUtils signature invalid");
+			m_bFailed = true;
+		}
+	}
+	catch (...) {
+		U::Core.AppendFailText("CNullInterfaces::Initialize() caught unhandled exception");
+		m_bFailed = true;
+	}
 
 	return !m_bFailed;
 }
