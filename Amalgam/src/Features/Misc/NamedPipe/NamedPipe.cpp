@@ -46,6 +46,9 @@ namespace F::NamedPipe
     };
     std::vector<PendingMessage> messageQueue;
     
+    std::mutex inboundMutex;
+    std::vector<PendingMessage> inboundQueue;
+    
     std::unordered_map<uint32_t, bool> localBots;
     
 
@@ -54,6 +57,8 @@ namespace F::NamedPipe
     void ProcessMessageQueue();
     bool SafeWriteToPipe(const std::string& message);
     int GetReconnectDelayMs();
+    void QueueIncomingMessage(const std::string& type, const std::string& content);
+    void ProcessIncomingQueue();
     
     void Log(const std::string& message)
     {
@@ -638,6 +643,24 @@ namespace F::NamedPipe
         return delay + jitter;
     }
 
+    void QueueIncomingMessage(const std::string& type, const std::string& content)
+    {
+        std::lock_guard<std::mutex> lock(inboundMutex);
+        inboundQueue.push_back({type, content, false});
+    }
+
+    void ProcessIncomingQueue()
+    {
+        std::lock_guard<std::mutex> lock(inboundMutex);
+        for (auto& msg : inboundQueue) {
+            if (msg.type == "Command")
+                ExecuteCommand(msg.content);
+            else if (msg.type == "LocalBot")
+                ProcessLocalBotMessage(msg.content);
+        }
+        inboundQueue.clear();
+    }
+
     void ConnectAndMaintainPipe()
     {
         Log("ConnectAndMaintainPipe started");
@@ -815,10 +838,11 @@ namespace F::NamedPipe
                                 std::getline(iss, content);
 
                                 if (messageType == "Command") {
-                                    Log("Executing command: " + content);
-                                    ExecuteCommand(content);
+                                    Log("Queued incoming Command: " + content);
+                                    QueueIncomingMessage(messageType, content);
                                 } else if (messageType == "LocalBot") {
-                                    ProcessLocalBotMessage(line);
+                                    Log("Queued incoming LocalBot: " + line);
+                                    QueueIncomingMessage(messageType, line);
                                 } else {
                                     Log("Received unknown message type: " + messageType);
                                 }

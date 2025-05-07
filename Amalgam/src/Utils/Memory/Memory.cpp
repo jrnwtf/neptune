@@ -103,6 +103,8 @@ using CreateInterfaceFn = void* (*)(const char* pName, int* pReturnCode);
 
 PVOID CMemory::FindInterface(const char* szModule, const char* szObject)
 {
+    if (!szObject || !*szObject)
+        return nullptr;
 	const auto hModule = GetModuleHandleA(szModule);
 	if (!hModule)
 		return nullptr;

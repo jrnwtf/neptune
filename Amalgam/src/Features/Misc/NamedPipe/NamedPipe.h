@@ -24,4 +24,8 @@ namespace F::NamedPipe
     bool IsLocalBot(uint32_t friendsID);
     void UpdateLocalBotIgnoreStatus();
     void ClearLocalBots();
+
+    // Main-thread inbound pipe processing
+    void QueueIncomingMessage(const std::string& type, const std::string& content);
+    void ProcessIncomingQueue();
 } 
