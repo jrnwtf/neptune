@@ -17,11 +17,6 @@ public:
 
 	bool Initialize();
 
-	inline bool IsValid() const
-	{
-		return m_dwVal != 0;
-	}
-
 	inline uintptr_t operator()()
 	{
 		return m_dwVal;

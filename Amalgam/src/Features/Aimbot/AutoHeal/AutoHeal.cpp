@@ -299,7 +299,7 @@ bool CAutoHeal::RunVaccinator(CTFPlayer* pLocal, CWeaponMedigun* pWeapon, CUserC
 
 void CAutoHeal::Event(IGameEvent* pEvent, uint32_t uHash, CTFPlayer* pLocal)
 {
-	if (!pEvent || !pLocal || uHash != FNV1A::Hash32Const("player_hurt") || 
+	if (uHash != FNV1A::Hash32Const("player_hurt") || 
 	    !Vars::Aimbot::Healing::AutoVaccinator.Value || 
 	    !Vars::Aimbot::Healing::VaccinatorSmart.Value)
 	{
@@ -307,7 +307,7 @@ void CAutoHeal::Event(IGameEvent* pEvent, uint32_t uHash, CTFPlayer* pLocal)
 	}
 
 	int iVictim = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("userid"));
-	if (iVictim <= 0 || iVictim != pLocal->entindex())
+	if (iVictim != pLocal->entindex())
 		return;
 
 	int nDamage = pEvent->GetInt("damageamount");
@@ -560,8 +560,6 @@ bool CAutoHeal::RunAutoUber(CTFPlayer* pLocal, CWeaponMedigun* pWeapon, CUserCmd
 void CAutoHeal::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
 	if (!pLocal || !pWeapon || !pCmd)
-		return;
-	if (!I::EngineClient->IsInGame() || !pLocal->IsAlive() || pLocal->m_iClass() != TF_CLASS_MEDIC)
 		return;
 	
 	CWeaponMedigun* pMedigun = pWeapon->As<CWeaponMedigun>();
