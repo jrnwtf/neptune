@@ -4,6 +4,7 @@
 #include "../../Spectate/Spectate.h"
 #include "../../Simulation/MovementSimulation/MovementSimulation.h"
 #include "../../PacketManip/AntiAim/AntiAim.h"
+#include <cmath>
 
 void CESP::DrawYawArrow(const Vec3& vOrigin, float flYaw, float flArrowLength, float flHeadSize, float flHeightOffset, 
                       const Color_t& mainColor, const Color_t& outlineColor, const Vec3& vScreenOrigin, 
@@ -1274,7 +1275,6 @@ void CESP::DrawPlayers()
 			
 			if (iEntIndex == I::EngineClient->GetLocalPlayer())
 			{
-				// Only draw yaw arrows if we're in thirdperson mode to avoid crashes
 				if (Vars::Visuals::Thirdperson::Enabled.Value)
 				{
 					const float flArrowLength = 40.0f; // Real-world unit length
@@ -1311,6 +1311,10 @@ void CESP::DrawPlayers()
 							flFakeYaw = flRealYaw + 120.0f; // Add an offset to demonstrate
 						}
 
+						// fuck you (NaN, W2S crashes fix)
+						if (!std::isfinite(flRealYaw) || !std::isfinite(flFakeYaw))
+							continue;
+
 						int iArrowStyle = Vars::ESP::YawArrowsStyle.Value;
 						
 						try {
@@ -1320,7 +1324,7 @@ void CESP::DrawPlayers()
 							DrawYawArrow(vOrigin, flFakeYaw, flArrowLength, flHeadSize, flHeightOffset, 
 										fakeColor, fakeOutline, vScreenOrigin, static_cast<Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum>(iArrowStyle), false);
 						} catch (...) {
-							// Silently fail if drawing causes an exception
+							// Silently explode if drawing causes an exception
 						}
 					}
 				}
