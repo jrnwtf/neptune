@@ -62,10 +62,63 @@ void CMenu::DrawMenu()
 			flOffset = H::Draw.Scale(36);
 			pDrawList->AddRectFilled({ vDrawPos.x, vDrawPos.y + H::Draw.Scale(35) }, { vDrawPos.x + H::Draw.Scale(flSideSize - 1), vDrawPos.y + H::Draw.Scale(36) }, F::Render.Background2);
 			
-			SetCursorPos({ H::Draw.Scale(12), H::Draw.Scale(11) });
-			PushStyleColor(ImGuiCol_Text, F::Render.Accent.Value);
-			FText(TruncateText(Vars::Menu::CheatTitle.Value, H::Draw.Scale(flSideSize - 28), F::Render.FontBold).c_str(), 0, F::Render.FontBold);
-			PopStyleColor();
+            std::string fullTitleStdStr = Vars::Menu::CheatTitle.Value;
+            
+            auto trim_string_safe = [](std::string& s_to_trim) {
+                size_t first_char = s_to_trim.find_first_not_of(" \t\n\r\f\v");
+                if (std::string::npos == first_char) {
+                    s_to_trim = ""; // string is all whitespace
+                    return;
+                }
+                size_t last_char = s_to_trim.find_last_not_of(" \t\n\r\f\v");
+                s_to_trim = s_to_trim.substr(first_char, (last_char - first_char + 1));
+            };
+            
+            trim_string_safe(fullTitleStdStr);
+
+            if (!fullTitleStdStr.empty()) {
+                float sidebarDisplayWidth = H::Draw.Scale(flSideSize - 1.f);
+                float maxOverallTextWidth = sidebarDisplayWidth - H::Draw.Scale(8.f); 
+                
+                std::string titleToDisplay = TruncateText(fullTitleStdStr, maxOverallTextWidth, F::Render.FontBold);
+
+                std::string sPart1, sPart2;
+                size_t len = titleToDisplay.length();
+                
+                size_t firstSpace = titleToDisplay.find(' ');
+                size_t lastSpace = titleToDisplay.rfind(' ');
+
+                if (firstSpace != std::string::npos && firstSpace == lastSpace) { // Exactly one space
+                    sPart1 = titleToDisplay.substr(0, firstSpace);
+                    sPart2 = titleToDisplay.substr(firstSpace + 1);
+                } else { // Zero or multiple spaces, or a single word
+                    size_t mid = len / 2;
+                    sPart1 = titleToDisplay.substr(0, mid);
+                    sPart2 = titleToDisplay.substr(mid);
+                }
+                
+                trim_string_safe(sPart1);
+                trim_string_safe(sPart2);
+                
+                ImVec2 textSize1 = FCalcTextSize(sPart1.c_str(), F::Render.FontBold);
+                ImVec2 textSize2 = FCalcTextSize(sPart2.c_str(), F::Render.FontBold);
+                float totalActualTextWidth = textSize1.x + textSize2.x;
+                
+                float startX = (sidebarDisplayWidth - totalActualTextWidth) / 2.0f;
+                startX = std::max(0.f, startX); 
+                
+                float currentY = H::Draw.Scale(11); // Vertical position for the text
+
+                SetCursorPos({ startX, currentY });
+                PushStyleColor(ImGuiCol_Text, F::Render.Active.Value); // Color for first part
+                FText(sPart1.c_str(), 0, F::Render.FontBold);
+                PopStyleColor();
+
+                SetCursorPos({ startX + textSize1.x, currentY });
+                PushStyleColor(ImGuiCol_Text, F::Render.Accent.Value); // Color for second part
+                FText(sPart2.c_str(), 0, F::Render.FontBold);
+                PopStyleColor();
+            }
 		}
 
 		static int iTab = 0, iAimbotTab = 0, iVisualsTab = 0, iMiscTab = 0, iNavEngTab = 0, iLogsTab = 0, iSettingsTab = 0;
@@ -1529,18 +1582,7 @@ void CMenu::MenuMisc(int iTab)
 					FToggle(Vars::Misc::Automation::AcceptItemDrops, FToggleEnum::Right);
 					FToggle(Vars::Misc::Automation::AutoF2Ignored, FToggleEnum::Left);
 					FToggle(Vars::Misc::Automation::AutoF1Priority, FToggleEnum::Right);
-					FToggle(Vars::Misc::Automation::RandomVotekick, FToggleEnum::Left);
-					FToggle(Vars::Misc::Automation::ChatSpam::Enable, FToggleEnum::Right);
-					FToggle(Vars::Misc::Automation::AutoReport, FToggleEnum::Left);
-					PushTransparent(!Vars::Misc::Automation::ChatSpam::Enable.Value);
-					{
-						FSlider(Vars::Misc::Automation::ChatSpam::Interval, FSliderEnum::Left | FSliderEnum::Clamp);
-						FToggle(Vars::Misc::Automation::ChatSpam::TeamChat, FToggleEnum::Right);
-						FToggle(Vars::Misc::Automation::ChatSpam::Randomize, FToggleEnum::Left);
-					}
-					PopTransparent();
-					FToggle(Vars::Misc::Automation::NoiseSpam, FToggleEnum::Left);
-					FDropdown(Vars::Misc::Automation::VoiceCommandSpam);
+					FToggle(Vars::Misc::Automation::RandomVotekick, FToggleEnum::Left);;
 				} EndSection();
 			}
 
@@ -1570,21 +1612,19 @@ void CMenu::MenuMisc(int iTab)
 						FToggle(Vars::Misc::Game::AntiCheatCritHack);
 					} EndSection();
 				}
-				if (Section("Queueing"))
+				if (Section("Spam", 8))
 				{
-					FDropdown(Vars::Misc::Queueing::ForceRegions);
-					FToggle(Vars::Misc::Queueing::FreezeQueue, FToggleEnum::Left);
-					FToggle(Vars::Misc::Queueing::AutoCasualQueue, FToggleEnum::Right);
-					FSlider(Vars::Misc::Queueing::QueueDelay, FSliderEnum::None);
-					FToggle(Vars::Misc::Queueing::RQif, FToggleEnum::Left);
-					PushTransparent(!FGet(Vars::Misc::Queueing::RQif));
+					FToggle(Vars::Misc::Automation::ChatSpam::Enable, FToggleEnum::Left);
+					PushTransparent(!Vars::Misc::Automation::ChatSpam::Enable.Value);
 					{
-						FSlider(Vars::Misc::Queueing::RQplt);
-						FToggle(Vars::Misc::Queueing::RQkick, FToggleEnum::Left);
-						FToggle(Vars::Misc::Queueing::RQLTM, FToggleEnum::Right);
-						FToggle(Vars::Misc::Queueing::RQIgnoreFriends, FToggleEnum::Left);
+						FSlider(Vars::Misc::Automation::ChatSpam::Interval, FSliderEnum::Left | FSliderEnum::Clamp);
+						FToggle(Vars::Misc::Automation::ChatSpam::TeamChat, FToggleEnum::Right);
+						FToggle(Vars::Misc::Automation::ChatSpam::Randomize, FToggleEnum::Left);
 					}
 					PopTransparent();
+					FToggle(Vars::Misc::Automation::NoiseSpam, FToggleEnum::Left);
+					FToggle(Vars::Misc::Automation::AutoReport, FToggleEnum::Right);
+					FDropdown(Vars::Misc::Automation::VoiceCommandSpam);
 				} EndSection();
 				if (Section("Mann vs. Machine", 8))
 				{
@@ -4310,6 +4350,22 @@ void CMenu::MenuNavEng(int iTab)
 						FTooltip("should double the performance of the movesim method by only checking every 2nd tick");
 					} EndSection();
 				}
+				if (Section("Queueing"))
+				{
+					FDropdown(Vars::Misc::Queueing::ForceRegions);
+					FToggle(Vars::Misc::Queueing::FreezeQueue, FToggleEnum::Left);
+					FToggle(Vars::Misc::Queueing::AutoCasualQueue, FToggleEnum::Right);
+					FSlider(Vars::Misc::Queueing::QueueDelay, FSliderEnum::None);
+					FToggle(Vars::Misc::Queueing::RQif, FToggleEnum::Left);
+					PushTransparent(!FGet(Vars::Misc::Queueing::RQif));
+					{
+						FSlider(Vars::Misc::Queueing::RQplt);
+						FToggle(Vars::Misc::Queueing::RQkick, FToggleEnum::Left);
+						FToggle(Vars::Misc::Queueing::RQLTM, FToggleEnum::Right);
+						FToggle(Vars::Misc::Queueing::RQIgnoreFriends, FToggleEnum::Left);
+					}
+					PopTransparent();
+				} EndSection();
 			}
 			EndTable();
 		}
