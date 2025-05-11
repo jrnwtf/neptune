@@ -6,146 +6,146 @@
 #include "../../PacketManip/AntiAim/AntiAim.h"
 #include <cmath>
 
-void CESP::DrawYawArrow(const Vec3& vOrigin, float flYaw, float flArrowLength, float flHeadSize, float flHeightOffset, 
-                      const Color_t& mainColor, const Color_t& outlineColor, const Vec3& vScreenOrigin, 
-                      Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum style, bool isReal)
-{
-	float flRadians = DEG2RAD(flYaw);
+// void CESP::DrawYawArrow(const Vec3& vOrigin, float flYaw, float flArrowLength, float flHeadSize, float flHeightOffset, 
+//                       const Color_t& mainColor, const Color_t& outlineColor, const Vec3& vScreenOrigin, 
+//                       Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum style, bool isReal)
+// {
+// 	float flRadians = DEG2RAD(flYaw);
 	
-	Vec3 vArrowEnd;
-	vArrowEnd.x = vOrigin.x + cos(flRadians) * flArrowLength;
-	vArrowEnd.y = vOrigin.y + sin(flRadians) * flArrowLength;
-	vArrowEnd.z = vOrigin.z; // Same height as origin
+// 	Vec3 vArrowEnd;
+// 	vArrowEnd.x = vOrigin.x + cos(flRadians) * flArrowLength;
+// 	vArrowEnd.y = vOrigin.y + sin(flRadians) * flArrowLength;
+// 	vArrowEnd.z = vOrigin.z; // Same height as origin
 	
-	float flHeadAngle1 = flRadians + DEG2RAD(150);
-	float flHeadAngle2 = flRadians - DEG2RAD(150);
+// 	float flHeadAngle1 = flRadians + DEG2RAD(150);
+// 	float flHeadAngle2 = flRadians - DEG2RAD(150);
 	
-	Vec3 vHeadPoint1;
-	vHeadPoint1.x = vArrowEnd.x + cos(flHeadAngle1) * flHeadSize;
-	vHeadPoint1.y = vArrowEnd.y + sin(flHeadAngle1) * flHeadSize;
-	vHeadPoint1.z = vArrowEnd.z;
+// 	Vec3 vHeadPoint1;
+// 	vHeadPoint1.x = vArrowEnd.x + cos(flHeadAngle1) * flHeadSize;
+// 	vHeadPoint1.y = vArrowEnd.y + sin(flHeadAngle1) * flHeadSize;
+// 	vHeadPoint1.z = vArrowEnd.z;
 	
-	Vec3 vHeadPoint2;
-	vHeadPoint2.x = vArrowEnd.x + cos(flHeadAngle2) * flHeadSize;
-	vHeadPoint2.y = vArrowEnd.y + sin(flHeadAngle2) * flHeadSize;
-	vHeadPoint2.z = vArrowEnd.z;
+// 	Vec3 vHeadPoint2;
+// 	vHeadPoint2.x = vArrowEnd.x + cos(flHeadAngle2) * flHeadSize;
+// 	vHeadPoint2.y = vArrowEnd.y + sin(flHeadAngle2) * flHeadSize;
+// 	vHeadPoint2.z = vArrowEnd.z;
 	
-	Vec3 vScreenEnd, vScreenHead1, vScreenHead2;
-	if (SDK::W2S(vArrowEnd, vScreenEnd) && 
-	    SDK::W2S(vHeadPoint1, vScreenHead1) && 
-	    SDK::W2S(vHeadPoint2, vScreenHead2))
-	{
-		switch (style)
-		{
-			case Vars::ESP::YawArrowsStyleEnum::Default:
-			{
-				Color_t shadowColor = { 0, 0, 0, 160 };
-				float shadowOffsetX = 2.0f;
-				float shadowOffsetY = 2.0f;
+// 	Vec3 vScreenEnd, vScreenHead1, vScreenHead2;
+// 	if (SDK::W2S(vArrowEnd, vScreenEnd) && 
+// 	    SDK::W2S(vHeadPoint1, vScreenHead1) && 
+// 	    SDK::W2S(vHeadPoint2, vScreenHead2))
+// 	{
+// 		switch (style)
+// 		{
+// 			case Vars::ESP::YawArrowsStyleEnum::Default:
+// 			{
+// 				Color_t shadowColor = { 0, 0, 0, 160 };
+// 				float shadowOffsetX = 2.0f;
+// 				float shadowOffsetY = 2.0f;
 				
-				H::Draw.Line(vScreenOrigin.x + shadowOffsetX, vScreenOrigin.y + shadowOffsetY, 
-				           vScreenEnd.x + shadowOffsetX, vScreenEnd.y + shadowOffsetY, shadowColor);
-				H::Draw.Line(vScreenEnd.x + shadowOffsetX, vScreenEnd.y + shadowOffsetY, 
-				           vScreenHead1.x + shadowOffsetX, vScreenHead1.y + shadowOffsetY, shadowColor);
-				H::Draw.Line(vScreenEnd.x + shadowOffsetX, vScreenEnd.y + shadowOffsetY, 
-				           vScreenHead2.x + shadowOffsetX, vScreenHead2.y + shadowOffsetY, shadowColor);
+// 				H::Draw.Line(vScreenOrigin.x + shadowOffsetX, vScreenOrigin.y + shadowOffsetY, 
+// 				           vScreenEnd.x + shadowOffsetX, vScreenEnd.y + shadowOffsetY, shadowColor);
+// 				H::Draw.Line(vScreenEnd.x + shadowOffsetX, vScreenEnd.y + shadowOffsetY, 
+// 				           vScreenHead1.x + shadowOffsetX, vScreenHead1.y + shadowOffsetY, shadowColor);
+// 				H::Draw.Line(vScreenEnd.x + shadowOffsetX, vScreenEnd.y + shadowOffsetY, 
+// 				           vScreenHead2.x + shadowOffsetX, vScreenHead2.y + shadowOffsetY, shadowColor);
 				
-				// Draw outline
-				H::Draw.Line(vScreenOrigin.x-1, vScreenOrigin.y-1, vScreenEnd.x-1, vScreenEnd.y-1, outlineColor);
-				H::Draw.Line(vScreenOrigin.x+1, vScreenOrigin.y+1, vScreenEnd.x+1, vScreenEnd.y+1, outlineColor);
-				H::Draw.Line(vScreenEnd.x-1, vScreenEnd.y-1, vScreenHead1.x-1, vScreenHead1.y-1, outlineColor);
-				H::Draw.Line(vScreenEnd.x+1, vScreenEnd.y+1, vScreenHead1.x+1, vScreenHead1.y+1, outlineColor);
-				H::Draw.Line(vScreenEnd.x-1, vScreenEnd.y-1, vScreenHead2.x-1, vScreenHead2.y-1, outlineColor);
-				H::Draw.Line(vScreenEnd.x+1, vScreenEnd.y+1, vScreenHead2.x+1, vScreenHead2.y+1, outlineColor);
+// 				// Draw outline
+// 				H::Draw.Line(vScreenOrigin.x-1, vScreenOrigin.y-1, vScreenEnd.x-1, vScreenEnd.y-1, outlineColor);
+// 				H::Draw.Line(vScreenOrigin.x+1, vScreenOrigin.y+1, vScreenEnd.x+1, vScreenEnd.y+1, outlineColor);
+// 				H::Draw.Line(vScreenEnd.x-1, vScreenEnd.y-1, vScreenHead1.x-1, vScreenHead1.y-1, outlineColor);
+// 				H::Draw.Line(vScreenEnd.x+1, vScreenEnd.y+1, vScreenHead1.x+1, vScreenHead1.y+1, outlineColor);
+// 				H::Draw.Line(vScreenEnd.x-1, vScreenEnd.y-1, vScreenHead2.x-1, vScreenHead2.y-1, outlineColor);
+// 				H::Draw.Line(vScreenEnd.x+1, vScreenEnd.y+1, vScreenHead2.x+1, vScreenHead2.y+1, outlineColor);
 
-				// Draw main lines
-				H::Draw.Line(vScreenOrigin.x, vScreenOrigin.y, vScreenEnd.x, vScreenEnd.y, mainColor);
-				H::Draw.Line(vScreenEnd.x, vScreenEnd.y, vScreenHead1.x, vScreenHead1.y, mainColor);
-				H::Draw.Line(vScreenEnd.x, vScreenEnd.y, vScreenHead2.x, vScreenHead2.y, mainColor);
-				break;
-			}
-			case Vars::ESP::YawArrowsStyleEnum::Modern:
-			{
-				Color_t shaftGradientStart = mainColor;
-				Color_t shaftGradientEnd = mainColor;
-				shaftGradientStart.a = 230;
-				shaftGradientEnd.a = 255;
+// 				// Draw main lines
+// 				H::Draw.Line(vScreenOrigin.x, vScreenOrigin.y, vScreenEnd.x, vScreenEnd.y, mainColor);
+// 				H::Draw.Line(vScreenEnd.x, vScreenEnd.y, vScreenHead1.x, vScreenHead1.y, mainColor);
+// 				H::Draw.Line(vScreenEnd.x, vScreenEnd.y, vScreenHead2.x, vScreenHead2.y, mainColor);
+// 				break;
+// 			}
+// 			case Vars::ESP::YawArrowsStyleEnum::Modern:
+// 			{
+// 				Color_t shaftGradientStart = mainColor;
+// 				Color_t shaftGradientEnd = mainColor;
+// 				shaftGradientStart.a = 230;
+// 				shaftGradientEnd.a = 255;
 				
-				Vec3 vMidPoint;
-				vMidPoint.x = (vScreenOrigin.x + vScreenEnd.x) / 2.0f;
-				vMidPoint.y = (vScreenOrigin.y + vScreenEnd.y) / 2.0f;
+// 				Vec3 vMidPoint;
+// 				vMidPoint.x = (vScreenOrigin.x + vScreenEnd.x) / 2.0f;
+// 				vMidPoint.y = (vScreenOrigin.y + vScreenEnd.y) / 2.0f;
 				
-				H::Draw.Line(vScreenOrigin.x, vScreenOrigin.y, vMidPoint.x, vMidPoint.y, shaftGradientStart);
-				H::Draw.Line(vMidPoint.x, vMidPoint.y, vScreenEnd.x, vScreenEnd.y, shaftGradientEnd);
+// 				H::Draw.Line(vScreenOrigin.x, vScreenOrigin.y, vMidPoint.x, vMidPoint.y, shaftGradientStart);
+// 				H::Draw.Line(vMidPoint.x, vMidPoint.y, vScreenEnd.x, vScreenEnd.y, shaftGradientEnd);
 				
-				float perpX = -sin(flRadians) * 1.0f;
-				float perpY = cos(flRadians) * 1.0f;
-				H::Draw.Line(vScreenOrigin.x + perpX, vScreenOrigin.y + perpY, 
-				           vMidPoint.x + perpX, vMidPoint.y + perpY, shaftGradientStart);
-				H::Draw.Line(vMidPoint.x + perpX, vMidPoint.y + perpY, 
-				           vScreenEnd.x + perpX, vScreenEnd.y + perpY, shaftGradientEnd);
-				H::Draw.Line(vScreenOrigin.x - perpX, vScreenOrigin.y - perpY, 
-				           vMidPoint.x - perpX, vMidPoint.y - perpY, shaftGradientStart);
-				H::Draw.Line(vMidPoint.x - perpX, vMidPoint.y - perpY, 
-				           vScreenEnd.x - perpX, vScreenEnd.y - perpY, shaftGradientEnd);
+// 				float perpX = -sin(flRadians) * 1.0f;
+// 				float perpY = cos(flRadians) * 1.0f;
+// 				H::Draw.Line(vScreenOrigin.x + perpX, vScreenOrigin.y + perpY, 
+// 				           vMidPoint.x + perpX, vMidPoint.y + perpY, shaftGradientStart);
+// 				H::Draw.Line(vMidPoint.x + perpX, vMidPoint.y + perpY, 
+// 				           vScreenEnd.x + perpX, vScreenEnd.y + perpY, shaftGradientEnd);
+// 				H::Draw.Line(vScreenOrigin.x - perpX, vScreenOrigin.y - perpY, 
+// 				           vMidPoint.x - perpX, vMidPoint.y - perpY, shaftGradientStart);
+// 				H::Draw.Line(vMidPoint.x - perpX, vMidPoint.y - perpY, 
+// 				           vScreenEnd.x - perpX, vScreenEnd.y - perpY, shaftGradientEnd);
 				
-				Vec3 vModernHead1, vModernHead2;
-				float largerHeadSize = flHeadSize * 1.3f;
+// 				Vec3 vModernHead1, vModernHead2;
+// 				float largerHeadSize = flHeadSize * 1.3f;
 				
-				vModernHead1.x = vArrowEnd.x + cos(flHeadAngle1) * largerHeadSize;
-				vModernHead1.y = vArrowEnd.y + sin(flHeadAngle1) * largerHeadSize;
-				vModernHead1.z = vArrowEnd.z;
+// 				vModernHead1.x = vArrowEnd.x + cos(flHeadAngle1) * largerHeadSize;
+// 				vModernHead1.y = vArrowEnd.y + sin(flHeadAngle1) * largerHeadSize;
+// 				vModernHead1.z = vArrowEnd.z;
 				
-				vModernHead2.x = vArrowEnd.x + cos(flHeadAngle2) * largerHeadSize;
-				vModernHead2.y = vArrowEnd.y + sin(flHeadAngle2) * largerHeadSize;
-				vModernHead2.z = vArrowEnd.z;
+// 				vModernHead2.x = vArrowEnd.x + cos(flHeadAngle2) * largerHeadSize;
+// 				vModernHead2.y = vArrowEnd.y + sin(flHeadAngle2) * largerHeadSize;
+// 				vModernHead2.z = vArrowEnd.z;
 				
-				Vec3 vScreenModernHead1, vScreenModernHead2;
-				if (SDK::W2S(vModernHead1, vScreenModernHead1) && SDK::W2S(vModernHead2, vScreenModernHead2))
-				{
-					std::vector<Vertex_t> headPoints;
-					headPoints.push_back({ vScreenEnd.x, vScreenEnd.y });
-					headPoints.push_back({ vScreenModernHead1.x, vScreenModernHead1.y });
-					headPoints.push_back({ vScreenModernHead2.x, vScreenModernHead2.y });
+// 				Vec3 vScreenModernHead1, vScreenModernHead2;
+// 				if (SDK::W2S(vModernHead1, vScreenModernHead1) && SDK::W2S(vModernHead2, vScreenModernHead2))
+// 				{
+// 					std::vector<Vertex_t> headPoints;
+// 					headPoints.push_back({ vScreenEnd.x, vScreenEnd.y });
+// 					headPoints.push_back({ vScreenModernHead1.x, vScreenModernHead1.y });
+// 					headPoints.push_back({ vScreenModernHead2.x, vScreenModernHead2.y });
 					
-					H::Draw.FillPolygon(headPoints, mainColor);
+// 					H::Draw.FillPolygon(headPoints, mainColor);
 					
-					Color_t highlightColor = mainColor;
-					highlightColor.r = std::min(255, highlightColor.r + 40);
-					highlightColor.g = std::min(255, highlightColor.g + 40);
-					highlightColor.b = std::min(255, highlightColor.b + 40);
+// 					Color_t highlightColor = mainColor;
+// 					highlightColor.r = std::min(255, highlightColor.r + 40);
+// 					highlightColor.g = std::min(255, highlightColor.g + 40);
+// 					highlightColor.b = std::min(255, highlightColor.b + 40);
 					
-					Vec3 vHighlightPoint;
-					vHighlightPoint.x = vScreenEnd.x - (cos(flRadians) * (flHeadSize * 0.3f));
-					vHighlightPoint.y = vScreenEnd.y - (sin(flRadians) * (flHeadSize * 0.3f));
+// 					Vec3 vHighlightPoint;
+// 					vHighlightPoint.x = vScreenEnd.x - (cos(flRadians) * (flHeadSize * 0.3f));
+// 					vHighlightPoint.y = vScreenEnd.y - (sin(flRadians) * (flHeadSize * 0.3f));
 					
-					std::vector<Vertex_t> highlightPoints;
-					highlightPoints.push_back({ vHighlightPoint.x, vHighlightPoint.y });
-					highlightPoints.push_back({ (vScreenModernHead1.x + vScreenEnd.x) / 2.0f, (vScreenModernHead1.y + vScreenEnd.y) / 2.0f });
-					highlightPoints.push_back({ (vScreenModernHead2.x + vScreenEnd.x) / 2.0f, (vScreenModernHead2.y + vScreenEnd.y) / 2.0f });
+// 					std::vector<Vertex_t> highlightPoints;
+// 					highlightPoints.push_back({ vHighlightPoint.x, vHighlightPoint.y });
+// 					highlightPoints.push_back({ (vScreenModernHead1.x + vScreenEnd.x) / 2.0f, (vScreenModernHead1.y + vScreenEnd.y) / 2.0f });
+// 					highlightPoints.push_back({ (vScreenModernHead2.x + vScreenEnd.x) / 2.0f, (vScreenModernHead2.y + vScreenEnd.y) / 2.0f });
 					
-					H::Draw.FillPolygon(highlightPoints, highlightColor);
+// 					H::Draw.FillPolygon(highlightPoints, highlightColor);
 					
-					Color_t darkOutline = mainColor;
-					darkOutline.r = std::max(0, darkOutline.r - 70);
-					darkOutline.g = std::max(0, darkOutline.g - 70);
-					darkOutline.b = std::max(0, darkOutline.b - 70);
-					darkOutline.a = 255;
+// 					Color_t darkOutline = mainColor;
+// 					darkOutline.r = std::max(0, darkOutline.r - 70);
+// 					darkOutline.g = std::max(0, darkOutline.g - 70);
+// 					darkOutline.b = std::max(0, darkOutline.b - 70);
+// 					darkOutline.a = 255;
 					
-					H::Draw.LinePolygon(headPoints, darkOutline);
-				}
-				break;
-			}
-			default: // Fallback to default
-			{
-				H::Draw.Line(vScreenOrigin.x, vScreenOrigin.y, vScreenEnd.x, vScreenEnd.y, mainColor);
-				H::Draw.Line(vScreenEnd.x, vScreenEnd.y, vScreenHead1.x, vScreenHead1.y, mainColor);
-				H::Draw.Line(vScreenEnd.x, vScreenEnd.y, vScreenHead2.x, vScreenHead2.y, mainColor);
-				break;
-			}
-		}
-	}
-}
+// 					H::Draw.LinePolygon(headPoints, darkOutline);
+// 				}
+// 				break;
+// 			}
+// 			default: // Fallback to default
+// 			{
+// 				H::Draw.Line(vScreenOrigin.x, vScreenOrigin.y, vScreenEnd.x, vScreenEnd.y, mainColor);
+// 				H::Draw.Line(vScreenEnd.x, vScreenEnd.y, vScreenHead1.x, vScreenHead1.y, mainColor);
+// 				H::Draw.Line(vScreenEnd.x, vScreenEnd.y, vScreenHead2.x, vScreenHead2.y, mainColor);
+// 				break;
+// 			}
+// 		}
+// 	}
+// }
 
 MAKE_SIGNATURE(CTFPlayerSharedUtils_GetEconItemViewByLoadoutSlot, "client.dll", "48 89 6C 24 ? 56 41 54 41 55 41 56 41 57 48 83 EC", 0x0);
 MAKE_SIGNATURE(CEconItemView_GetItemName, "client.dll", "40 53 48 83 EC ? 48 8B D9 C6 81 ? ? ? ? ? E8 ? ? ? ? 48 8B 8B", 0x0);
@@ -231,7 +231,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 		tCache.m_tColor = GetColor(pLocal, pPlayer);
 		tCache.m_bBox = Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Box;
 		tCache.m_bBones = Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Bones;
-		tCache.m_bYawArrows = Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::YawArrows;
+		// tCache.m_bYawArrows = Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::YawArrows;
 
 		if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Distance && !bLocal)
 			tCache.m_vText.emplace_back(ESPTextEnum::Bottom, std::format("[{:.0f}M]", vDelta.Length2D() / 41), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
@@ -1140,7 +1140,7 @@ void CESP::StoreWorld()
 
 void CESP::Draw()
 {
-	if (!Vars::ESP::Draw.Value)
+	if (!Vars::ESP::Draw.Value || !I::EngineClient->IsInGame())
 		return;
 
 	DrawWorld();
@@ -1265,71 +1265,71 @@ void CESP::DrawPlayers()
 			H::Draw.DrawHudTexture(m - flW / 2.f * flScale, b + bOffset, flScale, tCache.m_pWeaponIcon, Vars::Menu::Theme::Active.Value);
 		}
 
-		if (tCache.m_bYawArrows || (pEntity->entindex() == I::EngineClient->GetLocalPlayer() && (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::YawArrows)))
-		{
-			auto pPlayer = pEntity->As<CTFPlayer>();
-			if (!pPlayer || !pPlayer->IsAlive())
-				continue;
+		// if (tCache.m_bYawArrows || (pEntity->entindex() == I::EngineClient->GetLocalPlayer() && (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::YawArrows)))
+		// {
+		// 	auto pPlayer = pEntity->As<CTFPlayer>();
+		// 	if (!pPlayer || !pPlayer->IsAlive())
+		// 		continue;
 				
-			const int iEntIndex = pPlayer->entindex();
+		// 	const int iEntIndex = pPlayer->entindex();
 			
-			if (iEntIndex == I::EngineClient->GetLocalPlayer())
-			{
-				if (Vars::Visuals::Thirdperson::Enabled.Value)
-				{
-					const float flArrowLength = 40.0f; // Real-world unit length
-					const float flArrowThickness = 2.0f; // Thickness of arrow in world units
-					const float flHeadSize = 15.0f;     // Arrow head size in world units
-					const float flHeightOffset = 5.0f;   // Height from ground
+		// 	if (iEntIndex == I::EngineClient->GetLocalPlayer())
+		// 	{
+		// 		if (Vars::Visuals::Thirdperson::Enabled.Value)
+		// 		{
+		// 			const float flArrowLength = 40.0f; // Real-world unit length
+		// 			const float flArrowThickness = 2.0f; // Thickness of arrow in world units
+		// 			const float flHeadSize = 15.0f;     // Arrow head size in world units
+		// 			const float flHeightOffset = 5.0f;   // Height from ground
 
-					Vec3 vOrigin = pPlayer->GetAbsOrigin();
-					vOrigin.z += flHeightOffset; // Offset from ground
+		// 			Vec3 vOrigin = pPlayer->GetAbsOrigin();
+		// 			vOrigin.z += flHeightOffset; // Offset from ground
 
-					Vec3 vScreenOrigin;
-					if (SDK::W2S(vOrigin, vScreenOrigin))
-					{
-						Color_t realColor = { 0, 255, 0, 255 }; // Bright green for real yaw
-						Color_t fakeColor = { 255, 0, 0, 255 }; // Bright red for fake yaw
-						Color_t realOutline = { 0, 0, 0, 255 }; // Black outline for real yaw
-						Color_t fakeOutline = { 0, 0, 0, 255 }; // Black outline for fake yaw
+		// 			Vec3 vScreenOrigin;
+		// 			if (SDK::W2S(vOrigin, vScreenOrigin))
+		// 			{
+		// 				Color_t realColor = { 0, 255, 0, 255 }; // Bright green for real yaw
+		// 				Color_t fakeColor = { 255, 0, 0, 255 }; // Bright red for fake yaw
+		// 				Color_t realOutline = { 0, 0, 0, 255 }; // Black outline for real yaw
+		// 				Color_t fakeOutline = { 0, 0, 0, 255 }; // Black outline for fake yaw
 
-						realColor.a = 210; // Slightly transparent to avoid visual clutter
-						fakeColor.a = 210;
-						realOutline.a = 255;
-						fakeOutline.a = 255;
-						float flRealYaw = 0.0f;
-						float flFakeYaw = 0.0f;
+		// 				realColor.a = 210; // Slightly transparent to avoid visual clutter
+		// 				fakeColor.a = 210;
+		// 				realOutline.a = 255;
+		// 				fakeOutline.a = 255;
+		// 				float flRealYaw = 0.0f;
+		// 				float flFakeYaw = 0.0f;
 
-						if (G::AntiAim)
-						{
-							flRealYaw = F::AntiAim.vRealAngles.y;
-							flFakeYaw = F::AntiAim.vFakeAngles.y;
-						}
-						else
-						{
-							flRealYaw = I::EngineClient->GetViewAngles().y;
-							flFakeYaw = flRealYaw + 120.0f; // Add an offset to demonstrate
-						}
+		// 				if (G::AntiAim)
+		// 				{
+		// 					flRealYaw = F::AntiAim.vRealAngles.y;
+		// 					flFakeYaw = F::AntiAim.vFakeAngles.y;
+		// 				}
+		// 				else
+		// 				{
+		// 					flRealYaw = I::EngineClient->GetViewAngles().y;
+		// 					flFakeYaw = flRealYaw + 120.0f; // Add an offset to demonstrate
+		// 				}
 
-						// fuck you (NaN, W2S crashes fix)
-						if (!std::isfinite(flRealYaw) || !std::isfinite(flFakeYaw))
-							continue;
+		// 				// fuck you (NaN, W2S crashes fix)
+		// 				if (!std::isfinite(flRealYaw) || !std::isfinite(flFakeYaw))
+		// 					continue;
 
-						int iArrowStyle = Vars::ESP::YawArrowsStyle.Value;
+		// 				int iArrowStyle = Vars::ESP::YawArrowsStyle.Value;
 						
-						try {
-							DrawYawArrow(vOrigin, flRealYaw, flArrowLength, flHeadSize, flHeightOffset, 
-										realColor, realOutline, vScreenOrigin, static_cast<Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum>(iArrowStyle), true);
+		// 				try {
+		// 					DrawYawArrow(vOrigin, flRealYaw, flArrowLength, flHeadSize, flHeightOffset, 
+		// 								realColor, realOutline, vScreenOrigin, static_cast<Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum>(iArrowStyle), true);
 							
-							DrawYawArrow(vOrigin, flFakeYaw, flArrowLength, flHeadSize, flHeightOffset, 
-										fakeColor, fakeOutline, vScreenOrigin, static_cast<Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum>(iArrowStyle), false);
-						} catch (...) {
-							// Silently explode if drawing causes an exception
-						}
-					}
-				}
-			}
-		}
+		// 					DrawYawArrow(vOrigin, flFakeYaw, flArrowLength, flHeadSize, flHeightOffset, 
+		// 								fakeColor, fakeOutline, vScreenOrigin, static_cast<Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum>(iArrowStyle), false);
+		// 				} catch (...) {
+		// 					// Silently explode if drawing causes an exception
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
 	}
 
 	I::MatSystemSurface->DrawSetAlphaMultiplier(1.f);
@@ -1444,6 +1444,8 @@ Color_t CESP::GetColor(CTFPlayer* pLocal, CBaseEntity* pEntity)
 
 bool CESP::GetDrawBounds(CBaseEntity* pEntity, float& x, float& y, float& w, float& h)
 {
+	if (!pEntity || pEntity->IsDormant())
+		return false;
 	Vec3 vOrigin = pEntity->GetAbsOrigin();
 	matrix3x4 mTransform = { { 1, 0, 0, vOrigin.x }, { 0, 1, 0, vOrigin.y }, { 0, 0, 1, vOrigin.z } };
 	//if (pEntity->entindex() == I::EngineClient->GetLocalPlayer())

@@ -557,11 +557,11 @@ void CMenu::MenuVisuals(int iTab)
 					PushTransparent(!(FGet(Vars::ESP::Draw) & Vars::ESP::DrawEnum::Players));
 					{
 						FDropdown(Vars::ESP::Player);				
-						PushTransparent(!((FGet(Vars::ESP::Player) & Vars::ESP::PlayerEnum::YawArrows)));
-						{
-							FDropdown(Vars::ESP::YawArrowsStyle);
-						}
-						PopTransparent();
+						// PushTransparent(!((FGet(Vars::ESP::Player) & Vars::ESP::PlayerEnum::YawArrows)));
+						// {
+						// 	FDropdown(Vars::ESP::YawArrowsStyle);
+						// }
+						// PopTransparent();
 					}
 					PopTransparent();
 					PushTransparent(!(FGet(Vars::ESP::Draw) & Vars::ESP::DrawEnum::Buildings));

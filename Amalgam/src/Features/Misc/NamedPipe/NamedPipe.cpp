@@ -443,7 +443,7 @@ namespace F::NamedPipe
 
     void BroadcastLocalBotId()
     {
-        if (!I::EngineClient || !I::EngineClient->IsInGame())
+        if (!I::EngineClient)
             return;
 
         // Only proceed if we have a valid steam ID
@@ -453,6 +453,9 @@ namespace F::NamedPipe
         {
             // Use the friends ID from player info
             uint32_t friendsID = pi.friendsID;
+            
+            // Add ourselves to the local bots map
+            localBots[friendsID] = true;
             
             // Queue local bot broadcast with high priority
             QueueMessage("LocalBot", std::to_string(friendsID), true);
@@ -467,49 +470,64 @@ namespace F::NamedPipe
 
     void ProcessLocalBotMessage(const std::string& message)
     {
-        std::istringstream iss(message);
-        std::string botNumber, messageType, friendsIDstr;
-        std::getline(iss, botNumber, ':');
-        std::getline(iss, messageType, ':');
-        std::getline(iss, friendsIDstr);
-        
-        if (messageType == "LocalBot" && !friendsIDstr.empty())
-        {
-            try
+        try {
+            // Parse message format expected as: "botNumber:LocalBot:friendsID"
+            std::istringstream iss(message);
+            std::string botNumber, messageType, friendsIDstr;
+            std::getline(iss, botNumber, ':');
+            std::getline(iss, messageType, ':');
+            std::getline(iss, friendsIDstr);
+            
+            Log("Processing LocalBot message - botNumber: " + botNumber + ", type: " + messageType + ", ID: " + friendsIDstr);
+            
+            if (messageType == "LocalBot" && !friendsIDstr.empty())
             {
-                uint32_t friendsID = std::stoull(friendsIDstr);
-                
-                // Don't skip messages from our own bot ID - we might have multiple instances
-                // with the same ID running
-                
-                localBots[friendsID] = true;
-                Log("Added local bot with friendsID: " + friendsIDstr);
-                
-                // Try to find player information and add ignored tag
-                bool tagAdded = false;
-                PlayerInfo_t pi{};
-                for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
+                try
                 {
-                    if (I::EngineClient->GetPlayerInfo(i, &pi) && pi.friendsID == friendsID)
-                    {
-                        // Add both IGNORED_TAG and FRIEND_TAG
-                        F::PlayerUtils.AddTag(friendsID, F::PlayerUtils.TagToIndex(IGNORED_TAG), true, pi.name);
-                        F::PlayerUtils.AddTag(friendsID, F::PlayerUtils.TagToIndex(FRIEND_TAG), true, pi.name);
-                        Log("Marked local bot as ignored and friend: " + std::string(pi.name));
-                        tagAdded = true;
-                        break;
+                    uint32_t friendsID = std::stoull(friendsIDstr);
+                    
+                    // Don't skip messages from our own bot ID - we might have multiple instances
+                    // with the same ID running
+                    
+                    // Add to local bots map if not already there
+                    if (localBots.find(friendsID) == localBots.end()) {
+                        localBots[friendsID] = true;
+                        Log("Added local bot with friendsID: " + friendsIDstr);
+                        
+                        // Immediately try to find player info and add tags
+                        if (I::EngineClient && I::EngineClient->IsInGame()) {
+                            bool tagAdded = false;
+                            PlayerInfo_t pi{};
+                            
+                            for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
+                            {
+                                if (I::EngineClient->GetPlayerInfo(i, &pi) && pi.friendsID == friendsID)
+                                {
+                                    // Add both IGNORED_TAG and FRIEND_TAG
+                                    F::PlayerUtils.AddTag(friendsID, F::PlayerUtils.TagToIndex(IGNORED_TAG), true, pi.name);
+                                    F::PlayerUtils.AddTag(friendsID, F::PlayerUtils.TagToIndex(FRIEND_TAG), true, pi.name);
+                                    Log("Marked local bot as ignored and friend: " + std::string(pi.name));
+                                    tagAdded = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!tagAdded)
+                            {
+                                Log("Could not find player info for friendsID: " + friendsIDstr + " to add tags");
+                            }
+                        } else {
+                            Log("EngineClient unavailable or not in game. Will add tags later.");
+                        }
                     }
                 }
-                
-                if (!tagAdded)
+                catch (const std::exception& e)
                 {
-                    Log("Could not find player info for friendsID: " + friendsIDstr + " to add tags");
+                    Log("Error processing LocalBot message: " + std::string(e.what()));
                 }
             }
-            catch (const std::exception& e)
-            {
-                Log("Error processing LocalBot message: " + std::string(e.what()));
-            }
+        } catch (const std::exception& e) {
+            Log("Exception in ProcessLocalBotMessage: " + std::string(e.what()));
         }
     }
 
@@ -523,8 +541,13 @@ namespace F::NamedPipe
 
     void UpdateLocalBotIgnoreStatus()
     {
+        // First, process any pending messages to ensure we have the latest bot info
+        ProcessIncomingQueue();
+        
+        // Broadcast our own ID
         BroadcastLocalBotId();
         
+        // Make sure all known local bots are properly tagged
         for (const auto& [friendsID, isLocal] : localBots)
         {
             bool needsUpdate = false;
@@ -652,13 +675,21 @@ namespace F::NamedPipe
     void ProcessIncomingQueue()
     {
         std::lock_guard<std::mutex> lock(inboundMutex);
-        for (auto& msg : inboundQueue) {
-            if (msg.type == "Command")
-                ExecuteCommand(msg.content);
-            else if (msg.type == "LocalBot")
-                ProcessLocalBotMessage(msg.content);
+        
+        auto it = inboundQueue.begin();
+        while (it != inboundQueue.end()) {
+            if (it->type == "Command") {
+                ExecuteCommand(it->content);
+                it = inboundQueue.erase(it);
+            } else if (it->type == "LocalBot") {
+                ProcessLocalBotMessage(it->content);
+                it = inboundQueue.erase(it);
+            } else {
+                // Unknown message type, just remove it
+                Log("Unknown message type in inbound queue: " + it->type);
+                it = inboundQueue.erase(it);
+            }
         }
-        inboundQueue.clear();
     }
 
     void ConnectAndMaintainPipe()
@@ -666,13 +697,26 @@ namespace F::NamedPipe
         Log("ConnectAndMaintainPipe started");
         srand(static_cast<unsigned int>(time(nullptr)));
         
+        // For periodic local bot broadcasting
+        DWORD lastBroadcastTime = 0;
+        const DWORD BROADCAST_INTERVAL_MS = 5000; // 5 seconds
+        
         while (shouldRun)
         {
             DWORD currentTime = GetTickCount();
             
+            // Process any pending inbound messages
+            ProcessIncomingQueue();
+            
+            // Periodically broadcast local bot ID when in game
+            if (I::EngineClient && I::EngineClient->IsInGame() && 
+                currentTime - lastBroadcastTime > BROADCAST_INTERVAL_MS) {
+                BroadcastLocalBotId();
+                lastBroadcastTime = currentTime;
+            }
+            
             if (hPipe == INVALID_HANDLE_VALUE)
             {
-
                 int reconnectDelay = GetReconnectDelayMs();
                 if (currentTime - lastConnectAttemptTime > static_cast<DWORD>(reconnectDelay) || lastConnectAttemptTime == 0)
                 {
