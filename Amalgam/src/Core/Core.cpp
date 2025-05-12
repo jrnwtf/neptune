@@ -10,6 +10,8 @@
 #include "../SDK/Events/Events.h"
 #include "../Features/Misc/NamedPipe/NamedPipe.h"
 #include <Psapi.h>
+#include <random>
+#include <vector>
 
 static inline std::string GetProcessName(DWORD dwProcessID)
 {
@@ -93,7 +95,15 @@ void CCore::Load()
 	F::Configs.LoadConfig(F::Configs.m_sCurrentConfig, false);
 	F::Configs.m_bConfigLoaded = true;
 
+	std::vector<const char*> loadedMessages = { "ITS KILLING TIME, YOU HAVE NO CHOICE", "I AM THE SPECTRE", "apple" };
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> distrib(0, static_cast<int>(loadedMessages.size()) - 1);
+	const char* randomLoadedMessage = loadedMessages[distrib(gen)];
+	I::EngineClient->ClientCmd_Unrestricted(std::format("tf_party_chat \"{}\"", randomLoadedMessage).c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("play shivermetimbers/shivermetimbers.mp3").c_str());
 	SDK::Output("Amalgam", "Loaded", { 175, 150, 255 }, true, true, true);
+	
 }
 
 void CCore::Loop()
@@ -178,5 +188,12 @@ void CCore::Unload()
 		return;
 	}
 
+	std::vector<const char*> unloadedMessages = { "FUCK YOU NIGGER.", "KYS", "BARK BARK", "???" };
+	std::random_device rdUnload;
+	std::mt19937 genUnload(rdUnload());
+	std::uniform_int_distribution<> distribUnload(0, static_cast<int>(unloadedMessages.size()) - 1);
+	const char* randomUnloadedMessage = unloadedMessages[distribUnload(genUnload)];
+	I::EngineClient->ClientCmd_Unrestricted(std::format("tf_party_chat \"{}\"", randomUnloadedMessage).c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("play shivermetimbers/shivermetimbers.mp3").c_str());
 	SDK::Output("Amalgam", "Unloaded", { 175, 150, 255 }, true, true);
 }

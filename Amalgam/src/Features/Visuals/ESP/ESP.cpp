@@ -1193,18 +1193,24 @@ void CESP::DrawPlayers()
 
 		if (tCache.m_bHealthBar)
 		{
+			Color_t bgColor = { 0, 0, 0, 180 };
+			H::Draw.FillRect(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, bgColor);
+
 			if (tCache.m_flHealth > 1.f)
 			{
 				Color_t cColor = Vars::Colors::IndicatorGood.Value;
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, 1.f, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, 1.f, cColor, 
+					Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::HealthBarBorder ? Color_t(0, 0, 0, 255) : Color_t(0, 0, 0, 0), ALIGN_BOTTOM, true);
 
 				cColor = Vars::Colors::IndicatorMisc.Value;
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth - 1.f, cColor, { 0, 0, 0, 0 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth - 1.f, cColor, 
+					Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::HealthBarBorder ? Color_t(0, 0, 0, 255) : Color_t(0, 0, 0, 0), ALIGN_BOTTOM, true);
 			}
 			else
 			{
 				Color_t cColor = Vars::Colors::IndicatorBad.Value.Lerp(Vars::Colors::IndicatorGood.Value, tCache.m_flHealth);
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, 
+					Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::HealthBarBorder ? Color_t(0, 0, 0, 255) : Color_t(0, 0, 0, 0), ALIGN_BOTTOM, true);
 			}
 			lOffset += H::Draw.Scale(6);
 		}

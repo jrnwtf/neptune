@@ -11,6 +11,7 @@
 #include "../../Features/Visuals/Visuals.h"
 #include "../../Features/Killstreak/Killstreak.h"
 #include "../../Features/Aimbot/AutoHeal/AutoHeal.h"
+#include "../../Features/Misc/HitSounds.h"
 
 bool CEventListener::Initialize()
 {
@@ -60,6 +61,7 @@ void CEventListener::FireGameEvent(IGameEvent* pEvent)
 	case FNV1A::Hash32Const("player_hurt"):
 		F::Resolver.OnPlayerHurt(pEvent);
 		F::CheaterDetection.ReportDamage(pEvent);
+		HitSounds::OnPlayerHurt(pEvent);
 		break;
 	case FNV1A::Hash32Const("player_spawn"):
 		F::Backtrack.SetLerp(pEvent);

@@ -555,44 +555,6 @@ NavPoints CNavParser::determinePoints(CNavArea* current, CNavArea* next)
 		center_point.z = current->getNearestPoint(Vector2D(next_closest.x, next_closest.y)).z;
 	}
 
-	// If safepathing is enabled, adjust points to stay more centered and avoid corners
-	if (Vars::NavEng::NavEngine::SafePathing.Value)
-	{
-		// Move points more towards the center of the areas
-		Vector to_next = (next_center - area_center);
-		to_next.z = 0.0f;
-		to_next.Normalize();
-
-		// Calculate center point as a weighted average between area centers
-		// Use a 60/40 split to favor the current area more
-		center_point = area_center + (next_center - area_center) * 0.4f;
-
-		// Add extra safety margin near corners
-		float corner_margin = PLAYER_WIDTH * 0.75f;
-
-		// Check if we're near a corner by comparing distances to area edges
-		bool near_corner = false;
-		Vector area_mins = current->m_nwCorner; // Northwest corner
-		Vector area_maxs = current->m_seCorner; // Southeast corner
-
-		if (center_point.x - area_mins.x < corner_margin ||
-			area_maxs.x - center_point.x < corner_margin ||
-			center_point.y - area_mins.y < corner_margin ||
-			area_maxs.y - center_point.y < corner_margin)
-		{
-			near_corner = true;
-		}
-
-		// If near corner, move point more towards center
-		if (near_corner)
-		{
-			center_point = center_point + (area_center - center_point).Normalized() * corner_margin;
-		}
-
-		// Ensure the point is within the current area
-		center_point = current->getNearestPoint(Vector2D(center_point.x, center_point.y));
-	}
-
 	// Nearest point to center on "next", used for height checks
 	auto center_next = next->getNearestPoint(Vector2D(center_point.x, center_point.y));
 

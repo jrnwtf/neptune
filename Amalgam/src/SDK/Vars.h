@@ -569,8 +569,8 @@ namespace Vars
 			VA_LIST("Players", "Buildings", "Projectiles", "Objective", "NPCs", "Health", "Ammo", "Money", "Powerups", "Bombs", "Spellbook", "Gargoyle"),
 			Players = 1 << 0, Buildings = 1 << 1, Projectiles = 1 << 2, Objective = 1 << 3, NPCs = 1 << 4, Health = 1 << 5, Ammo = 1 << 6, Money = 1 << 7, Powerups = 1 << 8, Bombs = 1 << 9, Spellbook = 1 << 10, Gargoyle = 1 << 11);
 		CVarEnum(Player, VA_LIST("Player", "Player ESP"), 0b0, VISUAL | DROPDOWN_MULTI, nullptr,
-			VA_LIST("Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Name background", "Box", "Distance", "Bones", "Health bar", "Health text", "Uber bar", "Uber text", "Class icon", "Class text", "Weapon icon", "Weapon text", "Priority", "Labels", "Buffs", "Debuffs", "Misc", "Lag compensation", "Ping", "KDR", "That's how mafia works", "Yaw arrows"),
-			Enemy = 1 << 0, Team = 1 << 1, Local = 1 << 2, Prioritized = 1 << 3, Friends = 1 << 4, Party = 1 << 5, Name = 1 << 6, NameBackground = 1 << 7, Box = 1 << 8, Distance = 1 << 9, Bones = 1 << 10, HealthBar = 1 << 11, HealthText = 1 << 12, UberBar = 1 << 13, UberText = 1 << 14, ClassIcon = 1 << 15, ClassText = 1 << 16, WeaponIcon = 1 << 17, WeaponText = 1 << 18, Priority = 1 << 19, Labels = 1 << 20, Buffs = 1 << 21, Debuffs = 1 << 22, Misc = 1 << 23, LagCompensation = 1 << 24, Ping = 1 << 25, KDR = 1 << 26, ThatsHowMafiaWorks = 1 << 27);
+			VA_LIST("Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Name background", "Box", "Distance", "Bones", "Health bar", "Health bar border", "Health text", "Uber bar", "Uber text", "Class icon", "Class text", "Weapon icon", "Weapon text", "Priority", "Labels", "Buffs", "Debuffs", "Misc", "Lag compensation", "Ping", "KDR", "That's how mafia works"),
+			Enemy = 1 << 0, Team = 1 << 1, Local = 1 << 2, Prioritized = 1 << 3, Friends = 1 << 4, Party = 1 << 5, Name = 1 << 6, NameBackground = 1 << 7, Box = 1 << 8, Distance = 1 << 9, Bones = 1 << 10, HealthBar = 1 << 11, HealthBarBorder = 1 << 12, HealthText = 1 << 13, UberBar = 1 << 14, UberText = 1 << 15, ClassIcon = 1 << 16, ClassText = 1 << 17, WeaponIcon = 1 << 18, WeaponText = 1 << 19, Priority = 1 << 20, Labels = 1 << 21, Buffs = 1 << 22, Debuffs = 1 << 23, Misc = 1 << 24, LagCompensation = 1 << 25, Ping = 1 << 26, KDR = 1 << 27, ThatsHowMafiaWorks = 1 << 28);
 		CVarEnum(Building, VA_LIST("Building", "Building ESP"), 0b0, VISUAL | DROPDOWN_MULTI, nullptr,
 			VA_LIST("Enemy", "Team", "Local", "Prioritized", "Friends", "Party", "##Divider", "Name", "Name background", "Box", "Distance", "Health bar", "Health text", "Owner", "Level", "Flags"),
 			Enemy = 1 << 0, Team = 1 << 1, Local = 1 << 2, Prioritized = 1 << 3, Friends = 1 << 4, Party = 1 << 5, Name = 1 << 6, NameBackground = 1 << 7, Box = 1 << 8, Distance = 1 << 9, HealthBar = 1 << 10, HealthText = 1 << 11, Owner = 1 << 12, Level = 1 << 13, Flags = 1 << 14);
@@ -581,13 +581,14 @@ namespace Vars
 			VA_LIST("Enemy", "Team", "##Divider", "Name", "Name background", "Box", "Distance", "Flags", "Intel return time"),
 			Enemy = 1 << 0, Team = 1 << 1, Name = 1 << 2, NameBackground = 1 << 3, Box = 1 << 4, Distance = 1 << 5, Flags = 1 << 6, IntelReturnTime = 1 << 7);
 
-		CVar(Dist2Alpha, "Distance to alpha", true, VISUAL);
+		CVar(Dist2Alpha, "Distance to alpha", false, VISUAL);
 		CVar(MaxDist, "Max render distance", 2048, VISUAL | SLIDER_CLAMP, 512, 4096, 128);
 		CVar(ActiveAlpha, "Active alpha", 255, VISUAL | SLIDER_CLAMP, 0, 255, 5);
 		CVar(DormantAlpha, "Dormant alpha", 50, VISUAL | SLIDER_CLAMP, 0, 255, 5);
 		CVar(DormantDuration, "Dormant duration", 1.f, VISUAL | SLIDER_CLAMP | SLIDER_PRECISION, 0.015f, 5.0f, 0.1f, "%gs");
 		CVar(DormantPriority, "Dormant priority only", false, VISUAL);
 		CVar(BackgroundOpacity, "Background opacity", 200, VISUAL | SLIDER_CLAMP, 0, 255, 5);
+		CVar(HealthBarBorder, "Health bar border", false, VISUAL);
 		
 
 		SUBNAMESPACE_BEGIN(FOVArrows, Out of FOV arrows)
@@ -1057,6 +1058,10 @@ namespace Vars
 				VA_LIST("Footsteps", "Noisemaker", "Frying pan", "Water"),
 				Footsteps = 1 << 0, Noisemaker = 1 << 1, FryingPan = 1 << 2, Water = 1 << 3);
 			CVar(HitsoundAlways, "Hitsound always", false);
+			CVarEnum(HitsoundType, "Hitsound type", 0, NONE, nullptr,
+				VA_LIST("Default", "Bonk", "COD", "Quake", "Moan"),
+				Default, Bonk, COD, Quake, Moan);
+			CVar(HitsoundVolume, "Hitsound volume", 1.0f, SLIDER_CLAMP, 0.0f, 1.0f, 0.1f);
 			CVar(RemoveDSP, "Remove DSP", false);
 			CVar(GiantWeaponSounds, "Giant weapon sounds", false);
 		SUBNAMESPACE_END(Sound);
@@ -1151,7 +1156,6 @@ namespace Vars
 			CVarEnum(LookAtPath, "Look at path", 0, NONE, nullptr,
 				VA_LIST("Off", "Plain", "Silent", "Legit"),
 				Off, Plain, Silent, Legit);
-			CVar(SafePathing, "Safe pathing", false, NOSAVE | DEBUGVAR);
 			CVar(StickyIgnoreTime, "Sticky ignore time", 15, NOSAVE | DEBUGVAR | SLIDER_MIN, 15, 100, 5, "%is");
 			CVar(StuckDetectTime, "Stuck detect time", 2, NOSAVE | DEBUGVAR | SLIDER_MIN, 2, 26, 2, "%is");
 			CVar(StuckBlacklistTime, "Stuck blacklist time", 120, NOSAVE | DEBUGVAR | SLIDER_MIN, 20, 600, 20, "%is");
