@@ -16,4 +16,5 @@ MAKE_HOOK(CTFPlayer_DoAnimationEvent, S::CTFPlayer_DoAnimationEvent(), void,
 		return;
 
 	CALL_ORIGINAL(rcx, event, nData);
+#endif
 }

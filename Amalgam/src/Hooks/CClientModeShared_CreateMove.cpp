@@ -32,19 +32,6 @@ struct CmdHistory_t
 	bool m_bSendingPacket;
 };
 
-#define MATH_EPSILON (1.f / 16)
-#define PSILENT_EPSILON (1.f - MATH_EPSILON)
-#define REAL_EPSILON (0.1f + MATH_EPSILON)
-#define SNAP_SIZE_EPSILON (10.f - MATH_EPSILON)
-#define SNAP_NOISE_EPSILON (0.5f + MATH_EPSILON)
-
-struct CmdHistory_t
-{
-	Vec3 m_vAngle;
-	bool m_bAttack1;
-	bool m_bAttack2;
-	bool m_bSendingPacket;
-};
 
 MAKE_SIGNATURE(IHasGenericMeter_GetMeterMultiplier, "client.dll", "F3 0F 10 81 ? ? ? ? C3 CC CC CC CC CC CC CC 48 85 D2", 0x0);
 

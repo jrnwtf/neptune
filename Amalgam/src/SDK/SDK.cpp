@@ -377,13 +377,6 @@ int SDK::GetWinningTeam()
 	return 0;
 }
 
-int SDK::GetWinningTeam()
-{
-	if (auto pGameRules = I::TFGameRules())
-		return pGameRules->m_iWinningTeam();
-	return 0;
-}
-
 EWeaponType SDK::GetWeaponType(CTFWeaponBase* pWeapon, EWeaponType* pSecondaryType)
 {
 	if (pSecondaryType)

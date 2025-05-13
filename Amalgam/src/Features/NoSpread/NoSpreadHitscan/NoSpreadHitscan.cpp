@@ -176,6 +176,7 @@ void CNoSpreadHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* 
 
 		vBulletCorrections.push_back( { iBullet, vFixedSpread } );
 	}
+	delete(Random);
 	vAverageSpread /= static_cast<float>(iBulletsPerShot);
 
 	const auto cFixedSpread = std::ranges::min_element(vBulletCorrections,

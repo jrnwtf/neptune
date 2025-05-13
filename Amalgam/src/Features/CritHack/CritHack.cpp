@@ -87,6 +87,7 @@ bool CCritHack::IsCritCommand(int iSlot, int iIndex, float flMultCritChance, con
 	Random->SetSeed(DecryptOrEncryptSeed(iSlot, iIndex, uSeed));
 	//SDK::RandomSeed( DecryptOrEncryptSeed( iSlot, iIndex, uSeed ) );
 	const int iRandom = Random->RandomInt(0, WEAPON_RANDOM_RANGE - 1);//SDK::RandomInt(0, WEAPON_RANDOM_RANGE - 1);
+	delete(Random);
 
 	if (bSafe)
 	{
@@ -683,20 +684,7 @@ void CCritHack::Draw(CTFPlayer* pLocal)
 		if (!tStorage.m_bActive)
 			return;
 
-	auto& tStorage = m_mStorage[iSlot];
-	auto bRapidFire = pWeapon->IsRapidFire();
-	float flTickBase = TICKS_TO_TIME(pLocal->m_nTickBase());
-
-	y -= nTall;
-
-	if (Vars::Misc::Game::AntiCheatCompatibility.Value)
-		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value, align, "Anticheat compatibility");
-
-	if (tStorage.m_flDamage >= 0.f)
-	{
-		if (pLocal->IsCritBoosted())
-			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Colors::IndicatorTextMisc.Value, Vars::Menu::Theme::Background.Value, align, "Crit Boosted");
-		else if (pWeapon->m_flCritTime() > flTickBase)
+		if (tStorage.m_flDamage > 0)
 		{
 			if (pLocal->IsCritBoosted())
 			{

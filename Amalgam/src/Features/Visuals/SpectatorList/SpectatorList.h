@@ -10,6 +10,8 @@ private:
 		std::string m_sMode;
 		float m_flRespawnIn;
 		bool m_bRespawnTimeIncreased;
+		bool m_bIsFriend;
+		bool m_bInParty;
 		int m_iIndex;
 	};
 

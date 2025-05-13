@@ -407,9 +407,9 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 				continue;
 
 			std::vector<std::tuple<HitboxInfo, int, int>> vHitboxes;
-			for (int i = 0; i < tRecord.m_vHitboxInfos.size(); i++)
+			for (int i = 0; i < pRecord->m_vHitboxInfos.size(); i++)
 			{
-				auto HitboxInfo = tRecord.m_vHitboxInfos[i];
+				auto HitboxInfo = pRecord->m_vHitboxInfos[i];
 				const int nHitbox = HitboxInfo.m_nHitbox;
 
 				if (!F::AimbotGlobal.IsHitboxValid(H::Entities.GetModel(tTarget.m_pEntity->entindex()), nHitbox, Vars::Aimbot::Hitscan::Hitboxes.Value))

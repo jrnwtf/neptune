@@ -62,7 +62,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	float flDistance{};
 	switch (pEntity->GetClassID())
 	{
-	// player glow
+		// player glow
 	case ETFClassID::CTFPlayer:
 	{
 		return GetPlayerGlow(pEntity, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Players.Value, Vars::Glow::Team::Players.Value);
@@ -118,7 +118,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	case ETFClassID::CTFProjectile_GrapplingHook:
 	case ETFClassID::CTFProjectile_HealingBolt:
 	case ETFClassID::CTFProjectile_Rocket:
-	//case ETFClassID::CTFProjectile_BallOfFire: // lifetime too short
+		//case ETFClassID::CTFProjectile_BallOfFire: // lifetime too short
 	case ETFClassID::CTFProjectile_MechanicalArmOrb:
 	case ETFClassID::CTFProjectile_SentryRocket:
 	case ETFClassID::CTFProjectile_SpellFireball:
@@ -137,7 +137,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	}
 	case ETFClassID::CTFBaseProjectile:
 	case ETFClassID::CTFProjectile_EnergyRing: // not drawn, shoulddraw check, small anyways
-	//case ETFClassID::CTFProjectile_Syringe: // not drawn
+		//case ETFClassID::CTFProjectile_Syringe: // not drawn
 	{
 		auto pWeapon = pEntity->As<CTFBaseProjectile>()->m_hLauncher().Get();
 		auto pOwner = pWeapon ? pWeapon->As<CTFWeaponBase>()->m_hOwner().Get() : pEntity;
@@ -299,8 +299,6 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	case ETFClassID::CTFMedigunShield:
 		return false;
 	}
-	case ETFClassID::CTFMedigunShield:
-		return false;
 	}
 
 	// player glow

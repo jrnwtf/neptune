@@ -1,5 +1,5 @@
 #include "NavEngine.h"
-#include "../../TickHandler/TickHandler.h"
+#include "../../Ticks/Ticks.h"
 #include "../../Misc/Misc.h"
 #include <direct.h>
 
@@ -1117,4 +1117,70 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	}
 
 	SDK::WalkTo(pCmd, pLocal, current_vec);
+}
+
+void CNavEngine::Render()
+{
+	if (!Vars::Misc::Movement::NavEngine::Draw.Value || !isReady())
+		return;
+
+	auto pLocal = H::Entities.GetLocal();
+	if (!pLocal || !pLocal->IsAlive() || !map)
+		return;
+
+	/*if (!F::NavBot.m_vSlightDangerDrawlistNormal.empty())
+	{
+		for (auto vPos : F::NavBot.m_vSlightDangerDrawlistNormal)
+		{
+			RenderBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), Color_t(255, 150, 0, 255), false);
+		}
+	}
+
+	if (!F::NavBot.m_vSlightDangerDrawlistDormant.empty())
+	{
+		for (auto vPos : F::NavBot.m_vSlightDangerDrawlistDormant)
+		{
+			RenderBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), Color_t(255, 150, 0, 255), false);
+		}
+	}*/
+
+	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Blacklist)
+	{
+		if (auto pBlacklist = getFreeBlacklist())
+		{
+			if (!pBlacklist->empty())
+			{
+				for (auto& tBlacklistedArea : *pBlacklist)
+				{
+					H::Draw.RenderBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, false);
+					H::Draw.RenderWireframeBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, false);
+				}
+			}
+		}
+	}
+
+	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Area)
+	{
+		Vector vOrigin = pLocal->GetAbsOrigin();
+		auto pArea = map->findClosestNavSquare(vOrigin);
+		auto vEdge = pArea->getNearestPoint(Vector2D(vOrigin.x, vOrigin.y));
+		vEdge.z += PLAYER_JUMP_HEIGHT;
+		H::Draw.RenderBox(vEdge, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 0, 0, 255), false);
+		H::Draw.RenderWireframeBox(vEdge, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 0, 0, 255), false);
+
+		// Nw -> Ne
+		H::Draw.RenderLine(pArea->m_nwCorner, pArea->getNeCorner(), Vars::Colors::NavbotArea.Value, true);
+		// Nw -> Sw
+		H::Draw.RenderLine(pArea->m_nwCorner, pArea->getSwCorner(), Vars::Colors::NavbotArea.Value, true);
+		// Ne -> Se
+		H::Draw.RenderLine(pArea->getNeCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
+		// Sw -> Se
+		H::Draw.RenderLine(pArea->getSwCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
+	}
+
+	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Path && !crumbs.empty())
+	{
+		for (size_t i = 0; i < crumbs.size() - 1; i++)
+			H::Draw.RenderLine(crumbs[i].vec, crumbs[i + 1].vec, Vars::Colors::NavbotPath.Value, false);
+	}	
 }

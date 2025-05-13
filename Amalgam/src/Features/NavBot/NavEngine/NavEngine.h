@@ -254,6 +254,7 @@ public:
 	void updateStuckTime();
 	void Run(CUserCmd* pCmd);
 	void Reset(bool bForced = false);
+	void Render();
 };
 
 ADD_FEATURE(CNavEngine, NavEngine)

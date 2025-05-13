@@ -455,7 +455,10 @@ void CMenu::MenuAimbot(int iTab)
 					{
 						FDropdown(Vars::CheaterDetection::Methods);
 						PushTransparent(!FGet(Vars::CheaterDetection::DetectionsRequired));
-						FSlider(Vars::CheaterDetection::DetectionsRequired);
+						{
+							FSlider(Vars::CheaterDetection::DetectionsRequired);
+						}
+						PopTransparent();
 					}
 					PopTransparent();
 					PushTransparent(!(FGet(Vars::CheaterDetection::Methods) & Vars::CheaterDetection::MethodsEnum::PacketChoking));

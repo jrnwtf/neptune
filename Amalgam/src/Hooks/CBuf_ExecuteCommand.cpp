@@ -1,4 +1,5 @@
 #include "../SDK/SDK.h"
+
 #include <functional>
 #include <regex>
 
@@ -62,7 +63,7 @@ static std::vector<std::pair<std::string, std::string>> vStatic = {
     { "\\{assassin}", PRE_STR"\x7""d32ce6" },
     { "\\{commando}", PRE_STR"\x7""8847ff" },
     { "\\{mercenary}", PRE_STR"\x7""4b69ff" },
-	
+
     { "\\t", "\t" },
 };
 static std::vector<std::function<void()>> vDynamic = {
@@ -121,7 +122,7 @@ static std::vector<std::function<void()>> vDynamic = {
             if (match.size() != 4)
                 break;
 
-             int r = !match[1].str().empty() ? std::stoi(match[1]) : 255;
+            int r = !match[1].str().empty() ? std::stoi(match[1]) : 255;
             int g = !match[2].str().empty() ? std::stoi(match[2]) : 255;
             int b = !match[3].str().empty() ? std::stoi(match[3]) : 255;
 
@@ -144,7 +145,7 @@ static std::vector<std::function<void()>> vDynamic = {
             int b = !match[3].str().empty() ? std::stoi(match[3]) : 255;
             int a = !match[4].str().empty() ? std::stoi(match[4]) : 255;
 
-             Color_t tColor; tColor.SetRGB(r, g, b, a);
+            Color_t tColor; tColor.SetRGB(r, g, b, a);
             sCmdString = sCmdString.replace(match.position(), match.length(), std::format(PRE_STR"{}", tColor.ToHexA()));
         }
     },
@@ -196,8 +197,9 @@ static std::vector<std::function<void()>> vDynamic = {
                 break;
 
             int n = std::stoi(match[1]);
-			auto str = match[2].str();
-             std::ostringstream sStream;
+            auto str = match[2].str();
+
+            std::ostringstream sStream;
             for (int i = 0; i < n; i++)
                 sStream << str;
 

@@ -6,7 +6,7 @@
 #include "../Players/PlayerUtils.h"
 #include "../Misc/NamedPipe/NamedPipe.h"
 #include "../Aimbot/AimbotGlobal/AimbotGlobal.h"
-#include "../TickHandler/TickHandler.h"
+#include "../Ticks/Ticks.h"
 #include "../PacketManip/FakeLag/FakeLag.h"
 #include "../Misc/Misc.h"
 #include "../Simulation/MovementSimulation/MovementSimulation.h"
@@ -3322,4 +3322,89 @@ bool CNavBot::MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		return true;
 	
 	return false;
+}
+
+void CNavBot::Draw(CTFPlayer* pLocal)
+{
+	if (!(Vars::Menu::Indicators.Value & Vars::Menu::IndicatorsEnum::NavBot) || !pLocal->IsAlive())
+		return;
+
+	auto bIsReady = F::NavEngine.isReady();
+	if (!Vars::Debug::Info.Value && !bIsReady)
+		return;
+
+	int x = Vars::Menu::NavBotDisplay.Value.x;
+	int y = Vars::Menu::NavBotDisplay.Value.y + 8;
+	const auto& fFont = H::Fonts.GetFont(FONT_INDICATORS);
+	const int nTall = fFont.m_nTall + H::Draw.Scale(1);
+
+	EAlign align = ALIGN_TOP;
+	if (x <= 100 + H::Draw.Scale(50, Scale_Round))
+	{
+		x -= H::Draw.Scale(42, Scale_Round);
+		align = ALIGN_TOPLEFT;
+	}
+	else if (x >= H::Draw.m_nScreenW - 100 - H::Draw.Scale(50, Scale_Round))
+	{
+		x += H::Draw.Scale(42, Scale_Round);
+		align = ALIGN_TOPRIGHT;
+	}
+
+	const auto& cColor = F::NavEngine.isPathing() ? Vars::Menu::Theme::Active.Value : Vars::Menu::Theme::Inactive.Value;
+	const auto& cReadyColor = bIsReady ? Vars::Menu::Theme::Active.Value : Vars::Menu::Theme::Inactive.Value;
+	auto local_area = F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin());
+	const int iInSpawn = local_area ? local_area->m_TFattributeFlags & (TF_NAV_SPAWN_ROOM_BLUE | TF_NAV_SPAWN_ROOM_RED | TF_NAV_SPAWN_ROOM_EXIT) : -1;
+	std::wstring sJob = L"None";
+	switch (F::NavEngine.current_priority)
+	{
+	case patrol:
+		sJob = m_bDefending ? L"Defend" : L"Patrol";
+		break;
+	case lowprio_health:
+		sJob = L"Get health (Low-Prio)";
+		break;
+	case staynear:
+		sJob = std::format(L"Follow enemy ( {} )", m_sFollowTargetName.data());
+		break;
+	case run_reload:
+		sJob = L"Run reload";
+		break;
+	case run_safe_reload:
+		sJob = L"Run safe reload";
+		break;
+	case snipe_sentry:
+		sJob = L"Snipe sentry";
+		break;
+	case ammo:
+		sJob = L"Get ammo";
+		break;
+	case capture:
+		sJob = L"Capture";
+		break;
+	case prio_melee:
+		sJob = L"Melee";
+		break;
+	case engineer:
+		sJob = std::format(L"Engineer ({})", m_sEngineerTask.data());
+		break;
+	case health:
+		sJob = L"Get health";
+		break;
+	case escape_spawn:
+		sJob = L"Escape spawn";
+		break;
+	case danger:
+		sJob = L"Escape danger";
+		break;
+	default:
+		break;
+	}
+
+	H::Draw.StringOutlined(fFont, x, y, cColor, Vars::Menu::Theme::Background.Value, align, std::format(L"Job: {} {}", sJob, std::wstring(F::CritHack.m_bForce ? L"(Crithack on)" : L"")).data());
+	if (Vars::Debug::Info.Value)
+	{
+		H::Draw.StringOutlined(fFont, x, y += nTall, cReadyColor, Vars::Menu::Theme::Background.Value, align, std::format("Is ready: {}", std::to_string(bIsReady)).c_str());
+		H::Draw.StringOutlined(fFont, x, y += nTall, cReadyColor, Vars::Menu::Theme::Background.Value, align, std::format("In spawn: {}", std::to_string(iInSpawn)).c_str());
+		H::Draw.StringOutlined(fFont, x, y += nTall, cReadyColor, Vars::Menu::Theme::Background.Value, align, std::format("Area flags: {}", std::to_string(local_area ? local_area->m_TFattributeFlags : -1)).c_str());
+	}
 }

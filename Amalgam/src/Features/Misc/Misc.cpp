@@ -49,7 +49,6 @@ void CMisc::RunPost(CTFPlayer* pLocal, CUserCmd* pCmd, bool pSendPacket)
 
 	EdgeJump(pLocal, pCmd, true);
 	TauntKartControl(pLocal, pCmd);
-	AutoPeek(pLocal, pCmd, true);
 	FastMovement(pLocal, pCmd);
 	AutoPeek(pLocal, pCmd, true);
 	BreakShootSound(pLocal, pCmd);

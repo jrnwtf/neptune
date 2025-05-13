@@ -142,7 +142,7 @@ std::vector<TickRecord*> CBacktrack::GetValidRecords(std::vector<TickRecord*>& v
 
 	for (auto pRecord : vRecords)
 	{
-		float flDelta = fabsf(flCorrect - (TICKS_TO_TIME(iServerTick) - tRecord.m_flSimTime + flTimeMod)));
+		float flDelta = fabsf(flCorrect - (TICKS_TO_TIME(iServerTick) - (pRecord->m_flSimTime + flTimeMod)));
 		float flWindow = Vars::Misc::Game::AntiCheatCompatibility.Value ? 0 : Vars::Backtrack::Window.Value;
 		if (flDelta > flWindow / 1000)
 			continue;
@@ -406,17 +406,18 @@ std::optional<TickRecord> CBacktrack::GetHitRecord(CBaseEntity* pEntity, CTFWeap
 	float flMinFov = 45.f;
 	float flMinDist = 50.f;
 	bool bInsideRecord = false;
-
-	if (auto pRecords = GetRecords(pEntity))
+	std::vector<TickRecord*> vRecords;
+	if (GetRecords(pEntity, vRecords))
 	{
-		for (auto pRecord : GetValidRecords(pRecords))
+		vRecords = F::Backtrack.GetValidRecords(vRecords);
+		for(auto pRecord : vRecords)
 		{
-			if (!pRecord.m_BoneMatrix.m_aBones)
+			if (!pRecord->m_BoneMatrix.m_aBones)
 				continue;
 
-			for (int n = 0; n < pRecord.m_vHitboxInfos.size(); n++)
+			for (int n = 0; n < pRecord->m_vHitboxInfos.size(); n++)
 			{
-				auto sHitboxInfo = pRecord.m_vHitboxInfos[n];
+				auto sHitboxInfo = pRecord->m_vHitboxInfos[n];
 
 				// pSet->pHitbox failed, this hitbox cannot be used
 				if (sHitboxInfo.m_iBone == -1)
@@ -429,13 +430,13 @@ std::optional<TickRecord> CBacktrack::GetHitRecord(CBaseEntity* pEntity, CTFWeap
 				// We are inside this record (probably)
 				if (flDistTo < flMinDist)
 				{
-					pReturnRecord = pRecord;
+					pReturnRecord = *pRecord;
 					flMinDist = flDistTo;
 					bInsideRecord = true;
 				}
 				else if (!bInsideRecord && flFOVTo < flMinFov)
 				{
-					pReturnRecord = pRecord;
+					pReturnRecord = *pRecord;
 					flMinFov = flFOVTo;
 				}
 			}
