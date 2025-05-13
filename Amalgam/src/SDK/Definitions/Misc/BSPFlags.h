@@ -57,6 +57,7 @@
 #define CONTENTS_HITBOX			0x40000000	// use accurate hitboxes on trace
 #define CONTENTS_NOSTARTSOLID	0x80000000	// don't skip entities or displacements when starting in solid
 
+
 // NOTE: These are stored in a short in the engine now.  Don't use more than 16 bits
 #define	SURF_LIGHT		0x0001		// value will hold the light strength
 #define	SURF_SKY2D		0x0002		// don't draw, indicates we should skylight + draw 2d sky but not draw the 3D skybox

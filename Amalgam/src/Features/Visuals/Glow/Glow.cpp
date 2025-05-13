@@ -62,7 +62,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	float flDistance{};
 	switch (pEntity->GetClassID())
 	{
-		// player glow
+	// player glow
 	case ETFClassID::CTFPlayer:
 	{
 		return GetPlayerGlow(pEntity, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Players.Value, Vars::Glow::Team::Players.Value);
@@ -118,7 +118,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	case ETFClassID::CTFProjectile_GrapplingHook:
 	case ETFClassID::CTFProjectile_HealingBolt:
 	case ETFClassID::CTFProjectile_Rocket:
-		//case ETFClassID::CTFProjectile_BallOfFire: // lifetime too short
+	//case ETFClassID::CTFProjectile_BallOfFire: // lifetime too short
 	case ETFClassID::CTFProjectile_MechanicalArmOrb:
 	case ETFClassID::CTFProjectile_SentryRocket:
 	case ETFClassID::CTFProjectile_SpellFireball:
@@ -137,7 +137,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	}
 	case ETFClassID::CTFBaseProjectile:
 	case ETFClassID::CTFProjectile_EnergyRing: // not drawn, shoulddraw check, small anyways
-		//case ETFClassID::CTFProjectile_Syringe: // not drawn
+	//case ETFClassID::CTFProjectile_Syringe: // not drawn
 	{
 		auto pWeapon = pEntity->As<CTFBaseProjectile>()->m_hLauncher().Get();
 		auto pOwner = pWeapon ? pWeapon->As<CTFWeaponBase>()->m_hOwner().Get() : pEntity;
@@ -187,9 +187,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		if (pEntity->m_iTeamNum() == TF_TEAM_BLUE || pEntity->m_iTeamNum() == TF_TEAM_RED)
 		{
 			if (auto pOwner = pEntity->m_hOwnerEntity().Get())
-			{
 				return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::World::NPCs.Value, Vars::Glow::World::NPCs.Value, flDistance);
-			}
 			else
 				*pColor = H::Color.GetEntityDrawColor(pLocal, pEntity, Vars::Colors::Relative.Value, pEntity);
 		}
@@ -298,6 +296,8 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		ApplyDistanceAlphaMod(&pColor->a, flDistance, Vars::Glow::World::MinDist.Value, Vars::Glow::World::MaxDist.Value, Vars::Glow::World::Dist2Alpha.Value);
 
 		return Vars::Glow::World::Bombs.Value;
+	case ETFClassID::CTFMedigunShield:
+		return false;
 	}
 	case ETFClassID::CTFMedigunShield:
 		return false;
@@ -306,7 +306,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	// player glow
 	auto pOwner = pEntity->m_hOwnerEntity().Get();
 	if (pOwner && pOwner->IsPlayer())
-		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Players.Value, Vars::Glow::Team::Players.Value);
+		return GetPlayerGlow(pOwner, pOwner, pLocal, pGlow, pColor, Vars::Glow::Enemy::Players.Value, Vars::Glow::Team::Players.Value);
 
 	return false;
 }
@@ -448,7 +448,7 @@ void CGlow::Store(CTFPlayer* pLocal)
 		if (pEntity->IsPlayer() && !pEntity->IsDormant())
 		{
 			// backtrack
-			if (Vars::Backtrack::Enabled.Value && Vars::Glow::Backtrack::Enabled.Value && (Vars::Glow::Backtrack::Stencil.Value || Vars::Glow::Backtrack::Blur.Value) && pEntity != pLocal)
+			if (Vars::Glow::Backtrack::Enabled.Value && (Vars::Glow::Backtrack::Stencil.Value || Vars::Glow::Backtrack::Blur.Value) && pEntity != pLocal)
 			{
 				auto pWeapon = H::Entities.GetWeapon();
 				if (pWeapon && (G::PrimaryWeaponType != EWeaponType::PROJECTILE || Vars::Glow::Backtrack::Draw.Value & Vars::Glow::Backtrack::DrawEnum::Always))
@@ -539,8 +539,10 @@ void CGlow::RenderBacktrack(const DrawModelState_t& pState, const ModelRenderInf
 			//I::RenderView->SetBlend(flOriginalBlend);
 		};
 
-	const auto& pRecords = F::Backtrack.GetRecords(pEntity);
-	auto vRecords = F::Backtrack.GetValidRecords(pRecords);
+	std::vector<TickRecord*> vRecords = {};
+	if (!F::Backtrack.GetRecords(pEntity, vRecords))
+		return;
+	vRecords = F::Backtrack.GetValidRecords(vRecords);
 	if (!vRecords.size())
 		return;
 
@@ -549,25 +551,25 @@ void CGlow::RenderBacktrack(const DrawModelState_t& pState, const ModelRenderInf
 
 	if (!bDrawLast && !bDrawFirst)
 	{
-		for (auto& tRecord : vRecords)
+		for (auto pRecord : vRecords)
 		{
-			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(tRecord.m_vOrigin), 1.f, 24.f, 0.f, 1.f))
-				drawModel(tRecord.m_vOrigin, pState, pInfo, tRecord.m_BoneMatrix.m_aBones, flBlend);
+			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(pRecord->m_vOrigin), 1.f, 24.f, 0.f, 1.f))
+				drawModel(pRecord->m_vOrigin, pState, pInfo, pRecord->m_BoneMatrix.m_aBones, flBlend);
 		}
 	}
 	else
 	{
 		if (bDrawLast)
 		{
-			auto& tRecord = vRecords.back();
-			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(tRecord.m_vOrigin), 1.f, 24.f, 0.f, 1.f))
-				drawModel(tRecord.m_vOrigin, pState, pInfo, tRecord.m_BoneMatrix.m_aBones, flBlend);
+			auto pRecord = vRecords.back();
+			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(pRecord->m_vOrigin), 1.f, 24.f, 0.f, 1.f))
+				drawModel(pRecord->m_vOrigin, pState, pInfo, pRecord->m_BoneMatrix.m_aBones, flBlend);
 		}
 		if (bDrawFirst)
 		{
-			auto& tRecord = vRecords.front();
-			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(tRecord.m_vOrigin), 1.f, 24.f, 0.f, 1.f))
-				drawModel(tRecord.m_vOrigin, pState, pInfo, tRecord.m_BoneMatrix.m_aBones, flBlend);
+			auto pRecord = vRecords.front();
+			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(pRecord->m_vOrigin), 1.f, 24.f, 0.f, 1.f))
+				drawModel(pRecord->m_vOrigin, pState, pInfo, pRecord->m_BoneMatrix.m_aBones, flBlend);
 		}
 	}
 }
@@ -683,7 +685,7 @@ void CGlow::Initialize()
 		m_pMatGlowColor->IncrementReferenceCount();
 		F::Materials.m_mMatList[m_pMatGlowColor] = true;
 	}
-	
+
 	if (!m_pRenderBuffer1)
 	{
 		m_pRenderBuffer1 = I::MaterialSystem->CreateNamedRenderTargetTextureEx(

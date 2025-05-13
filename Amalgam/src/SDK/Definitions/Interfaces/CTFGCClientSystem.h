@@ -114,7 +114,6 @@ public:
 	}
 };
 
-
 class CTFParty
 {
 public:
@@ -175,6 +174,27 @@ public:
 	inline CTFParty* GetParty()
 	{
 		return S::CTFGCClientSystem_GetParty.Call<CTFParty*>(this);
+	}
+
+	inline CTFLobbyShared* GetLobby()
+	{
+		auto pSOCache = m_pSOCache();
+		if (!pSOCache)
+			return nullptr;
+
+		auto pTypeCache = pSOCache->FindTypeCache(2004);
+		if (!pTypeCache)
+			return nullptr;
+
+		int iCacheCount = pTypeCache->GetCacheCount();
+		if (!iCacheCount)
+			return nullptr;
+
+		auto pLobby = *reinterpret_cast<CTFLobbyShared**>(*reinterpret_cast<uintptr_t*>(uintptr_t(pTypeCache) + 8) + 8 * uintptr_t(iCacheCount - 1));
+		if (!pLobby)
+			return nullptr;
+
+		return reinterpret_cast<CTFLobbyShared*>(uintptr_t(pLobby) - 8); // i assume from the dynamic_cast?
 	}
 
 	inline void SetPendingPingRefresh(bool bValue)

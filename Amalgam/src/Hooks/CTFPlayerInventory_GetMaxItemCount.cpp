@@ -9,5 +9,6 @@ MAKE_HOOK(CTFPlayerInventory_GetMaxItemCount, S::CTFPlayerInventory_GetMaxItemCo
 	if (!Vars::Hooks::CTFPlayerInventory_GetMaxItemCount[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	return !Vars::Misc::Automation::BackpackExpander.Value ? CALL_ORIGINAL(rcx) : 4000;
 }

@@ -3,9 +3,10 @@
 
 #include "../Features/Visuals/Chams/Chams.h"
 #include "../Features/Visuals/Glow/Glow.h"
-#include "../Features/CameraWindow/CameraWindow.h"
+#include "../Features/Visuals/CameraWindow/CameraWindow.h"
 #include "../Features/Visuals/Visuals.h"
 #include "../Features/Visuals/Materials/Materials.h"
+#include "../Features/Navbot/NavEngine/NavEngine.h"
 
 MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::ClientModeShared, 39), bool,
 	void* rcx, const CViewSetup* pSetup)
@@ -14,11 +15,13 @@ MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::Clie
 	if (!Vars::Hooks::CClientModeShared_DoPostScreenSpaceEffects[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pSetup);
 #endif
+
 	if (G::Unload || (Vars::Visuals::UI::CleanScreenshots.Value && I::EngineClient->IsTakingScreenshot()))
 		return CALL_ORIGINAL(rcx, pSetup);
 
 	auto pLocal = H::Entities.GetLocal();
 	auto pWeapon = H::Entities.GetWeapon();
+
 	if (pLocal && pWeapon)
 	{
 		F::Visuals.SplashRadius(pLocal);
@@ -28,7 +31,7 @@ MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::Clie
 	if (F::CameraWindow.m_bDrawing)
 		return CALL_ORIGINAL(rcx, pSetup);
 
-	F::Visuals.DrawNavEngine();
+	F::NavEngine.Render();
 	F::Visuals.DrawBoxes();
 	F::Visuals.DrawPaths();
 	F::Visuals.DrawLines();

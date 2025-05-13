@@ -10,6 +10,7 @@ MAKE_HOOK(DSP_Process, S::DSP_Process(), void,
 	if (!Vars::Hooks::DSP_Process[DEFAULT_BIND])
 		return CALL_ORIGINAL(idsp, pbfront, pbrear, pbcenter, sampleCount);
 #endif
+
 	if (!Vars::Misc::Sound::RemoveDSP.Value)
 		CALL_ORIGINAL(idsp, pbfront, pbrear, pbcenter, sampleCount);
 #endif

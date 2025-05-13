@@ -19,6 +19,7 @@ MAKE_HOOK(CTFClientScoreBoardDialog_UpdatePlayerAvatar, S::CTFClientScoreBoardDi
 	if (!Vars::Hooks::CTFClientScoreBoardDialog_UpdatePlayerAvatar[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, playerIndex, kv);
 #endif
+
 	CTFClientScoreBoardDialog_UpdatePlayerList_PlayerIndex = playerIndex;
 
 	int iType = 0; F::PlayerUtils.GetPlayerName(playerIndex, nullptr, &iType);
@@ -33,6 +34,7 @@ MAKE_HOOK(CTFMatchSummary_UpdatePlayerAvatar, S::CTFMatchSummary_UpdatePlayerAva
 	if (!Vars::Hooks::CTFClientScoreBoardDialog_UpdatePlayerAvatar[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, playerIndex, kv);
 #endif
+
 	int iType = 0; F::PlayerUtils.GetPlayerName(playerIndex, nullptr, &iType);
 	if (iType != 1)
 		CALL_ORIGINAL(rcx, playerIndex, kv);
@@ -71,6 +73,7 @@ MAKE_HOOK(SectionedListPanel_SetItemFgColor, S::SectionedListPanel_SetItemFgColo
 	if (!Vars::Hooks::CTFClientScoreBoardDialog_UpdatePlayerAvatar[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, itemID, color);
 #endif
+
 	static const auto dwDesired = S::CTFClientScoreBoardDialog_UpdatePlayerList_SetItemFgColor_Call();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());
 

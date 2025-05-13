@@ -618,14 +618,14 @@ public:
 	{
 		return { RAD2DEG(atan2(-z, hypot(x, y))),
 				 RAD2DEG(atan2(y, x)),
-				0.f };
+				 0.f };
 	}
 
 	inline Vec3 FromAngle() const noexcept
 	{
-		return { cos(x * (3.14159265358979323846f / 180.f)) * cos(y * (3.14159265358979323846f / 180.f)),
-				 cos(x * (3.14159265358979323846f / 180.f)) * sin(y * (3.14159265358979323846f / 180.f)),
-				 -sin(x * (3.14159265358979323846f / 180.f)) };
+		return { cos(DEG2RAD(x)) * cos(DEG2RAD(y)),
+				 cos(DEG2RAD(x))* sin(DEG2RAD(y)),
+				 -sin(DEG2RAD(x)) };
 	}
 };
 using Vector = Vec3;

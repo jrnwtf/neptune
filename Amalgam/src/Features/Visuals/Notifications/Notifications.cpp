@@ -66,8 +66,6 @@ void CNotifications::Draw()
 		float flEase = 0.f;
 		if (float flPan = tNotification.m_flPanTime)
 		{
-			float flTime = SDK::PlatFloatTime();
-			float flCreate = tNotification.m_flCreateTime;
 			float flLife = std::min(flTime - flCreate, flCreate + tNotification.m_flLifeTime - flTime);
 			if (flLife < flPan)
 			{

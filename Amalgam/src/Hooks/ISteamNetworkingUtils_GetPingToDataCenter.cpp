@@ -57,6 +57,7 @@ MAKE_HOOK(ISteamNetworkingUtils_GetPingToDataCenter, U::Memory.GetVFunc(I::Steam
 	if (!Vars::Hooks::ISteamNetworkingUtils_GetPingToDataCenter[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, popID, pViaRelayPoP);
 #endif
+
 	int iReturn = CALL_ORIGINAL(rcx, popID, pViaRelayPoP);
 	if (!Vars::Misc::Queueing::ForceRegions.Value || iReturn < 0)
 		return iReturn;

@@ -11,6 +11,7 @@ MAKE_HOOK(CBaseEntity_WorldSpaceCenter, S::CBaseEntity_WorldSpaceCenter(), const
 	if (!Vars::Hooks::CBaseEntity_WorldSpaceCenter[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	static const auto dwDesired = S::CDamageAccountPanel_DisplayDamageFeedback_CBaseEntity_WorldSpaceCenter_Call();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());
 

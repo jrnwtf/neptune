@@ -18,7 +18,7 @@ public:
 
 struct BoneMatrix
 {
-	matrix3x4 m_aBones[128];
+	matrix3x4 m_aBones[MAXSTUDIOBONES];
 };
 
 struct HitboxInfo
@@ -44,7 +44,6 @@ struct TickRecord
 
 class CBacktrack
 {
-	void SendLerp();
 	void UpdateDatagram();
 	void MakeRecords();
 	void CleanRecords();
@@ -58,6 +57,7 @@ class CBacktrack
 	int m_nOldInReliableState = 0;
 	int m_nLastInSequenceNr = 0;
 	int m_nOldTickBase = 0;
+	float m_flMaxUnlag = 1.f;
 
 	struct CrosshairRecordInfo_t
 	{
@@ -68,19 +68,21 @@ class CBacktrack
 	std::optional<TickRecord> GetHitRecord(CBaseEntity* pEntity, CTFWeaponBase* pWeapon, CUserCmd* pCmd, CrosshairRecordInfo_t& InfoOut, const Vec3 vAngles, const Vec3 vPos);
 
 public:
+	void Store();
+	void SendLerp();
+	void Draw(CTFPlayer* pLocal);
+	void Reset();
+
+	bool GetRecords(CBaseEntity* pEntity, std::vector<TickRecord*>& vReturn);
+	std::vector<TickRecord*> GetValidRecords(std::vector<TickRecord*>& vRecords, CTFPlayer* pLocal = nullptr, bool bDistance = false, float flTimeMod = 0.f);
+
 	float GetLerp();
 	float GetFake();
 	float GetReal(int iFlow = MAX_FLOWS, bool bNoFake = true);
 	float GetFakeInterp();
+	void SetLerp(IGameEvent* pEvent);
 	int GetAnticipatedChoke(int iMethod = Vars::Aimbot::General::AimType.Value);
 
-	std::deque<TickRecord>* GetRecords(CBaseEntity* pEntity);
-	std::deque<TickRecord> GetValidRecords(std::deque<TickRecord>* pRecords, CTFPlayer* pLocal = nullptr, bool bDistance = false);
-
-	void Store();
-	void Run(CUserCmd* pCmd);
-	void Reset();
-	void SetLerp(IGameEvent* pEvent);
 	void ResolverUpdate(CBaseEntity* pEntity);
 	void ReportShot(int iIndex);
 	void AdjustPing(CNetChannel* netChannel);
@@ -88,11 +90,12 @@ public:
 	void BacktrackToCrosshair(CUserCmd* pCmd);
 
 	int m_iTickCount = 0;
-	float m_flMaxUnlag = 1.f;
 
 	float m_flFakeLatency = 0.f;
 	float m_flFakeInterp = 0.015f;
 	float m_flWishInterp = -1.f;
+
+	TickRecord m_tRecord = {}; // for temporary use
 };
 
 ADD_FEATURE(CBacktrack, Backtrack)

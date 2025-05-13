@@ -9,6 +9,7 @@ MAKE_HOOK(CTFPlayer_BuildTransformations, S::CTFPlayer_BuildTransformations(), v
 	if (!Vars::Hooks::CTFPlayer_BuildTransformations[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, hdr, pos, q, cameraTransform, boneMask, boneComputed);
 #endif
+
 	auto pPlayer = reinterpret_cast<CTFPlayer*>(rcx);
 	auto iOriginal = pPlayer->m_fFlags();
 	pPlayer->m_fFlags() &= ~FL_DUCKING;

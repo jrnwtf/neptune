@@ -10,6 +10,7 @@ MAKE_HOOK(CViewRender_PerformScreenOverlay, S::CViewRender_PerformScreenOverlay(
 	if (!Vars::Hooks::CViewRender_PerformScreenOverlay[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, x, y, w, h);
 #endif
+
 	if (!Vars::Visuals::Removals::ScreenOverlays.Value || Vars::Visuals::UI::CleanScreenshots.Value && I::EngineClient->IsTakingScreenshot())
 		CALL_ORIGINAL(rcx, x, y, w, h);
 #endif

@@ -28,6 +28,7 @@ public:
 	virtual IPhysicsSurfaceProps* GetSurfaceProps(void) = 0;
 	virtual bool IsWorldEntity(const CBaseHandle& handle) = 0;
 	virtual void SetHost(CBasePlayer* host) = 0;
+
 protected:
 	virtual ~IMoveHelper() {}
 };

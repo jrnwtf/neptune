@@ -1,4 +1,5 @@
 #include "../SDK/SDK.h"
+
 #include "../Features/Aimbot/Aimbot.h"
 #include "../Features/Backtrack/Backtrack.h"
 #include "../Features/CritHack/CritHack.h"
@@ -8,7 +9,7 @@
 #include "../Features/NoSpread/NoSpreadHitscan/NoSpreadHitscan.h"
 #include "../Features/PacketManip/PacketManip.h"
 #include "../Features/Resolver/Resolver.h"
-#include "../Features/TickHandler/TickHandler.h"
+#include "../Features/Ticks/Ticks.h"
 #include "../Features/Visuals/Visuals.h"
 #include "../Features/Visuals/FakeAngle/FakeAngle.h"
 #include "../Features/Spectate/Spectate.h"
@@ -16,6 +17,20 @@
 #include "../Features/NavBot/NavEngine/NavEngine.h"
 #include "../Features/NavBot/NavBot.h"
 #include "../Features/AutoJoin/AutoJoin.h"
+
+#define MATH_EPSILON (1.f / 16)
+#define PSILENT_EPSILON (1.f - MATH_EPSILON)
+#define REAL_EPSILON (0.1f + MATH_EPSILON)
+#define SNAP_SIZE_EPSILON (10.f - MATH_EPSILON)
+#define SNAP_NOISE_EPSILON (0.5f + MATH_EPSILON)
+
+struct CmdHistory_t
+{
+	Vec3 m_vAngle;
+	bool m_bAttack1;
+	bool m_bAttack2;
+	bool m_bSendingPacket;
+};
 
 #define MATH_EPSILON (1.f / 16)
 #define PSILENT_EPSILON (1.f - MATH_EPSILON)
@@ -109,7 +124,6 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 		}
 		if (pLocal->InCond(TF_COND_STUNNED) && pLocal->m_iStunFlags() & (TF_STUN_CONTROLS | TF_STUN_LOSER_STATE))
 			bCanAttack = false;
-
 		if (bCanAttack)
 		{
 			G::CanPrimaryAttack = pWeapon->CanPrimaryAttack();
@@ -191,7 +205,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	F::AutoJoin.Run(pLocal);
 	F::GameObjectiveController.Update();
 
-	F::Backtrack.Run(pCmd);
+	F::Backtrack.BacktrackToCrosshair(pCmd);
 
 	F::EnginePrediction.Start(pLocal, pCmd);
 	F::Aimbot.Run(pLocal, pWeapon, pCmd);
@@ -294,8 +308,8 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 				float flDelta34 = Math::CalcFov(vHistory[3].m_vAngle, vHistory[4].m_vAngle);
 
 				if ((
-					flDelta12 > SNAP_SIZE_EPSILON && flDelta23 < SNAP_NOISE_EPSILON && vHistory[2].m_vAngle != vHistory[3].m_vAngle
-					|| flDelta23 > SNAP_SIZE_EPSILON && flDelta12 < SNAP_NOISE_EPSILON && vHistory[1].m_vAngle != vHistory[2].m_vAngle
+						flDelta12 > SNAP_SIZE_EPSILON && flDelta23 < SNAP_NOISE_EPSILON && vHistory[2].m_vAngle != vHistory[3].m_vAngle
+					 || flDelta23 > SNAP_SIZE_EPSILON && flDelta12 < SNAP_NOISE_EPSILON && vHistory[1].m_vAngle != vHistory[2].m_vAngle
 					)
 					&& flDelta01 < SNAP_NOISE_EPSILON && vHistory[0].m_vAngle != vHistory[1].m_vAngle
 					&& flDelta34 < SNAP_NOISE_EPSILON && vHistory[3].m_vAngle != vHistory[4].m_vAngle)
@@ -308,5 +322,6 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 			}
 		}
 	}
+
 	return false;
 }

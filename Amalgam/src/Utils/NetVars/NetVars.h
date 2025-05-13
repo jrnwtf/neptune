@@ -8,7 +8,7 @@ class CNetVars
 public:
 	int GetOffset(RecvTable* pTable, const char* szNetVar);
 	int GetNetVar(const char* szClass, const char* szNetVar);
-	
+
 	RecvProp* GetProp(RecvTable* pTable, const char* szNetVar);
 	RecvProp* GetNetProp(const char* szClass, const char* szNetVar);
 };

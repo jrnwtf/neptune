@@ -16,13 +16,11 @@ MAKE_HOOK(FX_FireBullets, S::FX_FireBullets(), void,
 #endif
 	static const auto dwDesired = S::CTFWeaponBaseGun_FireBullet_FireBullets_Call();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());
-	if (!G::Unload)
-	{
-		if (iPlayer != I::EngineClient->GetLocalPlayer())
-			F::Backtrack.ReportShot(iPlayer);
-		else if (Vars::Aimbot::General::NoSpread.Value && dwRetAddr == dwDesired)
-			iSeed = F::NoSpreadHitscan.m_iSeed;
-	}
+	
+	if (iPlayer != I::EngineClient->GetLocalPlayer())
+		F::Backtrack.ReportShot(iPlayer);
+	else if (Vars::Aimbot::General::NoSpread.Value && dwRetAddr == dwDesired)
+		iSeed = F::NoSpreadHitscan.m_iSeed;
 
 	return CALL_ORIGINAL(pWpn, iPlayer, vecOrigin, vecAngles, iWeapon, iMode, iSeed, flSpread, flDamage, bCritical);
 }
@@ -37,6 +35,7 @@ MAKE_HOOK(FX_FireBullets_Server, S::FX_FireBullets_Server(), void,
 	if (!Vars::Hooks::FX_FireBullets[DEFAULT_BIND])
 		return CALL_ORIGINAL(pWpn, iPlayer, vecOrigin, vecAngles, iWeapon, iMode, iSeed, flSpread, flDamage, bCritical);
 #endif
+
 	if (Vars::Aimbot::General::NoSpread.Value)
 		SDK::Output("FX_FireBullets", std::format("{}", iSeed).c_str(), { 0, 255, 0 });
 	return CALL_ORIGINAL(pWpn, iPlayer, vecOrigin, vecAngles, iWeapon, iMode, iSeed, flSpread, flDamage, bCritical);

@@ -9,6 +9,7 @@ MAKE_HOOK(IBaseClientDLL_LevelShutdown, U::Memory.GetVFunc(I::BaseClientDLL, 7),
 	if (!Vars::Hooks::IBaseClientDLL_LevelShutdown[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	H::Entities.Clear(true);
 
 	CALL_ORIGINAL(rcx);

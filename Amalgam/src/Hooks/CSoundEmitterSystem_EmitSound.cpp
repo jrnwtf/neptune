@@ -103,6 +103,7 @@ static bool ShouldBlockSound(const char* pSound)
 
 	std::string sSound = pSound;
 	boost::algorithm::to_lower(sSound);
+
 	if (Vars::Misc::Sound::Block.Value)
 	{
 		auto CheckSound = [&](int iFlag, const std::vector<const char*>& vSounds)
@@ -129,7 +130,7 @@ static bool ShouldBlockSound(const char* pSound)
 
 		if (CheckSound(Vars::Misc::Sound::BlockEnum::Water, vWater))
 			return true;
-	}	
+	}
 
 	if (FNV1A::Hash32(pSound) == FNV1A::Hash32Const("Physics.WaterSplash")) // temporary fix for duplicate water sounds
 		return true;

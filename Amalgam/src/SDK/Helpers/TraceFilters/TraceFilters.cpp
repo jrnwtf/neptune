@@ -8,7 +8,7 @@ bool CTraceFilterHitscan::ShouldHitEntity(IHandleEntity* pServerEntity, int nCon
 		return false;
 	//if (pServerEntity->GetRefEHandle().GetSerialNumber() == (1 << 15))
 	//	return I::ClientEntityList->GetClientEntity(0) != pSkip;
-	
+
 	auto pEntity = reinterpret_cast<CBaseEntity*>(pServerEntity);
 
 	switch (pEntity->GetClassID())
@@ -20,6 +20,7 @@ bool CTraceFilterHitscan::ShouldHitEntity(IHandleEntity* pServerEntity, int nCon
 	case ETFClassID::CTFMedigunShield:
 	{
 		auto pLocal = H::Entities.GetLocal();
+
 		const int iTargetTeam = pEntity->m_iTeamNum(), iLocalTeam = pLocal ? pLocal->m_iTeamNum() : iTargetTeam;
 		return iTargetTeam != iLocalTeam;
 	}
@@ -31,6 +32,7 @@ bool CTraceFilterHitscan::ShouldHitEntity(IHandleEntity* pServerEntity, int nCon
 	{
 		auto pLocal = H::Entities.GetLocal();
 		auto pWeapon = H::Entities.GetWeapon();
+
 		bool bSniperRifle = false;
 		if (pLocal && pLocal == pSkip && pWeapon)
 		{
@@ -42,8 +44,10 @@ bool CTraceFilterHitscan::ShouldHitEntity(IHandleEntity* pServerEntity, int nCon
 				bSniperRifle = true;
 			}
 		}
+
 		if (!bSniperRifle)
 			return true;
+
 		const int iTargetTeam = pEntity->m_iTeamNum(), iLocalTeam = pLocal ? pLocal->m_iTeamNum() : iTargetTeam;
 		return iTargetTeam != iLocalTeam;
 	}
@@ -91,9 +95,11 @@ bool CTraceFilterProjectile::ShouldHitEntity(IHandleEntity* pServerEntity, int n
 	{
 		auto pLocal = H::Entities.GetLocal();
 		auto pWeapon = H::Entities.GetWeapon();
+
 		const bool bHeal = (pLocal && pLocal == pSkip && pWeapon) ? pWeapon->GetWeaponID() == TF_WEAPON_CROSSBOW || pWeapon->GetWeaponID() == TF_WEAPON_LUNCHBOX : false;
 		if (bHeal)
 			return true;
+
 		const int iTargetTeam = pEntity->m_iTeamNum(), iLocalTeam = pLocal ? pLocal->m_iTeamNum() : iTargetTeam;
 		return iTargetTeam != iLocalTeam;
 	}

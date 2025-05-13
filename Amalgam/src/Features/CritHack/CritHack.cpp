@@ -1,7 +1,6 @@
 #include "CritHack.h"
 
-#include "../TickHandler/TickHandler.h"
-#include "NoPipeRot.h"
+#include "../Ticks/Ticks.h"
 
 #define WEAPON_RANDOM_RANGE				10000
 #define TF_DAMAGE_CRIT_MULTIPLIER		3.0f
@@ -250,9 +249,9 @@ void CCritHack::CanFireCritical(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 
 	const float flNormalizedDamage = m_iCritDamage / TF_DAMAGE_CRIT_MULTIPLIER;
 	float flCritChance = m_flCritChance + 0.1f;
-	if (m_iRangedDamage  && m_iCritDamage)
+	if (m_iRangedDamage && m_iCritDamage)
 	{
-		const float flObservedCritChance = flNormalizedDamage / (flNormalizedDamage + m_iRangedDamage  - m_iCritDamage);
+		const float flObservedCritChance = flNormalizedDamage / (flNormalizedDamage + m_iRangedDamage - m_iCritDamage);
 		m_bCritBanned = flObservedCritChance > flCritChance;
 	}
 
@@ -328,7 +327,7 @@ void CCritHack::Reset()
 	m_mStorage.clear();
 
 	m_iFillStart = 0;
-
+	
 	m_iCritDamage = 0;
 	m_iRangedDamage = 0;
 	m_iMeleeDamage = 0;
@@ -564,7 +563,8 @@ void CCritHack::Event(IGameEvent* pEvent, uint32_t uHash, CTFPlayer* pLocal)
 
 		break;
 	}
-	case FNV1A::Hash32Const("teamplay_round_start"):
+	case FNV1A::Hash32Const("scorestats_accumulated_update"):
+	case FNV1A::Hash32Const("mvm_reset_stats"):
 		m_iRangedDamage = m_iCritDamage = m_iMeleeDamage = 0;
 		break;
 	case FNV1A::Hash32Const("client_beginconnect"):
@@ -576,10 +576,6 @@ void CCritHack::Event(IGameEvent* pEvent, uint32_t uHash, CTFPlayer* pLocal)
 
 void CCritHack::Store()
 {
-	auto pResource = H::Entities.GetPR();
-	if (!pResource)
-		return;
-
 	for (auto& pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ALL))
 	{
 		auto pPlayer = pEntity->As<CTFPlayer>();
@@ -687,7 +683,20 @@ void CCritHack::Draw(CTFPlayer* pLocal)
 		if (!tStorage.m_bActive)
 			return;
 
-		if (tStorage.m_flDamage > 0)
+	auto& tStorage = m_mStorage[iSlot];
+	auto bRapidFire = pWeapon->IsRapidFire();
+	float flTickBase = TICKS_TO_TIME(pLocal->m_nTickBase());
+
+	y -= nTall;
+
+	if (Vars::Misc::Game::AntiCheatCompatibility.Value)
+		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value, align, "Anticheat compatibility");
+
+	if (tStorage.m_flDamage >= 0.f)
+	{
+		if (pLocal->IsCritBoosted())
+			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Colors::IndicatorTextMisc.Value, Vars::Menu::Theme::Background.Value, align, "Crit Boosted");
+		else if (pWeapon->m_flCritTime() > flTickBase)
 		{
 			if (pLocal->IsCritBoosted())
 			{

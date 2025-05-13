@@ -433,7 +433,6 @@ public:
 	inline MedigunChargeTypes GetChargeType()
 	{
 		int iTmp = SDK::AttribHookValue(MEDIGUN_CHARGE_INVULN, "set_charge_type", this);
-
 		if (GetMedigunType() == MEDIGUN_RESIST)
 			iTmp += m_nChargeResistType();
 
@@ -479,6 +478,7 @@ public:
 				auto pOwner = m_hOwnerEntity().Get()->As<CTFPlayer>();
 				if (pOwner && pOwner->IsCritBoosted())
 					return 3.f;
+
 				if (GetRifleType() == RIFLE_JARATE)
 				{
 					if (SDK::AttribHookValue(0, "jarate_duration", this) > 0)
@@ -488,6 +488,7 @@ public:
 						return 1.36f;
 					return 1.f;
 				}
+
 				return 3.f;
 			};
 		
@@ -504,11 +505,14 @@ public:
 				auto pOwner = m_hOwnerEntity().Get()->As<CTFPlayer>();
 				if (pOwner && pOwner->IsCritBoosted())
 					return 3.f;
+
 				if (pOwner && pOwner->IsMiniCritBoosted()
 					|| pTarget && (pTarget->InCond(TF_COND_URINE) || pTarget->InCond(TF_COND_MARKEDFORDEATH)))
 					return 1.36f;
+
 				return 1.f;
 			};
+
 		float flMult = SDK::AttribHookValue(GetMainMult(), "mult_dmg", this);
 		flMult = SDK::AttribHookValue(flMult, "bodyshot_damage_modify", this);
 		if (m_flChargedDamage() == 150.f)

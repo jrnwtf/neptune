@@ -309,5 +309,5 @@ public:
 
 public:
 	int m_nBaselineTick;	// sequence number of baseline
-	int m_nBaselineNr;		// 0 or 1 
+	int m_nBaselineNr;		// 0 or 1 		
 };

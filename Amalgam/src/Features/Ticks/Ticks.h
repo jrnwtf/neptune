@@ -20,8 +20,10 @@ class CTickshiftHandler
 
 	bool m_bShootAngle = false;
 	Vec3 m_vShootAngle = {};
+
 public:
 	void Run(float accumulated_extra_samples, bool bFinalTick, CTFPlayer* pLocal);
+	void Draw(CTFPlayer* pLocal);
 	void Reset();
 
 	void CLMove(float accumulated_extra_samples, bool bFinalTick);

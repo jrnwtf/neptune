@@ -2,6 +2,7 @@
 // for C and C++
 // from codepoints https://github.com/google/material-design-icons/raw/master/font/MaterialIcons-Regular.codepoints
 // for use with font https://github.com/google/material-design-icons/blob/master/font/MaterialIcons-Regular.ttf
+
 #pragma once
 
 #define FONT_ICON_FILE_NAME_MD "MaterialIcons-Regular.ttf"

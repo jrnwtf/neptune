@@ -11,6 +11,7 @@ MAKE_HOOK(HostState_Shutdown, S::HostState_Shutdown(), void)
 	if (!Vars::Hooks::HostState_Shutdown[DEFAULT_BIND])
 		return CALL_ORIGINAL();
 #endif
+
 	U::Core.m_bUnload = true;
 	CALL_ORIGINAL();
 }
@@ -21,6 +22,7 @@ MAKE_HOOK(HostState_Restart, S::HostState_Restart(), void)
 	if (!Vars::Hooks::HostState_Shutdown[DEFAULT_BIND])
 		return CALL_ORIGINAL();
 #endif
+
 	U::Core.m_bUnload = true;
 	CALL_ORIGINAL();
 }

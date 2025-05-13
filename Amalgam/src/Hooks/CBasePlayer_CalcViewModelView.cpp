@@ -10,6 +10,7 @@ MAKE_HOOK(CBasePlayer_CalcViewModelView, S::CBasePlayer_CalcViewModelView(), voi
 	if (!Vars::Hooks::CBasePlayer_CalcViewModelView[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pOwner, vEyePosition, vEyeAngles);
 #endif
+
 	Vec3 vOffset = { float(Vars::Visuals::Viewmodel::OffsetX.Value), float(Vars::Visuals::Viewmodel::OffsetY.Value), float(Vars::Visuals::Viewmodel::OffsetZ.Value) };
 	bool bOffset = !vOffset.IsZero();
 

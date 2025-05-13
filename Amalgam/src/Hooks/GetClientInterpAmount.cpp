@@ -10,6 +10,7 @@ MAKE_HOOK(GetClientInterpAmount, S::GetClientInterpAmount(), float)
 	if (!Vars::Hooks::GetClientInterpAmount[DEFAULT_BIND])
 		return CALL_ORIGINAL();
 #endif
+
 	static const auto dwDesired1 = S::CNetGraphPanel_DrawTextFields_GetClientInterpAmount_Call1();
 	static const auto dwDesired2 = S::CNetGraphPanel_DrawTextFields_GetClientInterpAmount_Call2();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());

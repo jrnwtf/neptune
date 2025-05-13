@@ -9,6 +9,7 @@ MAKE_HOOK(CBasePlayer_CalcPlayerView, S::CBasePlayer_CalcPlayerView(), void,
 	if (!Vars::Hooks::CBasePlayer_CalcPlayerView[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, eyeOrigin, eyeAngles, fov);
 #endif
+
 	if (Vars::Visuals::Removals::ViewPunch.Value)
 	{
 		auto pPlayer = reinterpret_cast<CBasePlayer*>(rcx);

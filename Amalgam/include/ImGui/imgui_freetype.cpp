@@ -173,7 +173,7 @@ namespace
         const FT_Glyph_Metrics* LoadGlyph(uint32_t in_codepoint);
         const FT_Bitmap*        RenderGlyphAndGetInfo(GlyphInfo* out_glyph_info);
         void                    BlitGlyph(const FT_Bitmap* ft_bitmap, uint32_t* dst, uint32_t dst_pitch, unsigned char* multiply_table = nullptr);
-		FreeTypeFont()          { memset((void*)this, 0, sizeof(*this)); }
+        FreeTypeFont()          { memset((void*)this, 0, sizeof(*this)); }
         ~FreeTypeFont()         { CloseFont(); }
 
         // [Internals]
@@ -574,7 +574,7 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
     // 8. Render/rasterize font characters into the texture
     int total_surface = 0;
     int buf_rects_out_n = 0;
-	const int pack_padding = atlas->TexGlyphPadding;
+    const int pack_padding = atlas->TexGlyphPadding;
     for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {
         ImFontBuildSrcDataFT& src_tmp = src_tmp_array[src_i];
@@ -624,7 +624,7 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
             total_surface += src_tmp.Rects[glyph_i].w * src_tmp.Rects[glyph_i].h;
         }
     }
-	for (int i = 0; i < atlas->CustomRects.Size; i++)
+    for (int i = 0; i < atlas->CustomRects.Size; i++)
         total_surface += (atlas->CustomRects[i].Width + pack_padding) * (atlas->CustomRects[i].Height + pack_padding);
 
     // We need a width for the skyline algorithm, any width!
@@ -696,7 +696,7 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
         const float descent = src_tmp.Font.Info.Descender;
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
 
-		if (src_tmp.GlyphsCount == 0)
+        if (src_tmp.GlyphsCount == 0)
             continue;
         const float font_off_x = cfg.GlyphOffset.x;
         const float font_off_y = cfg.GlyphOffset.y + IM_ROUND(dst_font->Ascent);

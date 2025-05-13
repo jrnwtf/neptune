@@ -11,6 +11,7 @@ MAKE_HOOK(KeyValues_SetInt, S::KeyValues_SetInt(), void,
 	if (!Vars::Hooks::KeyValues_SetInt[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, keyName, value);
 #endif
+
 	static const auto dwDesired = S::CTFClientScoreBoardDialog_UpdatePlayerList_SetInt_Call();
 	static const auto dwJump = S::CTFClientScoreBoardDialog_UpdatePlayerList_Jump();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());

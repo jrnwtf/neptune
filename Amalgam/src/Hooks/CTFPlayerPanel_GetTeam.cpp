@@ -15,6 +15,7 @@ MAKE_HOOK(CTFPlayerPanel_GetTeam, S::CTFPlayerPanel_GetTeam(), int,
 	if (!Vars::Hooks::CTFPlayerPanel_GetTeam[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	static const auto dwDesired = S::CTFTeamStatusPlayerPanel_Update_GetTeam_Call();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());
 
@@ -36,6 +37,7 @@ MAKE_HOOK(CTFTeamStatusPlayerPanel_Update, S::CTFTeamStatusPlayerPanel_Update(),
 	if (!Vars::Hooks::CTFPlayerPanel_GetTeam[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	CTFTeamStatusPlayerPanel_Update_PlayerIndex = *reinterpret_cast<int*>(uintptr_t(rcx) + 580);
 	return CALL_ORIGINAL(rcx);
 }
@@ -48,6 +50,7 @@ MAKE_HOOK(vgui_Panel_SetBgColor, S::vgui_Panel_SetBgColor(), void,
 	if (!Vars::Hooks::CTFPlayerPanel_GetTeam[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, color);
 #endif
+
 	static const auto dwDesired = S::CTFTeamStatusPlayerPanel_Update_SetBgColor_Call();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());
 

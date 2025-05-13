@@ -1,7 +1,7 @@
 #include "Materials.h"
 
 #include "../Glow/Glow.h"
-#include "../../CameraWindow/CameraWindow.h"
+#include "../CameraWindow/CameraWindow.h"
 #include "../../Configs/Configs.h"
 #include "../../Binds/Binds.h"
 #include <filesystem>
@@ -191,6 +191,10 @@ void CMaterials::LoadMaterials()
 	F::Glow.Initialize();
 	F::CameraWindow.Initialize();
 
+	S::InitializeStandardMaterials.Call<void>();
+	auto pMaterial = *reinterpret_cast<IMaterial**>(U::Memory.RelToAbs(S::Wireframe()));
+	pMaterial->SetMaterialVarFlag(MATERIAL_VAR_VERTEXALPHA, true);
+
 	m_bLoaded = true;
 }
 
@@ -302,7 +306,7 @@ void CMaterials::EditMaterial(const char* sName, const char* sVMT)
 		ModifyKeyValues(kv);
 
 		tMaterial.m_pMaterial = Create(sName, kv);
-		StoreVars(tMaterial);
+		//StoreVars(tMaterial);
 
 		std::ofstream outStream(F::Configs.m_sMaterialsPath + sName + ".vmt");
 		outStream << sVMT;

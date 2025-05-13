@@ -9,5 +9,6 @@ MAKE_HOOK(CBaseViewModel_ShouldFlipViewModel, S::CBaseViewModel_ShouldFlipViewMo
 	if (!Vars::Hooks::CBaseViewModel_ShouldFlipViewModel[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	return G::FlipViewmodels = CALL_ORIGINAL(rcx);
 }

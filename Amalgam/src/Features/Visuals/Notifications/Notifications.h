@@ -7,7 +7,7 @@ struct Notification_t
 	float m_flCreateTime;
 	float m_flLifeTime;
 	float m_flPanTime;
-	
+
 	Color_t m_tAccent;
 	Color_t m_tBackground;
 	Color_t m_tActive;

@@ -201,7 +201,7 @@ int SDK::HandleToIDX(unsigned int pHandle)
 
 bool SDK::W2S(const Vec3& vOrigin, Vec3& vScreen, bool bAlways)
 {
-	const auto& worldToScreen = H::Draw.m_WorldToProjection.As3x4();
+	const auto& worldToScreen = H::Draw.m_mWorldToProjection.As3x4();
 
 	float flW = worldToScreen[3][0] * vOrigin.x + worldToScreen[3][1] * vOrigin.y + worldToScreen[3][2] * vOrigin.z + worldToScreen[3][3];
 	vScreen.z = 0;
@@ -368,6 +368,12 @@ int SDK::GetRoundState()
 {
 	if (auto pGameRules = I::TFGameRules())
 		return pGameRules->m_iRoundState();
+	return 0;
+}
+int SDK::GetWinningTeam()
+{
+	if (auto pGameRules = I::TFGameRules())
+		return pGameRules->m_iWinningTeam();
 	return 0;
 }
 
@@ -763,6 +769,7 @@ bool CTraceFilterSetup::ShouldHitEntity(IHandleEntity* pServerEntity, int nConte
 	case ETFClassID::CTFPlayer:
 	{
 		auto pLocal = H::Entities.GetLocal();
+
 		const int iTargetTeam = pEntity->m_iTeamNum(), iLocalTeam = pLocal ? pLocal->m_iTeamNum() : iTargetTeam;
 		return iTargetTeam != iLocalTeam;
 	}

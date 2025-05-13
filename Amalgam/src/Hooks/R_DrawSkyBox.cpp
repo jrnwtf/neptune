@@ -10,6 +10,7 @@ MAKE_HOOK(R_DrawSkyBox, S::R_DrawSkyBox(), void,
 	if (!Vars::Hooks::R_DrawSkyBox[DEFAULT_BIND])
 		return CALL_ORIGINAL(zFar, nDrawFlags);
 #endif
+
 	if (FNV1A::Hash32(Vars::Visuals::World::SkyboxChanger.Value.c_str()) == FNV1A::Hash32Const("Off") || Vars::Visuals::UI::CleanScreenshots.Value && I::EngineClient->IsTakingScreenshot())
 		return CALL_ORIGINAL(zFar, nDrawFlags);
 

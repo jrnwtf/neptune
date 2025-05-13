@@ -13,7 +13,6 @@ void CSpectate::NetUpdateEnd(CTFPlayer* pLocal)
 		if (pEntity == pLocal)
 			m_iTarget = m_iIntendedTarget = -1;
 	}
-
 	if (m_iTarget == -1)
 	{
 		if (pLocal->IsAlive() && pLocal->m_hObserverTarget())
@@ -27,7 +26,6 @@ void CSpectate::NetUpdateEnd(CTFPlayer* pLocal)
 
 	m_pOriginalTarget = pLocal->m_hObserverTarget().Get();
 	m_iOriginalMode = pLocal->m_iObserverMode();
-
 	if (!pEntity)
 		return;
 
@@ -43,6 +41,7 @@ void CSpectate::NetUpdateEnd(CTFPlayer* pLocal)
 	pLocal->m_iObserverMode() = Vars::Visuals::Thirdperson::Enabled.Value ? OBS_MODE_THIRDPERSON : OBS_MODE_FIRSTPERSON;
 	pLocal->m_vecViewOffset() = pEntity->GetViewOffset();
 	Vars::Visuals::Thirdperson::Enabled.Value ? I::Input->CAM_ToThirdPerson() : I::Input->CAM_ToFirstPerson();
+
 	m_pTargetTarget = pLocal->m_hObserverTarget().Get();
 	m_iTargetMode = pLocal->m_iObserverMode();
 }
@@ -61,6 +60,7 @@ void CSpectate::CreateMove(CTFPlayer* pLocal, CUserCmd* pCmd)
 	int iButtons = pCmd->buttons & ~IN_SCORE;
 	if (iButtons)
 		m_iIntendedTarget = -1;
+
 	static bool bStaticView = false;
 	const bool bLastView = bStaticView;
 	const bool bCurrView = bStaticView = m_iTarget != -1;

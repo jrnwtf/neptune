@@ -13,8 +13,6 @@ struct KeyStorage
 
 class CKeyHandler
 {
-	std::unordered_map<int, KeyStorage> StorageMap;
-
 public:
 	void StoreKey(int iKey, KeyStorage* pStorage = nullptr);
 

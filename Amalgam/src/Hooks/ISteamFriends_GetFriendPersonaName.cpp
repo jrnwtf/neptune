@@ -11,8 +11,10 @@ MAKE_HOOK(ISteamFriends_GetFriendPersonaName, U::Memory.GetVFunc(I::SteamFriends
 	if (!Vars::Hooks::ISteamFriends_GetFriendPersonaName[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, steamIDFriend);
 #endif
+
 	static const auto dwDesired = S::GetPlayerNameForSteamID_GetFriendPersonaName_Call();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());
+
 	if (Vars::Visuals::UI::StreamerMode.Value && dwRetAddr == dwDesired)
 	{
 		if (I::SteamUser->GetSteamID() == steamIDFriend)
@@ -31,5 +33,6 @@ MAKE_HOOK(ISteamFriends_GetFriendPersonaName, U::Memory.GetVFunc(I::SteamFriends
 				return "Party";
 		}
 	}
+
 	return CALL_ORIGINAL(rcx, steamIDFriend);
 }

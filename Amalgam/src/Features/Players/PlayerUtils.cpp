@@ -328,10 +328,10 @@ PriorityLabel_t* CPlayerlistUtils::GetSignificantTag(uint32_t uFriendsID, int iM
 	std::sort(vTags.begin(), vTags.end(), [&](const auto a, const auto b) -> bool
 		{
 			// sort by priority if unequal
-			if (a->m_iPriority  != b->m_iPriority )
-				return a->m_iPriority  > b->m_iPriority ;
+			if (a->m_iPriority != b->m_iPriority)
+				return a->m_iPriority > b->m_iPriority;
 
-			return a->m_sName  < b->m_sName ;
+			return a->m_sName < b->m_sName;
 		});
 	return vTags.front();
 }
@@ -454,17 +454,17 @@ const char* CPlayerlistUtils::GetPlayerName(int iIndex, const char* sDefault, in
 void CPlayerlistUtils::UpdatePlayers( )
 {
 	static Timer tTimer = {};
-	if ( !tTimer.Run( 1.f ) )
+	if (!tTimer.Run(1.f))
 		return;
 
-	std::lock_guard lock( m_mutex );
-	m_vPlayerCache.clear( );
+	std::lock_guard lock(m_mutex);
+	m_vPlayerCache.clear();
 
-	auto pResource = H::Entities.GetPR( );
-	if ( !pResource )
+	auto pResource = H::Entities.GetPR();
+	if (!pResource)
 		return;
 
-	for ( int n = 1; n <= I::EngineClient->GetMaxClients( ); n++ )
+	for (int n = 1; n <= I::EngineClient->GetMaxClients(); n++)
 	{
 		if (!pResource->m_bValid(n) || !pResource->m_bConnected(n))
 			continue;
@@ -476,7 +476,7 @@ void CPlayerlistUtils::UpdatePlayers( )
 		// Process special characters in player names
 		if (sName && uFriendsID)
 			ProcessSpecialCharsInName(uFriendsID, sName);
-		
+
 		m_vPlayerCache.emplace_back(
 			sName ? sName : "",
 			uFriendsID,

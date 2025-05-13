@@ -9,6 +9,7 @@
 #include "../Features/Visuals/Visuals.h"
 #include "../SDK/Events/Events.h"
 #include "../Features/Misc/NamedPipe/NamedPipe.h"
+
 #include <Psapi.h>
 
 static inline std::string GetProcessName(DWORD dwProcessID)
@@ -39,6 +40,7 @@ static inline bool CheckDXLevel()
 		SDK::Output("Amalgam", sMessage, { 175, 150, 255 }, true, true);
 		//return false;
 	}
+
 	return true;
 }
 
@@ -46,6 +48,24 @@ void CCore::AppendFailText(const char* sMessage)
 {
 	ssFailStream << std::format("{}\n", sMessage);
 	OutputDebugStringA(std::format("{}\n", sMessage).c_str());
+}
+
+void CCore::LogFailText()
+{
+	ssFailStream << "\nBuilt @ " __DATE__ ", " __TIME__ ", " __CONFIGURATION__ "\n";
+	ssFailStream << "Ctrl + C to copy. \n";
+	try
+	{
+		std::ofstream file;
+		file.open(F::Configs.m_sConfigPath + "fail_log.txt", std::ios_base::app);
+		file << ssFailStream.str() + "\n\n\n";
+		file.close();
+		ssFailStream << "Logged to Amalgam\\fail_log.txt. ";
+	}
+	catch (...) {}
+#ifndef TEXTMODE
+	SDK::Output("Failed to load", ssFailStream.str().c_str(), {}, false, true, false, false, false, false, MB_OK | MB_ICONERROR);
+#endif
 }
 
 void CCore::Load()
@@ -116,26 +136,12 @@ void CCore::Unload()
 {
 	if (m_bFailed)
 	{
-		ssFailStream << "\nBuilt @ " __DATE__ ", " __TIME__ " (1)\n";
-		ssFailStream << "Ctrl + C to copy. \n";
-		try
-		{
-			std::ofstream file;
-			file.open(F::Configs.m_sConfigPath + "fail_log.txt", std::ios_base::app);
-			file << ssFailStream.str() + "\n\n\n";
-			file.close();
-			ssFailStream << "Logged to Amalgam\\fail_log.txt. ";
-		}
-		catch (...) {}
-
-#ifndef TEXTMODE
-		SDK::Output("Failed to load", ssFailStream.str().c_str(), {}, false, true, false, false, false, false, MB_OK | MB_ICONERROR);
-#endif
+		LogFailText();
 		return;
 	}
 
 	G::Unload = true;
-	m_bFailed2 = !U::Hooks.Unload();
+	m_bFailed2 = !U::Hooks.Unload() || m_bFailed2;
 	U::BytePatches.Unload();
 	H::Events.Unload();
 
@@ -160,21 +166,7 @@ void CCore::Unload()
 
 	if (m_bFailed2)
 	{
-		ssFailStream << "\nBuilt @ " __DATE__ ", " __TIME__ " (2)\n";
-		ssFailStream << "Ctrl + C to copy. \n";
-		try
-		{
-			std::ofstream file;
-			file.open(F::Configs.m_sConfigPath + "fail_log.txt", std::ios_base::app);
-			file << ssFailStream.str() + "\n\n\n";
-			file.close();
-			ssFailStream << "Logged to Amalgam\\fail_log.txt. ";
-		}
-		catch (...) {}
-
-#ifndef TEXTMODE
-		SDK::Output("Failed to load", ssFailStream.str().c_str(), {}, false, true, false, false, false, false, MB_OK | MB_ICONERROR);
-#endif
+		LogFailText();
 		return;
 	}
 

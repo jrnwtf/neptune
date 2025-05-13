@@ -8,6 +8,7 @@ MAKE_HOOK(IEngineTrace_TraceRay, U::Memory.GetVFunc(I::EngineTrace, 4), void,
 	if (!Vars::Hooks::IEngineTrace_TraceRay[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, ray, fMask, pTraceFilter, pTrace);
 #endif
+
 	CALL_ORIGINAL(rcx, ray, fMask, pTraceFilter, pTrace);
 	if (Vars::Debug::VisualizeTraces.Value)
 	{

@@ -11,6 +11,7 @@ MAKE_HOOK(CTFPlayerShared_IsPlayerDominated, S::CTFPlayerShared_IsPlayerDominate
 	if (!Vars::Hooks::CTFPlayerShared_IsPlayerDominated[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, index);
 #endif
+
 	static const auto dwDesired = S::CTFClientScoreBoardDialog_UpdatePlayerList_IsPlayerDominated_Call();
 	static const auto dwJump = S::CTFClientScoreBoardDialog_UpdatePlayerList_Jump();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());

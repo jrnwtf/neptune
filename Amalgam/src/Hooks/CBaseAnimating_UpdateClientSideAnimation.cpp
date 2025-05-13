@@ -11,6 +11,7 @@ MAKE_HOOK(CBaseAnimating_UpdateClientSideAnimation, S::CBaseAnimating_UpdateClie
 	if (!Vars::Hooks::CBaseAnimating_UpdateClientSideAnimation[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	auto pLocal = H::Entities.GetLocal();
 	auto pPlayer = reinterpret_cast<CTFPlayer*>(rcx);
 	if ((Vars::Visuals::Removals::Interpolation.Value || F::Resolver.GetAngles(pPlayer)) && !G::UpdatingAnims

@@ -43,10 +43,10 @@ bool CAutoRocketJump::SetAngles(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 			for (int n = 1; n < 10; n++)
 			{
 				F::MoveSim.RunTick(tStorage);
-				if (!pLocal->IsOnGround())
+				if (!pLocal->IsOnGround() || pLocal->IsSwimming())
 					continue;
 
-				Vec3 vForward = tStorage.m_MoveData.m_vecVelocity.To2D().Normalized();
+				Vec3 vForward = tStorage.m_MoveData.m_vecVelocity.Normalized2D();
 				vPoint = tStorage.m_MoveData.m_vecAbsOrigin - vForward * flOffset; //- Vec3(0, 0, 20);
 				bShouldReturn = false;
 				break;
@@ -102,7 +102,7 @@ bool CAutoRocketJump::SetAngles(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 
 void CAutoRocketJump::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
-	if (!pLocal || !pWeapon || !pCmd || !pLocal->IsAlive() || pLocal->IsAGhost() || I::EngineVGui->IsGameUIVisible() || I::MatSystemSurface->IsCursorVisible())
+	if (!pLocal || !pWeapon || !pCmd || !pLocal->IsAlive() || pLocal->IsAGhost() || I::EngineVGui->IsGameUIVisible())
 	{
 		m_iFrame = -1;
 		return;
@@ -148,8 +148,6 @@ void CAutoRocketJump::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* p
 				Vec3 vOriginal = F::ProjSim.GetOrigin();
 				for (int n = 1; n < 10; n++)
 				{
-
-
 					Vec3 Old = F::ProjSim.GetOrigin();
 					F::MoveSim.RunTick(tStorage);
 					F::ProjSim.RunTick(tProjInfo);
@@ -167,7 +165,7 @@ void CAutoRocketJump::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* p
 							{
 								const Vec3 vOriginal = pLocal->GetAbsOrigin();
 								pLocal->SetAbsOrigin(vOrigin);
-								Vec3 vPos = {}; reinterpret_cast<CCollisionProperty*>(pLocal->GetCollideable())->CalcNearestPoint(vPoint, &vPos);
+								Vec3 vPos; reinterpret_cast<CCollisionProperty*>(pLocal->GetCollideable())->CalcNearestPoint(vPoint, &vPos);
 								pLocal->SetAbsOrigin(vOriginal);
 
 								return vPoint.DistTo(vPos) < 120.f && SDK::VisPosWorld(pLocal, pLocal, vPoint, vOrigin + pLocal->m_vecViewOffset(), MASK_SHOT);

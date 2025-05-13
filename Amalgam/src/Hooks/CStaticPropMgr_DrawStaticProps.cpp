@@ -10,6 +10,7 @@ MAKE_HOOK(CStaticPropMgr_DrawStaticProps, S::CStaticPropMgr_DrawStaticProps(), v
 	if (!Vars::Hooks::CStaticPropMgr_DrawStaticProps[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pProps, count, bShadowDepth, drawVCollideWireframe);
 #endif
+
 	G::DrawingProps = true;
 	CALL_ORIGINAL(rcx, pProps, count, bShadowDepth, drawVCollideWireframe);
 	G::DrawingProps = false;

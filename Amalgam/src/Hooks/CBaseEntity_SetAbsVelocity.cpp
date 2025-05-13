@@ -61,6 +61,7 @@ MAKE_HOOK(CBaseEntity_SetAbsVelocity, S::CBaseEntity_SetAbsVelocity(), void,
 	if (!Vars::Hooks::CBaseEntity_SetAbsVelocity[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, vecAbsVelocity);
 #endif
+
 	static const auto dwDesired = S::CBasePlayer_PostDataUpdate_SetAbsVelocity_Call();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());
 	if (dwRetAddr != dwDesired || G::Unload)
@@ -76,6 +77,7 @@ MAKE_HOOK(CBaseEntity_SetAbsVelocity, S::CBaseEntity_SetAbsVelocity(), void,
 
 	auto& tOldRecord = pRecords->front();
 	auto tNewRecord = VelFixRecord(pPlayer->m_vecOrigin() + Vec3(0, 0, pPlayer->m_vecMaxs().z - pPlayer->m_vecMins().z), pPlayer->m_flSimulationTime());
+
 	int iDeltaTicks = TIME_TO_TICKS(tNewRecord.m_flSimulationTime - tOldRecord.m_flSimulationTime);
 	float flDeltaTime = TICKS_TO_TIME(iDeltaTicks);
 	if (iDeltaTicks <= 0)
