@@ -3,7 +3,7 @@
     <img src=".github/assets/download.png" alt="Download" width="auto" height="auto">
   </a>
   <a href="https://nightly.link/TheGameEnhancer2004/Amalgam-v2/workflows/msbuild/master/Amalgamx64ReleasePDB.zip">
-    <img src=".github/assets/pdb.png" alt="PDB" width="auto" height="auto">
+    <img src=".github/assets/pdb2.png" alt="PDB" width="auto" height="auto">
   </a>
   <a href="https://nightly.link/TheGameEnhancer2004/Amalgam-v2/workflows/msbuild/master/Amalgamx64ReleaseAVX2.zip">
     <img src=".github/assets/download_avx2.png" alt="Download AVX2" width="auto" height="auto">
@@ -16,7 +16,7 @@
     <img src=".github/assets/freetype.png" alt="Download Freetype" width="auto" height="auto">
   </a>
   <a href="https://nightly.link/TheGameEnhancer2004/Amalgam-v2/workflows/msbuild/master/Amalgamx64ReleaseFreetypePDB.zip">
-    <img src=".github/assets/pdb.png" alt="PDB Freetype" width="auto" height="auto">
+    <img src=".github/assets/pdb2.png" alt="PDB Freetype" width="auto" height="auto">
   </a>
   <a href="https://nightly.link/TheGameEnhancer2004/Amalgam-v2/workflows/msbuild/master/Amalgamx64ReleaseFreetypeAVX2.zip">
     <img src=".github/assets/freetype_avx2.png" alt="Download Freetype AVX2" width="auto" height="auto">
@@ -29,7 +29,7 @@
     <img src=".github/assets/textmode.png" alt="Download Textmode" width="auto" height="auto">
   </a>
   <a href="https://nightly.link/TheGameEnhancer2004/Amalgam-v2/workflows/msbuild/master/Amalgamx64ReleaseTextmodePDB.zip">
-    <img src=".github/assets/pdb.png" alt="PDB Textmode" width="auto" height="auto">
+    <img src=".github/assets/pdb2.png" alt="PDB Textmode" width="auto" height="auto">
   </a>
   <a href="https://nightly.link/TheGameEnhancer2004/Amalgam-v2/workflows/msbuild/master/Amalgamx64ReleaseTextmodeAVX2.zip">
     <img src=".github/assets/textmode_avx2.png" alt="Download Textmode AVX2" width="auto" height="auto">

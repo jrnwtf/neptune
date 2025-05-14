@@ -279,15 +279,16 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				if (vTags.size())
 				{
 					std::sort(vTags.begin(), vTags.end(), [&](const auto a, const auto b) -> bool
-							  {
-								  // sort by priority if unequal
-								  if (a->m_iPriority != b->m_iPriority)
-									  return a->m_iPriority > b->m_iPriority;
-								  return a->m_sName < b->m_sName;
-							  });
+						{
+							// sort by priority if unequal
+							if (a->m_iPriority != b->m_iPriority)
+								return a->m_iPriority > b->m_iPriority;
+
+							return a->m_sName < b->m_sName;
+						});
 
 					for (auto& pTag : vTags) // 50 alpha as white outline tends to be more apparent
-						tCache.m_vText.emplace_back(ESPTextEnum::Right, pTag->m_sName, pTag->m_tColor, H::Draw.IsColorDark(pTag->m_tColor) ? Color_t(255, 255, 255, 50) : Color_t(0, 0, 0, 255));
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, pTag->m_sName, pTag->m_tColor, H::Draw.IsColorDark(pTag->m_tColor) ? Color_t(255, 255, 255, 50) : Color_t(0, 0, 0));
 				}
 			}
 		}
@@ -856,14 +857,14 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_SpellSpawnHorde:
 			case ETFClassID::CTFProjectile_SpellSpawnZombie: szName = "Skeleton"; break;
 			case ETFClassID::CTFProjectile_SpellTransposeTeleport: szName = "Teleport"; break;
-				//case ETFClassID::CTFProjectile_Throwable:
-				//case ETFClassID::CTFProjectile_ThrowableBrick:
-				//case ETFClassID::CTFProjectile_ThrowableRepel: szName = "Throwable"; break;
+			//case ETFClassID::CTFProjectile_Throwable:
+			//case ETFClassID::CTFProjectile_ThrowableBrick:
+			//case ETFClassID::CTFProjectile_ThrowableRepel: szName = "Throwable"; break;
 			case ETFClassID::CTFProjectile_Arrow: szName = pEntity->As<CTFProjectile_Arrow>()->m_iProjectileType() == TF_PROJECTILE_BUILDING_REPAIR_BOLT ? "Repair" : "Arrow"; break;
 			case ETFClassID::CTFProjectile_GrapplingHook: szName = "Grapple"; break;
 			case ETFClassID::CTFProjectile_HealingBolt: szName = "Heal"; break;
-				//case ETFClassID::CTFBaseRocket:
-				//case ETFClassID::CTFFlameRocket:
+			//case ETFClassID::CTFBaseRocket:
+			//case ETFClassID::CTFFlameRocket:
 			case ETFClassID::CTFProjectile_Rocket:
 			case ETFClassID::CTFProjectile_EnergyBall:
 			case ETFClassID::CTFProjectile_SentryRocket: szName = "Rocket"; break;
@@ -873,13 +874,13 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_SpellLightningOrb: szName = "Lightning"; break;
 			case ETFClassID::CTFProjectile_SpellKartOrb: szName = "Fist"; break;
 			case ETFClassID::CTFProjectile_Flare: szName = "Flare"; break;
-				//case ETFClassID::CTFBaseProjectile:
+			//case ETFClassID::CTFBaseProjectile:
 			case ETFClassID::CTFProjectile_EnergyRing: szName = "Energy"; break;
-				//case ETFClassID::CTFProjectile_Syringe: szName = "Syringe";
+			//case ETFClassID::CTFProjectile_Syringe: szName = "Syringe";
 			}
 			tCache.m_vText.emplace_back(ESPTextEnum::Top, szName, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 		}
-		
+
 		if (Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Owner && pOwner)
 		{
 			PlayerInfo_t pi{};
@@ -1173,21 +1174,25 @@ void CESP::DrawPlayers()
 		if (tCache.m_bBones)
 		{
 			auto pPlayer = pEntity->As<CTFPlayer>();
-			switch ( H::Entities.GetModel( pPlayer->entindex( ) ) )
+			matrix3x4 aBones[MAXSTUDIOBONES];
+			if (pPlayer->SetupBones(aBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, I::GlobalVars->curtime))
 			{
-			case FNV1A::Hash32Const( "models/vsh/player/saxton_hale.mdl" ):
-				DrawBones( pPlayer, { HITBOX_SAXTON_HEAD, HITBOX_SAXTON_CHEST, HITBOX_SAXTON_PELVIS }, tCache.m_tColor );
-				DrawBones( pPlayer, { HITBOX_SAXTON_CHEST, HITBOX_SAXTON_LEFT_UPPER_ARM, HITBOX_SAXTON_LEFT_FOREARM, HITBOX_SAXTON_LEFT_HAND }, tCache.m_tColor );
-				DrawBones( pPlayer, { HITBOX_SAXTON_CHEST, HITBOX_SAXTON_RIGHT_UPPER_ARM, HITBOX_SAXTON_RIGHT_FOREARM, HITBOX_SAXTON_RIGHT_HAND }, tCache.m_tColor );
-				DrawBones( pPlayer, { HITBOX_SAXTON_PELVIS, HITBOX_SAXTON_LEFT_THIGH, HITBOX_SAXTON_LEFT_CALF, HITBOX_SAXTON_LEFT_FOOT }, tCache.m_tColor );
-				DrawBones( pPlayer, { HITBOX_SAXTON_PELVIS, HITBOX_SAXTON_RIGHT_THIGH, HITBOX_SAXTON_RIGHT_CALF, HITBOX_SAXTON_RIGHT_FOOT }, tCache.m_tColor );
-				break;
-			default:
-				DrawBones( pPlayer, { HITBOX_HEAD, HITBOX_CHEST, HITBOX_PELVIS }, tCache.m_tColor );
-				DrawBones( pPlayer, { HITBOX_CHEST, HITBOX_LEFT_UPPER_ARM, HITBOX_LEFT_FOREARM, HITBOX_LEFT_HAND }, tCache.m_tColor );
-				DrawBones( pPlayer, { HITBOX_CHEST, HITBOX_RIGHT_UPPER_ARM, HITBOX_RIGHT_FOREARM, HITBOX_RIGHT_HAND }, tCache.m_tColor );
-				DrawBones( pPlayer, { HITBOX_PELVIS, HITBOX_LEFT_THIGH, HITBOX_LEFT_CALF, HITBOX_LEFT_FOOT }, tCache.m_tColor );
-				DrawBones( pPlayer, { HITBOX_PELVIS, HITBOX_RIGHT_THIGH, HITBOX_RIGHT_CALF, HITBOX_RIGHT_FOOT }, tCache.m_tColor );
+				switch (H::Entities.GetModel(pPlayer->entindex()))
+				{
+				case FNV1A::Hash32Const("models/vsh/player/saxton_hale.mdl"):
+					DrawBones(pPlayer, aBones, { HITBOX_SAXTON_HEAD, HITBOX_SAXTON_CHEST, HITBOX_SAXTON_PELVIS }, tCache.m_tColor);
+					DrawBones(pPlayer, aBones, { HITBOX_SAXTON_CHEST, HITBOX_SAXTON_LEFT_UPPER_ARM, HITBOX_SAXTON_LEFT_FOREARM, HITBOX_SAXTON_LEFT_HAND }, tCache.m_tColor);
+					DrawBones(pPlayer, aBones, { HITBOX_SAXTON_CHEST, HITBOX_SAXTON_RIGHT_UPPER_ARM, HITBOX_SAXTON_RIGHT_FOREARM, HITBOX_SAXTON_RIGHT_HAND }, tCache.m_tColor);
+					DrawBones(pPlayer, aBones, { HITBOX_SAXTON_PELVIS, HITBOX_SAXTON_LEFT_THIGH, HITBOX_SAXTON_LEFT_CALF, HITBOX_SAXTON_LEFT_FOOT }, tCache.m_tColor);
+					DrawBones(pPlayer, aBones, { HITBOX_SAXTON_PELVIS, HITBOX_SAXTON_RIGHT_THIGH, HITBOX_SAXTON_RIGHT_CALF, HITBOX_SAXTON_RIGHT_FOOT }, tCache.m_tColor);
+					break;
+				default:
+					DrawBones(pPlayer, aBones, { HITBOX_HEAD, HITBOX_CHEST, HITBOX_PELVIS }, tCache.m_tColor);
+					DrawBones(pPlayer, aBones, { HITBOX_CHEST, HITBOX_LEFT_UPPER_ARM, HITBOX_LEFT_FOREARM, HITBOX_LEFT_HAND }, tCache.m_tColor);
+					DrawBones(pPlayer, aBones, { HITBOX_CHEST, HITBOX_RIGHT_UPPER_ARM, HITBOX_RIGHT_FOREARM, HITBOX_RIGHT_HAND }, tCache.m_tColor);
+					DrawBones(pPlayer, aBones, { HITBOX_PELVIS, HITBOX_LEFT_THIGH, HITBOX_LEFT_CALF, HITBOX_LEFT_FOOT }, tCache.m_tColor);
+					DrawBones(pPlayer, aBones, { HITBOX_PELVIS, HITBOX_RIGHT_THIGH, HITBOX_RIGHT_CALF, HITBOX_RIGHT_FOOT }, tCache.m_tColor);
+				}
 			}
 		}
 
@@ -1488,12 +1493,12 @@ const char* CESP::GetPlayerClass(int iClassNum)
 	return iClassNum < 10 && iClassNum > 0 ? szClasses[iClassNum] : szClasses[0];
 }
 
-void CESP::DrawBones(CTFPlayer* pPlayer, std::vector<int> vecBones, Color_t clr)
+void CESP::DrawBones(CTFPlayer* pPlayer, matrix3x4* aBones, std::vector<int> vecBones, Color_t clr)
 {
 	for (size_t n = 1; n < vecBones.size(); n++)
 	{
-		const auto vBone1 = pPlayer->GetHitboxCenter(vecBones[n]);
-		const auto vBone2 = pPlayer->GetHitboxCenter(vecBones[n - 1]);
+		auto vBone1 = pPlayer->GetHitboxCenter(aBones, vecBones[n]);
+		auto vBone2 = pPlayer->GetHitboxCenter(aBones, vecBones[n - 1]);
 
 		Vec3 vScreenBone, vScreenParent;
 		if (SDK::W2S(vBone1, vScreenBone) && SDK::W2S(vBone2, vScreenParent))

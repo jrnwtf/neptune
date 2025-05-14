@@ -9,6 +9,7 @@ MAKE_HOOK(CClientState_GetClientInterpAmount, S::CClientState_GetClientInterpAmo
 	if (!Vars::Hooks::CClientState_GetClientInterpAmount[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	G::Lerp = CALL_ORIGINAL(rcx);
 	return 0.f;
 }

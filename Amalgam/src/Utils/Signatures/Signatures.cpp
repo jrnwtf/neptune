@@ -18,7 +18,8 @@ CSignature::CSignature(const char* sDLLName, const char* sSignature, int nOffset
 bool CSignature::Initialize()
 {
 	m_dwVal = U::Memory.FindSignature(m_pszDLLName, m_pszSignature);
-	if (!m_dwVal) {
+	if (!m_dwVal)
+	{
 		U::Core.AppendFailText(std::format("CSignature::Initialize() failed to initialize:\n  {}\n  {}\n  {}", m_pszName, m_pszDLLName, m_pszSignature).c_str());
 		return false;
 	}

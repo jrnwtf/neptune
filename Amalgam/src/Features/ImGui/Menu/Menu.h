@@ -37,6 +37,7 @@ public:
 
 	bool m_bIsOpen = false;
 	bool m_bInKeybind = false;
+	bool m_bWindowHovered = false;
 };
 
 ADD_FEATURE(CMenu, Menu);

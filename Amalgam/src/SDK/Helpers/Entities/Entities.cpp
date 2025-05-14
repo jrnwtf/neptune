@@ -259,7 +259,7 @@ void CEntities::Store()
 			if (pPlayer->IsAlive() && !bDormant)
 				F::CheaterDetection.ReportChoke(pPlayer, m_mChokes[n]);
 			m_mSetTicks[n] = I::GlobalVars->tickcount;
-			
+
 			if (!bDormant)
 			{
 				m_mOrigins[n].emplace_front(pPlayer->m_vecOrigin() + Vec3(0, 0, pPlayer->m_vecMaxs().z - pPlayer->m_vecMins().z), flSimTime);
@@ -410,6 +410,7 @@ bool CEntities::IsProjectile(CBaseEntity* pEntity)
 {
 	if (!pEntity)
 		return false;
+
 	switch (pEntity->GetClassID())
 	{
 	case ETFClassID::CBaseProjectile:

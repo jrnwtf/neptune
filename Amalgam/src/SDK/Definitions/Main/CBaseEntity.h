@@ -94,7 +94,7 @@ public:
 	NETVAR_OFF(m_Particles, CParticleProperty*, "CBaseEntity", "m_flElasticity", -56);
 
 	VIRTUAL(UpdateVisibility, void, CBaseEntity*, this, 91);
-	
+
 	inline Vec3 GetCenter()
 	{
 		return m_vecOrigin() + (m_vecMins() + m_vecMaxs()) / 2;
@@ -102,8 +102,7 @@ public:
 
 	inline Vec3 GetRenderCenter()
 	{
-		Vec3 vMin = {}, vMax = {};
-		GetRenderBounds(vMin, vMax);
+		Vec3 vMin, vMax; GetRenderBounds(vMin, vMax);
 		return GetRenderOrigin() + Vec3(0.f, 0.f, (vMin.z + vMax.z) / 2);
 	}
 
@@ -201,7 +200,7 @@ public:
 		return reinterpret_cast< bool( * )( CBaseEntity*, int, int ) >( U::Memory.GetVFunc( this, 146 ) )(this, collisionGroup, contentsMask);
 		//return S::CBaseEntity_ShouldCollide.Call<bool>( this, collisionGroup, contentsMask );
 	}
-	
+
 	inline int SolidMask()
 	{
 		if (IsPlayer())

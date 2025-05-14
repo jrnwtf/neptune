@@ -10,9 +10,11 @@ MAKE_HOOK(CTFPlayer_DoAnimationEvent, S::CTFPlayer_DoAnimationEvent(), void,
 	if (!Vars::Hooks::CTFPlayer_DoAnimationEvent[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, event, nData);
 #endif
+
 	auto pPlayer = reinterpret_cast<CTFPlayer*>(rcx);
 	if (pPlayer->entindex() != I::EngineClient->GetLocalPlayer())
 		return;
+
 	CALL_ORIGINAL(rcx, event, nData);
 #endif
 }

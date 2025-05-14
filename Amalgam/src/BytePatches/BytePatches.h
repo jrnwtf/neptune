@@ -23,6 +23,9 @@ public:
 
 class CBytePatches
 {
+private:
+	bool m_bFailed = false;
+
 public:
 	bool Initialize();
 	void Unload();

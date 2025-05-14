@@ -15,7 +15,7 @@ struct Target_t
 	int m_nPriority = 0;
 	int m_nAimedHitbox = -1;
 
-	TickRecord m_tRecord = {};
+	TickRecord* m_pRecord = nullptr;
 	bool m_bBacktrack = false;
 };
 
@@ -26,13 +26,13 @@ public:
 	void SortPriority(std::vector<Target_t>&);
 
 	bool PlayerBoneInFOV(CTFPlayer* pTarget, Vec3 vLocalPos, Vec3 vLocalAngles, float& flFOVTo, Vec3& vPos, Vec3& vAngleTo, int iHitboxes = Vars::Aimbot::Hitscan::HitboxesEnum::Head | Vars::Aimbot::Hitscan::HitboxesEnum::Body | Vars::Aimbot::Hitscan::HitboxesEnum::Pelvis | Vars::Aimbot::Hitscan::HitboxesEnum::Arms | Vars::Aimbot::Hitscan::HitboxesEnum::Legs);
-	bool PlayerPosInFOV(CTFPlayer* pTarget, Vec3 vLocalPos, Vec3 vLocalAngles, float& flFOVTo, Vec3& vPos, Vec3& vAngleTo);
-
 	bool IsHitboxValid(uint32_t uHash, int nHitbox, int iHitboxes = Vars::Aimbot::Hitscan::HitboxesEnum::Head | Vars::Aimbot::Hitscan::HitboxesEnum::Body | Vars::Aimbot::Hitscan::HitboxesEnum::Pelvis | Vars::Aimbot::Hitscan::HitboxesEnum::Arms | Vars::Aimbot::Hitscan::HitboxesEnum::Legs);
 
 	bool ShouldIgnore(CBaseEntity* pTarget, CTFPlayer* pLocal, CTFWeaponBase* pWeapon, bool bIgnoreDormant = true);
 	int GetPriority(int targetIdx);
 
+	bool ShouldAim();
+	bool ShouldHoldAttack(CTFWeaponBase* pWeapon);
 	bool ValidBomb(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CBaseEntity* pBomb);
 };
 

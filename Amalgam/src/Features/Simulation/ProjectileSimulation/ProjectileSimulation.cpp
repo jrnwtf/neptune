@@ -63,6 +63,8 @@ bool CProjectileSimulation::GetInfoMain(CTFPlayer* pPlayer, CTFWeaponBase* pWeap
 				vAngAdd.x += Random->RandomFloat(-1.5f, 1.5f);//SDK::RandomFloat(-1.5f, 1.5f);
 				vAngAdd.y += Random->RandomFloat(-1.5f, 1.5f);//SDK::RandomFloat(-1.5f, 1.5f);
 			}
+			delete(Random);
+
 			if (!(iFlags & ProjSimEnum::NoRandomAngles)) // don't do angle stuff for aimbot, nospread will pick that up
 				vAngles += vAngAdd;
 
@@ -151,6 +153,7 @@ bool CProjectileSimulation::GetInfoMain(CTFPlayer* pPlayer, CTFWeaponBase* pWeap
 	case TF_WEAPON_SHOTGUN_BUILDING_RESCUE:
 	{
 		bool bCrossbow = pWeapon->GetWeaponID() == TF_WEAPON_CROSSBOW;
+
 		SDK::GetProjectileFireSetup(pPlayer, vAngles, { 23.5f, 8.f, -3.f }, vPos, vAngle, !bTrace ? true : false, bQuick);
 		auto uType = bCrossbow ? FNV1A::Hash32Const("models/weapons/w_models/w_syringe_proj.mdl") : FNV1A::Hash32Const("models/weapons/w_models/w_repair_claw.mdl");
 		tProjInfo = { uType, vPos, vAngle, pWeapon->GetWeaponID() == TF_WEAPON_CROSSBOW ? Vec3(3.f, 3.f, 3.f) : Vec3(1.f, 1.f, 1.f), 2400.f, 0.2f * flGravity, true, 10.f /*arrows have some lifetime check for whatever reason*/ };
@@ -162,7 +165,7 @@ bool CProjectileSimulation::GetInfoMain(CTFPlayer* pPlayer, CTFWeaponBase* pWeap
 		tProjInfo = { FNV1A::Hash32Const("models/weapons/w_models/w_syringe_proj.mdl"), vPos, vAngle, { 1.f, 1.f, 1.f }, 1000.f, 0.3f * flGravity, true };
 		return true;
 	}
-	case TF_WEAPON_FLAMETHROWER: // this inherits player velocity, possibly account for
+	case TF_WEAPON_FLAMETHROWER:
 	{
 		static auto tf_flamethrower_boxsize = U::ConVars.FindVar("tf_flamethrower_boxsize");
 		const float flHull = tf_flamethrower_boxsize->GetFloat();
@@ -220,7 +223,7 @@ bool CProjectileSimulation::GetInfoMain(CTFPlayer* pPlayer, CTFWeaponBase* pWeap
 	{
 		static auto tf_grapplinghook_projectile_speed = U::ConVars.FindVar("tf_grapplinghook_projectile_speed");
 		static auto tf_grapplinghook_max_distance = U::ConVars.FindVar("tf_grapplinghook_max_distance");
-		
+
 		SDK::GetProjectileFireSetup(pPlayer, vAngles, { 23.5f, -8.f, -3.f }, vPos, vAngle, !bTrace ? true : false, bQuick);
 		float flSpeed = tf_grapplinghook_projectile_speed->GetFloat();
 		if (pPlayer->InCond(TF_COND_RUNE_AGILITY))
@@ -528,6 +531,7 @@ bool CProjectileSimulation::Initialize(ProjectileInfo& tProjInfo, bool bSimulate
 				break;
 			}
 		}
+
 		if (tProjInfo.m_bNoSpin)
 			vAngularVelocity.Zero();
 

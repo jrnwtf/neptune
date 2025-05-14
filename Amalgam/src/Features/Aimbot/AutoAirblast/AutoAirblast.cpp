@@ -73,18 +73,11 @@ void CAutoAirblast::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 		Vec3 vOrigin = PredictOrigin(pProjectile->m_vecOrigin(), pProjectile->GetAbsVelocity(), flLatency);
 		pProjectile->SetAbsOrigin(vOrigin);
 
-		if (Vars::Aimbot::Projectile::AutoAirblast.Value & Vars::Aimbot::Projectile::AutoAirblastEnum::RespectFOV
+		if (!(Vars::Aimbot::Projectile::AutoAirblast.Value & Vars::Aimbot::Projectile::AutoAirblastEnum::IgnoreFOV)
 			&& Math::CalcFov(I::EngineClient->GetViewAngles(), Math::CalcAngle(vEyePos, vOrigin)) > Vars::Aimbot::General::AimFOV.Value)
 			continue;
 
-		/*
-		if (Vars::Aimbot::Projectile::AutoAirblast.Value & Vars::Aimbot::Projectile::AutoAirblastEnum::RedirectAdvanced)
-		{
-
-
-		}
-		else*/ if (Vars::Aimbot::Projectile::AutoAirblast.Value & Vars::Aimbot::Projectile::AutoAirblastEnum::RedirectSimple
-			|| Vars::Aimbot::Projectile::AutoAirblast.Value & Vars::Aimbot::Projectile::AutoAirblastEnum::RedirectAdvanced)
+		if (Vars::Aimbot::Projectile::AutoAirblast.Value & Vars::Aimbot::Projectile::AutoAirblastEnum::Redirect) // implement advanced redirection
 		{
 			Vec3 vAngle = Math::CalcAngle(vEyePos, vOrigin);
 			if (CanAirblastEntity(pLocal, pProjectile, vAngle, vOrigin))
@@ -93,7 +86,6 @@ void CAutoAirblast::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 				pCmd->viewangles = vAngle;
 				G::PSilentAngles = true;
 				bShouldBlast = true;
-
 			}
 		}
 		else if (CanAirblastEntity(pLocal, pProjectile, pCmd->viewangles, vOrigin))

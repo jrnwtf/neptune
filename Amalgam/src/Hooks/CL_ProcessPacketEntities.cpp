@@ -111,7 +111,6 @@ MAKE_HOOK(CL_ProcessPacketEntities, S::CL_ProcessPacketEntities(), bool,
 		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): pWeapon->m_iLastCritCheckFrame() = {}", iSlot, uintptr_t(pWeapon), pWeapon->m_iLastCritCheckFrame()).c_str(), { 100, 255, 150 }, Vars::Debug::Logging.Value);
 		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): pWeapon->m_flLastRapidFireCritCheckTime() = {}", iSlot, uintptr_t(pWeapon), pWeapon->m_flLastRapidFireCritCheckTime()).c_str(), { 100, 255, 150 }, Vars::Debug::Logging.Value);
 		SDK::Output("ProcessPacketEntities", std::format("{} ({:#x}): pWeapon->m_flCritTime() = {}", iSlot, uintptr_t(pWeapon), pWeapon->m_flCritTime()).c_str(), { 100, 255, 150 }, Vars::Debug::Logging.Value);
-
 	}
 
 	return bReturn;

@@ -3,7 +3,7 @@
 #include "../Features/Visuals/Chams/Chams.h"
 #include "../Features/Visuals/Glow/Glow.h"
 #include "../Features/Visuals/Materials/Materials.h"
-#include "../Features/CameraWindow/CameraWindow.h"
+#include "../Features/Visuals/CameraWindow/CameraWindow.h"
 
 MAKE_SIGNATURE(CBaseAnimating_DrawModel, "client.dll", "4C 8B DC 49 89 5B ? 89 54 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 83 EC ? 48 8B 05 ? ? ? ? 48 8D 3D", 0x0);
 MAKE_SIGNATURE(CEconEntity_DrawOverriddenViewmodel_DrawModel_Call, "client.dll", "41 8B D5 FF 50 ? 8B 97", 0x6);
@@ -17,8 +17,9 @@ MAKE_HOOK(IVModelRender_DrawModelExecute, U::Memory.GetVFunc(I::ModelRender, 19)
 	if (!Vars::Hooks::IVModelRender_DrawModelExecute[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pState, pInfo, pBoneToWorld);
 #endif
+
 	/*
-	if (!F::Chams.iRendering && !F::Glow.m_bRendering  && !I::EngineVGui->IsGameUIVisible())
+	if (!F::Chams.iRendering && !F::Glow.m_bRendering && !I::EngineVGui->IsGameUIVisible())
 	{
 		if (const auto& pEntity = I::ClientEntityList->GetClientEntity(pInfo.m_nEntIndex))
 			Utils::ConLog("Entity", std::format("{}, {}, {}", pInfo.m_nEntIndex, int(pEntity->GetClassID()), I::ModelInfoClient->GetModelName(pInfo.m_pModel)).c_str());
@@ -33,7 +34,7 @@ MAKE_HOOK(IVModelRender_DrawModelExecute, U::Memory.GetVFunc(I::ModelRender, 19)
 
 	if (F::Chams.m_bRendering)
 		return F::Chams.RenderHandler(pState, pInfo, pBoneToWorld);
-	if (F::Glow.m_bRendering )
+	if (F::Glow.m_bRendering)
 		return F::Glow.RenderHandler(pState, pInfo, pBoneToWorld);
 
 	if (F::Chams.m_mEntities[pInfo.entity_index])
@@ -62,6 +63,7 @@ MAKE_HOOK(CBaseAnimating_DrawModel, S::CBaseAnimating_DrawModel(), int,
 	if (!Vars::Hooks::IVModelRender_DrawModelExecute[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, flags);
 #endif
+
 	static const auto dwDrawModel = S::CEconEntity_DrawOverriddenViewmodel_DrawModel_Call();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());
 
@@ -82,6 +84,7 @@ MAKE_HOOK(CBaseAnimating_InternalDrawModel, S::CBaseAnimating_InternalDrawModel(
 	if (!Vars::Hooks::IVModelRender_DrawModelExecute[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, flags);
 #endif
+
 	if (!bDrawingViewmodel || !(flags & STUDIO_RENDER))
 		return CALL_ORIGINAL(rcx, flags);
 

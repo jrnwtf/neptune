@@ -12,19 +12,23 @@ MAKE_HOOK(CBaseHudChatLine_InsertAndColorizeText, S::CBaseHudChatLine_InsertAndC
 	if (!Vars::Hooks::CBaseHudChatLine_InsertAndColorizeText[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, buf, clientIndex);
 #endif
+
 	std::string sMessage = SDK::ConvertWideToUTF8(buf);
+
 	if (clientIndex)
 	{
 		PlayerInfo_t pi{};
 		if (!I::EngineClient->GetPlayerInfo(clientIndex, &pi))
 			return CALL_ORIGINAL(rcx, buf, clientIndex);
+
 		std::string sName = pi.name;
 		auto iFind = sMessage.find(sName);
+
 		int iType = 0;
-		if ( const char* sReplace = F::PlayerUtils.GetPlayerName( clientIndex, nullptr, &iType ) )
+		if (const char* sReplace = F::PlayerUtils.GetPlayerName(clientIndex, nullptr, &iType))
 		{
-			if ( iFind != std::string::npos )
-				sMessage = sMessage.replace( std::max( iFind - 1, 0ui64 ), sName.length( ) + 1, std::format( "\x3{}\x1", sReplace ) );
+			if (iFind != std::string::npos)
+				sMessage = sMessage.replace(std::max(iFind - 1, 0ui64), sName.length() + 1, std::format("\x3{}\x1", sReplace));
 			sName = sReplace;
 		}
 
@@ -45,6 +49,7 @@ MAKE_HOOK(CBaseHudChatLine_InsertAndColorizeText, S::CBaseHudChatLine_InsertAndC
 				if (auto pTag = F::PlayerUtils.GetSignificantTag(clientIndex, 0))
 					sTag = pTag->m_sName, cColor = pTag->m_tColor.ToHexA();
 			}
+
 			if (!sTag.empty())
 			{
 				if (iFind != std::string::npos)
@@ -73,6 +78,7 @@ MAKE_HOOK(CBaseHudChatLine_InsertAndColorizeText, S::CBaseHudChatLine_InsertAndC
 				if (FNV1A::Hash32(sFind.c_str()) == FNV1A::Hash32(sReplace2.c_str()))
 					continue;
 			}
+
 			size_t iPos = 0;
 			while (true)
 			{

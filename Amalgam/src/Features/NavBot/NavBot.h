@@ -139,6 +139,7 @@ public:
 	void Reset();
 	void RunAutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd);
 	void RunForceWeapon(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
+	void Draw(CTFPlayer* pLocal);
 };
 
 ADD_FEATURE(CNavBot, NavBot)

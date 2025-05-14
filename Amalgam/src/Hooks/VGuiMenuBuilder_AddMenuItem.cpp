@@ -54,19 +54,19 @@ MAKE_HOOK(VGuiMenuBuilder_AddMenuItem, S::VGuiMenuBuilder_AddMenuItem(), void*,
             PlayerName = pi.name;
 
             CALL_ORIGINAL(rcx, "History", "history", "profile");
-			CALL_ORIGINAL(rcx, I::EngineClient->GetPlayerForUserID(F::Spectate.m_iIntendedTarget) == PlayerIndex ? "Unspectate" : "Spectate", "spectate", "profile");
-			
-            CALL_ORIGINAL(rcx, std::format("Tags for {}", PlayerName).c_str(), "listtags", "tags");
-			for (auto it = F::PlayerUtils.m_vTags.begin(); it != F::PlayerUtils.m_vTags.end(); it++)
-			{
-				int iID = std::distance(F::PlayerUtils.m_vTags.begin(), it);
-				auto& tTag = *it;
-				if (!tTag.m_bAssignable)
-					continue;
+            CALL_ORIGINAL(rcx, I::EngineClient->GetPlayerForUserID(F::Spectate.m_iIntendedTarget) == PlayerIndex ? "Unspectate" : "Spectate", "spectate", "profile");
 
-				bool bHasTag = F::PlayerUtils.HasTag(FriendsID, iID);
-				CALL_ORIGINAL(rcx, std::format("{} {}", bHasTag ? "Remove" : "Add", tTag.m_sName).c_str(), std::format("modifytag{}", iID).c_str(), "tags");
-			}
+            CALL_ORIGINAL(rcx, std::format("Tags for {}", PlayerName).c_str(), "listtags", "tags");
+            for (auto it = F::PlayerUtils.m_vTags.begin(); it != F::PlayerUtils.m_vTags.end(); it++)
+            {
+                int iID = std::distance(F::PlayerUtils.m_vTags.begin(), it);
+                auto& tTag = *it;
+                if (!tTag.m_bAssignable)
+                    continue;
+
+                bool bHasTag = F::PlayerUtils.HasTag(FriendsID, iID);
+                CALL_ORIGINAL(rcx, std::format("{} {}", bHasTag ? "Remove" : "Add", tTag.m_sName).c_str(), std::format("modifytag{}", iID).c_str(), "tags");
+            }
         }
 
         return ret;
@@ -96,7 +96,7 @@ MAKE_HOOK(CTFClientScoreBoardDialog_OnCommand, S::CTFClientScoreBoardDialog_OnCo
         if (auto pResource = H::Entities.GetPR())
             F::Spectate.SetTarget(pResource->m_iUserID(PlayerIndex));
         break;
-	case FNV1A::Hash32Const("listtags"):
+    case FNV1A::Hash32Const("listtags"):
         F::Output.TagsOnJoin(PlayerName, FriendsID);
         break;
     default:

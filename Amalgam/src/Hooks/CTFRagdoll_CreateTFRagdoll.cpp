@@ -10,6 +10,7 @@ MAKE_HOOK(CTFRagdoll_CreateTFRagdoll, S::CTFRagdoll_CreateTFRagdoll(), void,
 	if (!Vars::Hooks::CTFRagdoll_CreateTFRagdoll[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	if (Vars::Visuals::Removals::Ragdolls.Value)
 		return;
 

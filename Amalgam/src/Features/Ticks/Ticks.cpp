@@ -1,4 +1,4 @@
-#include "TickHandler.h"
+#include "Ticks.h"
 
 #include "../NetworkFix/NetworkFix.h"
 #include "../PacketManip/AntiAim/AntiAim.h"
@@ -114,7 +114,6 @@ Vec3* CTickshiftHandler::GetShootAngle()
 	return nullptr;
 }
 
-
 bool CTickshiftHandler::CanChoke()
 {
 	static auto sv_maxusrcmdprocessticks = U::ConVars.FindVar("sv_maxusrcmdprocessticks");
@@ -122,7 +121,7 @@ bool CTickshiftHandler::CanChoke()
 	if (Vars::Misc::Game::AntiCheatCompatibility.Value)
 		iMaxTicks = std::min(iMaxTicks, 8);
 
-	return I::ClientState->chokedcommands < 21 && F::Ticks.m_iShiftedTicks + I::ClientState->chokedcommands < iMaxTicks;
+	return I::ClientState->chokedcommands < 21 && m_iShiftedTicks + I::ClientState->chokedcommands < iMaxTicks;
 }
 
 void CTickshiftHandler::AntiWarp(CTFPlayer* pLocal, CUserCmd* pCmd)
@@ -251,6 +250,7 @@ void CTickshiftHandler::CLMove(float accumulated_extra_samples, bool bFinalTick)
 	if (Vars::Misc::Game::AntiCheatCompatibility.Value)
 		m_iMaxShift = std::min(m_iMaxShift, 8);
 	m_iMaxShift -= std::max(24 - std::clamp(Vars::Doubletap::RechargeLimit.Value, 1, 24), F::AntiAim.YawOn() ? F::AntiAim.AntiAimTicks() : 0);
+
 	while (m_iShiftedTicks > m_iMaxShift)
 		CLMoveFunc(accumulated_extra_samples, false); // skim any excess ticks
 
@@ -263,7 +263,7 @@ void CTickshiftHandler::CLMove(float accumulated_extra_samples, bool bFinalTick)
 
 	if (m_bSpeedhack)
 	{
-		m_iShiftedTicks = Vars::Speedhack::Factor.Value;
+		m_iShiftedTicks = Vars::Speedhack::Amount.Value;
 		m_iShiftedGoal = 0;
 	}
 
@@ -332,8 +332,8 @@ void CTickshiftHandler::CreateMove(CTFPlayer* pLocal, CUserCmd* pCmd, bool* pSen
 	AntiWarp(pLocal, pCmd);
 	ManagePacket(pCmd, pSendPacket);
 
-	F::Ticks.SaveShootPos(pLocal);
-	F::Ticks.SaveShootAngle(pCmd, *pSendPacket);
+	SaveShootPos(pLocal);
+	SaveShootAngle(pCmd, *pSendPacket);
 }
 
 void CTickshiftHandler::ManagePacket(CUserCmd* pCmd, bool* pSendPacket)
@@ -348,8 +348,7 @@ void CTickshiftHandler::ManagePacket(CUserCmd* pCmd, bool* pSendPacket)
 	}
 
 	*pSendPacket = m_iShiftedGoal == m_iShiftedTicks;
-	if (I::ClientState->chokedcommands >= 21 // prevent overchoking
-		|| m_iShiftedTicks == m_iShiftedGoal + Vars::Doubletap::TickLimit.Value - 1 && I::ClientState->chokedcommands) // unchoke if we are choking
+	if (I::ClientState->chokedcommands >= 21) // prevent overchoking
 		*pSendPacket = true;
 }
 
@@ -397,4 +396,54 @@ int CTickshiftHandler::GetMinimumTicksNeeded(CTFWeaponBase* pWeapon)
 	}
 
 	return (GetShotsWithinPacket(pWeapon) - 1) * std::ceilf(pWeapon->GetFireRate() / TICK_INTERVAL) + iDelay;
+}
+
+void CTickshiftHandler::Draw(CTFPlayer* pLocal)
+{
+	if (!(Vars::Menu::Indicators.Value & Vars::Menu::IndicatorsEnum::Ticks) || !pLocal->IsAlive())
+		return;
+
+	const DragBox_t dtPos = Vars::Menu::TicksDisplay.Value;
+	const auto& fFont = H::Fonts.GetFont(FONT_INDICATORS);
+
+	if (!m_bSpeedhack)
+	{
+		int iChoke = std::max(I::ClientState->chokedcommands - (F::AntiAim.YawOn() ? F::AntiAim.AntiAimTicks() : 0), 0);
+		int iTicks = std::clamp(m_iShiftedTicks + iChoke, 0, m_iMaxShift);
+
+		int boxWidth = 180;
+		int boxHeight = 29;
+		int barHeight = 3;
+		int textBoxHeight = boxHeight - barHeight;
+
+		int x = dtPos.x - boxWidth / 2;
+		int y = dtPos.y;
+
+		Color_t bgColor = { 0, 0, 0, 180 };
+		H::Draw.GradientRect(x, y, boxWidth, textBoxHeight, bgColor, bgColor, true);
+		H::Draw.GradientRect(x, y + textBoxHeight, boxWidth, barHeight, bgColor, bgColor, true);
+
+		static float currentProgress = 0.0f;
+		float targetProgress = float(iTicks) / m_iMaxShift;
+		currentProgress = std::lerp(currentProgress, targetProgress, I::GlobalVars->frametime * 10.0f);
+
+		int barWidth = static_cast<int>(boxWidth * currentProgress);
+		if (barWidth > 0)
+		{
+			Color_t barColor = m_iWait ? Color_t{ 255, 150, 0, 255 } : Color_t{ 0, 255, 100, 255 };
+			H::Draw.GradientRect(x, y + textBoxHeight, barWidth, barHeight, barColor, barColor, true);
+		}
+
+		std::string leftText = "Ticks";
+		std::string rightText = std::format("{} / {}", iTicks, m_iMaxShift);
+		Color_t textColor = Vars::Menu::Theme::Active.Value;
+
+		H::Draw.String(fFont, x + 5, y + (textBoxHeight / 2), textColor, ALIGN_LEFT, leftText.c_str());
+		H::Draw.String(fFont, x + boxWidth - 5, y + (textBoxHeight / 2), textColor, ALIGN_RIGHT, rightText.c_str());
+
+		if (m_iWait)
+			H::Draw.StringOutlined(fFont, dtPos.x, y + boxHeight + 2, textColor, Vars::Menu::Theme::Background.Value, ALIGN_TOP, "Not Ready");
+	}
+	else
+		H::Draw.StringOutlined(fFont, dtPos.x, dtPos.y + 2, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOP, std::format("Speedhack x{}", Vars::Speedhack::Amount.Value).c_str());
 }

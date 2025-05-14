@@ -12,9 +12,10 @@ public:
 	void Unload();
 
 	void AppendFailText(const char* sMessage);
+	void LogFailText();
 
 	bool m_bUnload = false;
-	
+
 private:
 	bool m_bFailed = false;
 	bool m_bFailed2 = false;

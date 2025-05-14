@@ -9,6 +9,7 @@ MAKE_HOOK(NotificationQueue_Add, S::NotificationQueue_Add(), int,
 	if (!Vars::Hooks::NotificationQueue_Add[DEFAULT_BIND])
 		return CALL_ORIGINAL(pNotification);
 #endif
+
 	if (Vars::Misc::Automation::AcceptItemDrops.Value && FNV1A::Hash32(pNotification->m_pText) == FNV1A::Hash32Const("TF_HasNewItems"))
 	{
 		pNotification->Accept();

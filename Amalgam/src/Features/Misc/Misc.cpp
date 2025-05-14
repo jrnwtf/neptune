@@ -1,7 +1,7 @@
 #include "Misc.h"
 
 #include "../Backtrack/Backtrack.h"
-#include "../TickHandler/TickHandler.h"
+#include "../Ticks/Ticks.h"
 #include "../Players/PlayerUtils.h"
 #include "../Aimbot/AutoRocketJump/AutoRocketJump.h"
 #include "NamedPipe/NamedPipe.h"
@@ -13,7 +13,6 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 	VoiceCommandSpam(pLocal);
 	ChatSpam(pLocal);
 	CheatsBypass();
-	PingReducer();
 	WeaponSway();
 	AutoReport();
 	
@@ -91,7 +90,6 @@ void CMisc::AutoJump(CTFPlayer* pLocal, CUserCmd* pCmd)
 				pCmd->buttons &= ~IN_JUMP;
 		}
 	}
-
 	bLastAttempted = pCmd->buttons & IN_JUMP;
 }
 
@@ -278,7 +276,7 @@ void CMisc::AntiAFK(CTFPlayer* pLocal, CUserCmd* pCmd)
 	const float flMaxIdleTime = mp_idlemaxtime->GetFloat();
 
 	if (pCmd->buttons & (IN_MOVELEFT | IN_MOVERIGHT | IN_FORWARD | IN_BACK) || !pLocal->IsAlive())
-			tTimer.Update();
+		tTimer.Update();
 	else if (Vars::Misc::Automation::AntiAFK.Value && iIdleMethod && tTimer.Check(flMaxIdleTime * 60.f - 10.f)) // trigger 10 seconds before kick
 	{
 		pCmd->buttons |= I::GlobalVars->tickcount % 2 ? IN_FORWARD : IN_BACK;
@@ -310,26 +308,6 @@ void CMisc::CheatsBypass()
 		sv_cheats->m_nValue = 0;
 		bCheatSet = false;
 	}
-}
-
-void CMisc::PingReducer()
-{
-	static Timer tTimer = {};
-	if (!tTimer.Run(0.1f))
-		return;
-
-	auto pNetChan = reinterpret_cast<CNetChannel*>(I::EngineClient->GetNetChannelInfo());
-	const auto& pResource = H::Entities.GetPR( );
-	if (!pNetChan || !pResource)
-		return;
-
-	static auto cl_cmdrate = U::ConVars.FindVar("cl_cmdrate");
-	const int iCmdRate = cl_cmdrate->GetInt();
-	const int Ping = pResource->m_iPing( I::EngineClient->GetLocalPlayer( ) );
-	const int iTarget = Vars::Misc::Exploits::PingReducer.Value && ( Ping > Vars::Misc::Exploits::PingTarget.Value ) ? -1 : iCmdRate;
-
-	NET_SetConVar cmd("cl_cmdrate", std::to_string(m_iWishCmdrate = iTarget).c_str());
-	pNetChan->SendNetMsg(cmd);
 }
 
 void CMisc::WeaponSway()
@@ -514,8 +492,6 @@ void CMisc::Event(IGameEvent* pEvent, uint32_t uHash)
 	case FNV1A::Hash32Const("client_disconnect"):
 	case FNV1A::Hash32Const("client_beginconnect"):
 	case FNV1A::Hash32Const("game_newmap"):
-		m_iWishCmdrate /*= m_iWishUpdaterate*/ = -1;
-		F::Backtrack.m_flWishInterp = -1.f;
 		m_vChatSpamLines.clear();
 		m_iCurrentChatSpamIndex = 0;
 		[[fallthrough]];
@@ -594,7 +570,7 @@ int CMisc::AntiBackstab(CTFPlayer* pLocal, CUserCmd* pCmd, bool bSendPacket)
 						return true;
 
 					float flTolerance = 0.0625f;
-					float flExtra = 2.f * flTolerance / flDist; // account for origin tolerance
+					float flExtra = 2.f * flTolerance / flDist; // account for origin compression
 					float flPosVsTargetViewMinDot = 0.f - 0.0031f - flExtra;
 
 					Vec3 vTargetForward; Math::AngleVectors(pCmd->viewangles, &vTargetForward);
@@ -621,6 +597,26 @@ int CMisc::AntiBackstab(CTFPlayer* pLocal, CUserCmd* pCmd, bool bSendPacket)
 	}
 
 	return 0;
+}
+
+void CMisc::PingReducer()
+{
+	static Timer tTimer = {};
+	if (!tTimer.Run(0.1f))
+		return;
+
+	auto pNetChan = reinterpret_cast<CNetChannel*>(I::EngineClient->GetNetChannelInfo());
+	const auto& pResource = H::Entities.GetPR( );
+	if (!pNetChan || !pResource)
+		return;
+
+	static auto cl_cmdrate = U::ConVars.FindVar("cl_cmdrate");
+	const int iCmdRate = cl_cmdrate->GetInt();
+	const int Ping = pResource->m_iPing( I::EngineClient->GetLocalPlayer( ) );
+	const int iTarget = Vars::Misc::Exploits::PingReducer.Value && ( Ping > Vars::Misc::Exploits::PingTarget.Value ) ? -1 : iCmdRate;
+
+	NET_SetConVar cmd("cl_cmdrate", std::to_string(m_iWishCmdrate = iTarget).c_str());
+	pNetChan->SendNetMsg(cmd);
 }
 
 void CMisc::UnlockAchievements()

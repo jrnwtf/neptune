@@ -11,6 +11,7 @@ MAKE_HOOK(CL_ReadPackets, S::CL_ReadPackets(), void,
 	if (!Vars::Hooks::CL_ReadPackets[DEFAULT_BIND])
 		return CALL_ORIGINAL(bFinalTick);
 #endif
+
 	if (F::NetworkFix.ShouldReadPackets())
 		CALL_ORIGINAL(bFinalTick);
 }

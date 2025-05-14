@@ -14,6 +14,7 @@ MAKE_HOOK(CTFPlayerShared_InCond, S::CTFPlayerShared_InCond(), bool,
 	if (!Vars::Hooks::CTFPlayerShared_InCond[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, nCond);
 #endif
+
 	static const auto dwPlayer = S::CTFPlayer_ShouldDraw_InCond_Call();
 	static const auto dwWearable = S::CTFWearable_ShouldDraw_InCond_Call();
 	static const auto dwHudScope = S::CHudScope_ShouldDraw_InCond_Call();

@@ -80,7 +80,7 @@ namespace Math
 		v.y = NormalizeAngle(v.y);
 		v.z = 0.f;
 	}
-	
+
 	inline void ClampAngles(Vec2& v)
 	{
 		v.x = std::clamp(NormalizeAngle(v.x), -89.f, 89.f);

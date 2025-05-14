@@ -12,7 +12,7 @@
 #include "../Features/Visuals/Glow/Glow.h"
 #include "../Features/Spectate/Spectate.h"
 #include "../Features/Binds/Binds.h"
-#include "../Features//TickHandler/TickHandler.h"
+
 
 MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVFunc(I::BaseClientDLL, 35), void,
 		  void* rcx, ClientFrameStage_t curStage)
@@ -98,6 +98,7 @@ MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVFunc(I::BaseClientDLL, 
 		F::Glow.Store(pLocal);
 		F::Visuals.Store(pLocal);
 #endif
+
 		F::CheaterDetection.Run();
 #ifndef TEXTMODE
 		F::Spectate.NetUpdateEnd(pLocal);

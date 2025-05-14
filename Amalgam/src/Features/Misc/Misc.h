@@ -18,7 +18,6 @@ class CMisc
 	void ChatSpam(CTFPlayer* pLocal);
 
 	void CheatsBypass();
-	void PingReducer();
 	void WeaponSway();
 	void AutoReport();
 
@@ -43,6 +42,7 @@ public:
 	void Event(IGameEvent* pEvent, uint32_t uNameHash);
 	int AntiBackstab(CTFPlayer* pLocal, CUserCmd* pCmd, bool bSendPacket);
 
+	void PingReducer();
 	void UnlockAchievements();
 	void LockAchievements();
 	bool SteamRPC();

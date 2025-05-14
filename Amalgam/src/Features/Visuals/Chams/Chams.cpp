@@ -21,6 +21,7 @@ static inline bool GetPlayerChams(CBaseEntity* pPlayer, CBaseEntity* pEntity, CT
 	{
 		if (pEntity->m_iTeamNum() != pLocal->m_iTeamNum() ? !Vars::Chams::EnemyChams.Value : !Vars::Chams::TeamChams.Value)
 			return false;
+
 		switch (pEntity->m_iTeamNum())
 		{
 		case TF_TEAM_BLUE:
@@ -314,7 +315,7 @@ void CChams::Store(CTFPlayer* pLocal)
 		if (pEntity->IsPlayer())
 		{
 			// backtrack
-			if (Vars::Backtrack::Enabled.Value && Vars::Chams::Backtrack::Enabled.Value && pEntity != pLocal)
+			if (Vars::Chams::Backtrack::Enabled.Value && pEntity != pLocal)
 			{
 				auto pWeapon = H::Entities.GetWeapon();
 				if (pWeapon && (G::PrimaryWeaponType != EWeaponType::PROJECTILE || Vars::Chams::Backtrack::Draw.Value & Vars::Chams::Backtrack::DrawEnum::Always))
@@ -378,9 +379,6 @@ void CChams::RenderMain()
 
 void CChams::RenderBacktrack(const DrawModelState_t& pState, const ModelRenderInfo_t& pInfo)
 {
-	if (!Vars::Backtrack::Enabled.Value || !Vars::Chams::Backtrack::Enabled.Value)
-		return;
-
 	static auto ModelRender_DrawModelExecute = U::Hooks.m_mHooks["IVModelRender_DrawModelExecute"];
 	auto pRenderContext = I::MaterialSystem->GetRenderContext();
 	if (!ModelRender_DrawModelExecute || !pRenderContext)
@@ -390,21 +388,23 @@ void CChams::RenderBacktrack(const DrawModelState_t& pState, const ModelRenderIn
 	if (!pEntity || !pEntity->IsPlayer())
 		return;
 
-
 	pRenderContext->DepthRange(0.f, Vars::Chams::Backtrack::IgnoreZ.Value ? 0.2f : 1.f);
 
 	auto drawModel = [&](Vec3& vOrigin, const DrawModelState_t& pState, const ModelRenderInfo_t& pInfo, matrix3x4* pBoneToWorld, float flBlend)
 		{
 			if (!SDK::IsOnScreen(pEntity, vOrigin))
 				return;
+
 			float flOriginalBlend = I::RenderView->GetBlend();
 			I::RenderView->SetBlend(flBlend * flOriginalBlend);
 			ModelRender_DrawModelExecute->Call<void>(I::ModelRender, pState, pInfo, pBoneToWorld);
 			I::RenderView->SetBlend(flOriginalBlend);
 		};
 
-	auto pRecords = F::Backtrack.GetRecords(pEntity);
-	auto vRecords = F::Backtrack.GetValidRecords(pRecords);
+	std::vector<TickRecord*> vRecords = {};
+	if (!F::Backtrack.GetRecords(pEntity, vRecords))
+		return;
+	vRecords = F::Backtrack.GetValidRecords(vRecords);
 	if (!vRecords.size())
 		return;
 
@@ -413,25 +413,25 @@ void CChams::RenderBacktrack(const DrawModelState_t& pState, const ModelRenderIn
 
 	if (!bDrawLast && !bDrawFirst)
 	{
-		for (auto& tRecord : vRecords)
+		for (auto pRecord : vRecords)
 		{
-			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(tRecord.m_vOrigin), 1.f, 24.f, 0.f, 1.f))
-				drawModel(tRecord.m_vOrigin, pState, pInfo, tRecord.m_BoneMatrix.m_aBones, flBlend);
+			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(pRecord->m_vOrigin), 1.f, 24.f, 0.f, 1.f))
+				drawModel(pRecord->m_vOrigin, pState, pInfo, pRecord->m_BoneMatrix.m_aBones, flBlend);
 		}
 	}
 	else
 	{
 		if (bDrawLast)
 		{
-			auto& tRecord = vRecords.back();
-			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(tRecord.m_vOrigin), 1.f, 24.f, 0.f, 1.f))
-				drawModel(tRecord.m_vOrigin, pState, pInfo, tRecord.m_BoneMatrix.m_aBones, flBlend);
+			auto pRecord = vRecords.back();
+			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(pRecord->m_vOrigin), 1.f, 24.f, 0.f, 1.f))
+				drawModel(pRecord->m_vOrigin, pState, pInfo, pRecord->m_BoneMatrix.m_aBones, flBlend);
 		}
 		if (bDrawFirst)
 		{
-			auto& tRecord = vRecords.front();
-			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(tRecord.m_vOrigin), 1.f, 24.f, 0.f, 1.f))
-				drawModel(tRecord.m_vOrigin, pState, pInfo, tRecord.m_BoneMatrix.m_aBones, flBlend);
+			auto pRecord = vRecords.front();
+			if (float flBlend = Math::RemapVal(pEntity->GetAbsOrigin().DistTo(pRecord->m_vOrigin), 1.f, 24.f, 0.f, 1.f))
+				drawModel(pRecord->m_vOrigin, pState, pInfo, pRecord->m_BoneMatrix.m_aBones, flBlend);
 		}
 	}
 
@@ -439,14 +439,10 @@ void CChams::RenderBacktrack(const DrawModelState_t& pState, const ModelRenderIn
 }
 void CChams::RenderFakeAngle(const DrawModelState_t& pState, const ModelRenderInfo_t& pInfo)
 {
-	if (!Vars::Chams::FakeAngle::Enabled.Value || pInfo.entity_index != I::EngineClient->GetLocalPlayer() || !F::FakeAngle.bDrawChams || !F::FakeAngle.bBonesSetup)
-		return;
-
 	static auto ModelRender_DrawModelExecute = U::Hooks.m_mHooks["IVModelRender_DrawModelExecute"];
 	auto pRenderContext = I::MaterialSystem->GetRenderContext();
 	if (!ModelRender_DrawModelExecute || !pRenderContext)
 		return;
-
 
 	pRenderContext->DepthRange(0.f, Vars::Chams::FakeAngle::IgnoreZ.Value ? 0.2f : 1.f);
 

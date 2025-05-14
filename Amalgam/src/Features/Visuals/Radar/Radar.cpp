@@ -9,9 +9,8 @@ bool CRadar::GetDrawPosition(CTFPlayer* pLocal, CBaseEntity* pEntity, int& x, in
 	const float flYaw = -DEG2RAD(I::EngineClient->GetViewAngles().y);
 	const float flSin = sinf(flYaw), flCos = cosf(flYaw);
 
-	const Vec3 vDelta = pLocal->GetAbsOrigin() - pEntity->GetAbsOrigin();
-	auto vPos = Vec2(vDelta.x * flSin + vDelta.y * flCos, vDelta.x * flCos - vDelta.y * flSin);
-	z = vDelta.z;
+	Vec3 vDelta = pLocal->GetAbsOrigin() - pEntity->GetAbsOrigin();
+	Vec2 vPos = { vDelta.x * flSin + vDelta.y * flCos, vDelta.x * flCos - vDelta.y * flSin };
 
 	switch (Vars::Radar::Main::Style.Value)
 	{

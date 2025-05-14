@@ -11,6 +11,7 @@ MAKE_HOOK(CTFInput_ApplyMouse, S::CTFInput_ApplyMouse(), void,
 	if (!Vars::Hooks::CTFInput_ApplyMouse[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, viewangles, cmd, mouse_x, mouse_y);
 #endif
+
 	// we should maybe predict the shield cond for better accuracy
 
 	CALL_ORIGINAL(rcx, viewangles, cmd, mouse_x, mouse_y);
@@ -47,6 +48,7 @@ MAKE_HOOK(CTFInput_CAM_CapYaw, S::CTFInput_CAM_CapYaw(), float,
 	if (!Vars::Hooks::CTFInput_ApplyMouse[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, fVal);
 #endif
+
 	if (!Vars::Misc::Movement::ShieldTurnRate.Value)
 		return CALL_ORIGINAL(rcx, fVal);
 

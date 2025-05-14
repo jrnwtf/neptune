@@ -17,6 +17,7 @@
 #include "Interfaces/IGameMovement.h"
 #include "Interfaces/IInput.h"
 #include "Interfaces/IInputSystem.h"
+#include "Interfaces/IKeyValuesSystem.h"
 #include "Interfaces/IMaterialSystem.h"
 #include "Interfaces/IMatSystemSurface.h"
 #include "Interfaces/IMoveHelper.h"
@@ -43,6 +44,7 @@ class CNullInterfaces
 {
 private:
 	bool m_bFailed = false;
+
 public:
 	bool Initialize();
 };

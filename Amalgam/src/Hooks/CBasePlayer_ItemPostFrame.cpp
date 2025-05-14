@@ -73,10 +73,12 @@ MAKE_HOOK(CBasePlayer_ItemPostFrame, S::CBasePlayer_ItemPostFrame(), void,
 	if (!Vars::Hooks::CBasePlayer_ItemPostFrame[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	auto pLocal = reinterpret_cast<CTFPlayer*>(rcx);
 	auto pWeapon = H::Entities.GetWeapon();
 	if (!pWeapon)
 		return CALL_ORIGINAL(rcx);
+
 	switch (pWeapon->GetWeaponID())
 	{
 	case TF_WEAPON_ROCKETLAUNCHER:
@@ -91,7 +93,7 @@ MAKE_HOOK(CBasePlayer_ItemPostFrame, S::CBasePlayer_ItemPostFrame(), void,
 
 	if (pWeapon->m_iItemDefinitionIndex() == Soldier_m_TheBeggarsBazooka)
 	{
-	if (I::GlobalVars->curtime < pLocal->m_flNextAttack())
+		if (I::GlobalVars->curtime < pLocal->m_flNextAttack())
 			return CALL_ORIGINAL(rcx);
 	}
 	else
@@ -100,18 +102,23 @@ MAKE_HOOK(CBasePlayer_ItemPostFrame, S::CBasePlayer_ItemPostFrame(), void,
 		auto pViewmodel = pLocal->m_hViewModel().Get()->As<CBaseAnimating>();
 		if (!pViewmodel)
 			return CALL_ORIGINAL(rcx);
+
 		auto pStudio = pViewmodel->GetModelPtr();
 		if (!pStudio)
 			return CALL_ORIGINAL(rcx);
+
 		float flReloadTime = pViewmodel->SequenceDuration();
 		float flReloadSpeed = 1.f / pViewmodel->m_flPlaybackRate();
+
 		float flLastCycle = (I::GlobalVars->curtime - pWeapon->m_flReloadPriorNextFire() - TICK_INTERVAL) / (flReloadTime * flReloadSpeed);
 		float flCurrCycle = (I::GlobalVars->curtime - pWeapon->m_flReloadPriorNextFire()) / (flReloadTime * flReloadSpeed);
+
 		animevent_t event; int index = 0;
 		index = S::GetAnimationEvent.Call<int>(pStudio, pViewmodel->m_nSequence(), &event, flLastCycle, flCurrCycle, index);
 		if (!index || event.event != AE_WPN_INCREMENTAMMO)
 			return CALL_ORIGINAL(rcx);
 	}
+
 	CALL_ORIGINAL(rcx);
 	pWeapon->IncrementAmmo();
 	pWeapon->m_bReloadedThroughAnimEvent() = true;

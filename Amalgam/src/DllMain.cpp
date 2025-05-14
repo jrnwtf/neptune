@@ -8,12 +8,12 @@ DWORD WINAPI MainThread(LPVOID lpParam)
         Sleep(100);
     U::Core.Load();
     U::Core.Loop();
-    CrashLog::Unload(); // 0xC0000409
+    
+    CrashLog::Unload();
     U::Core.Unload();
 
     FreeLibraryAndExitThread(static_cast<HMODULE>(lpParam), EXIT_SUCCESS);
 }
-
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {

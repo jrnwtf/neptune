@@ -1,4 +1,5 @@
 #include "../SDK/SDK.h"
+
 #include "../Features/Aimbot/Aimbot.h"
 #include "../Features/Backtrack/Backtrack.h"
 #include "../Features/CritHack/CritHack.h"
@@ -8,7 +9,7 @@
 #include "../Features/NoSpread/NoSpreadHitscan/NoSpreadHitscan.h"
 #include "../Features/PacketManip/PacketManip.h"
 #include "../Features/Resolver/Resolver.h"
-#include "../Features/TickHandler/TickHandler.h"
+#include "../Features/Ticks/Ticks.h"
 #include "../Features/Visuals/Visuals.h"
 #include "../Features/Visuals/FakeAngle/FakeAngle.h"
 #include "../Features/Spectate/Spectate.h"
@@ -31,6 +32,7 @@ struct CmdHistory_t
 	bool m_bAttack2;
 	bool m_bSendingPacket;
 };
+
 
 MAKE_SIGNATURE(IHasGenericMeter_GetMeterMultiplier, "client.dll", "F3 0F 10 81 ? ? ? ? C3 CC CC CC CC CC CC CC 48 85 D2", 0x0);
 
@@ -110,7 +112,6 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 		}
 		if (pLocal->InCond(TF_COND_STUNNED) && pLocal->m_iStunFlags() & (TF_STUN_CONTROLS | TF_STUN_LOSER_STATE))
 			bCanAttack = false;
-
 		if (bCanAttack)
 		{
 			G::CanPrimaryAttack = pWeapon->CanPrimaryAttack();
@@ -192,7 +193,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	F::AutoJoin.Run(pLocal);
 	F::GameObjectiveController.Update();
 
-	F::Backtrack.Run(pCmd);
+	F::Backtrack.BacktrackToCrosshair(pCmd);
 
 	F::EnginePrediction.Start(pLocal, pCmd);
 	F::Aimbot.Run(pLocal, pWeapon, pCmd);
@@ -298,8 +299,8 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 				float flDelta34 = Math::CalcFov(vHistory[3].m_vAngle, vHistory[4].m_vAngle);
 
 				if ((
-					flDelta12 > SNAP_SIZE_EPSILON && flDelta23 < SNAP_NOISE_EPSILON && vHistory[2].m_vAngle != vHistory[3].m_vAngle
-					|| flDelta23 > SNAP_SIZE_EPSILON && flDelta12 < SNAP_NOISE_EPSILON && vHistory[1].m_vAngle != vHistory[2].m_vAngle
+						flDelta12 > SNAP_SIZE_EPSILON && flDelta23 < SNAP_NOISE_EPSILON && vHistory[2].m_vAngle != vHistory[3].m_vAngle
+					 || flDelta23 > SNAP_SIZE_EPSILON && flDelta12 < SNAP_NOISE_EPSILON && vHistory[1].m_vAngle != vHistory[2].m_vAngle
 					)
 					&& flDelta01 < SNAP_NOISE_EPSILON && vHistory[0].m_vAngle != vHistory[1].m_vAngle
 					&& flDelta34 < SNAP_NOISE_EPSILON && vHistory[3].m_vAngle != vHistory[4].m_vAngle)
@@ -312,5 +313,6 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 			}
 		}
 	}
+
 	return false;
 }

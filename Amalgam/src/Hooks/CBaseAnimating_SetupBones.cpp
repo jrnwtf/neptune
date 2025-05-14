@@ -9,6 +9,7 @@ MAKE_HOOK(CBaseAnimating_SetupBones, S::CBaseAnimating_SetupBones(), bool,
 	if (!Vars::Hooks::CBaseAnimating_SetupBones[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pBoneToWorldOut, nMaxBones, boneMask, currentTime);
 #endif
+
 	if (!G::Unload && Vars::Misc::Game::SetupBonesOptimization.Value && !H::Entities.IsSettingUpBones())
 	{
 		auto pBaseEntity = reinterpret_cast<CBaseEntity*>(uintptr_t(rcx) - 8);

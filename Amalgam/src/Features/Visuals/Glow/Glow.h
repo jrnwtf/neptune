@@ -27,7 +27,6 @@ class CGlow
 	IMaterial* m_pMatBlurX;
 	IMaterial* m_pMatBlurY;
 
-
 	struct GlowHasher_t
 	{
 		std::size_t operator()(const Glow_t& k) const

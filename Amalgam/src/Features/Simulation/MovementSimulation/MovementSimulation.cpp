@@ -160,7 +160,7 @@ void CMovementSimulation::Store()
 		}
 		if (pPlayer->InCond(TF_COND_SHIELD_CHARGE))
 		{
-		DummyCmd.forwardmove = 450.f;
+			DummyCmd.forwardmove = 450.f;
 			DummyCmd.sidemove = 0.f;
 			SDK::FixMovement(&DummyCmd, bLocal ? F::EnginePrediction.m_vAngles : pPlayer->GetEyeAngles(), {});
 			tCurRecord.m_vDirection.x = DummyCmd.forwardmove;
@@ -172,10 +172,10 @@ void CMovementSimulation::Store()
 			{
 			case 0:
 				if (bLocal && Vars::Misc::Movement::Bunnyhop.Value && G::OriginalMove.m_iButtons & IN_JUMP)
-					tCurRecord.m_vDirection = vVelocity.To2D().Normalized() * flMaxSpeed;
+					tCurRecord.m_vDirection = vVelocity.Normalized2D() * flMaxSpeed;
 				break;
 			case 1:
-				tCurRecord.m_vDirection = vVelocity.To2D().Normalized() * flMaxSpeed;
+				tCurRecord.m_vDirection = vVelocity.Normalized2D() * flMaxSpeed;
 				break;
 			case 2:
 				tCurRecord.m_vDirection *= 2;
@@ -414,7 +414,7 @@ static inline void VisualizeRecords(MoveData& tRecord1, MoveData& tRecord2, Colo
 	G::LineStorage.emplace_back(std::pair<Vec3, Vec3>(tRecord1.m_vOrigin, tRecord1.m_vOrigin + Vec3(0, 0, 5)), I::GlobalVars->curtime + 5.f, tColor);
 	if (!bStraight && flYaw)
 	{
-		Vec3 vVelocity = tRecord1.m_vVelocity.To2D().Normalized() * 5;
+		Vec3 vVelocity = tRecord1.m_vVelocity.Normalized2D() * 5;
 		vVelocity = Math::RotatePoint(vVelocity, {}, { 0, flYaw > 0 ? 90.f : -90.f, 0 });
 		if (Vars::Aimbot::Projectile::MovesimFrictionFlags.Value & Vars::Aimbot::Projectile::MovesimFrictionFlagsEnum::CalculateIncrease && tRecord1.m_iMode == 1)
 			vVelocity /= GetFrictionScale(tRecord1.m_vVelocity.Length2D(), flYaw, tRecord1.m_vVelocity.z + GetGravity() * TICK_INTERVAL, 0.f, 56.f);
@@ -432,13 +432,13 @@ static bool GetYawDifference(MoveData& tRecord1, MoveData& tRecord2, bool bStart
 	*pYaw = Math::NormalizeAngle(flYaw1 - flYaw2);
 	if (flMaxSpeed && tRecord1.m_iMode != 1)
 		*pYaw *= std::clamp(tRecord1.m_vVelocity.Length2D() / flMaxSpeed, 0.f, 1.f);
-
 	if (Vars::Aimbot::Projectile::MovesimFrictionFlags.Value & Vars::Aimbot::Projectile::MovesimFrictionFlagsEnum::CalculateIncrease && tRecord1.m_iMode == 1)
 		*pYaw /= GetFrictionScale(tRecord1.m_vVelocity.Length2D(), *pYaw, tRecord1.m_vVelocity.z + GetGravity() * TICK_INTERVAL, 0.f, 56.f);
 	if (fabsf(*pYaw) > 45.f)
 		return false;
 
 	static int iChanges, iStart;
+
 	static int iStaticSign = 0;
 	const int iLastSign = iStaticSign;
 	const int iCurrSign = iStaticSign = *pYaw ? sign(*pYaw) : iStaticSign;
@@ -601,7 +601,7 @@ void CMovementSimulation::SetBounds(CTFPlayer* pPlayer)
 	if (pPlayer->entindex() == I::EngineClient->GetLocalPlayer())
 		return;
 
-	// fixes issues with origin tolerance
+	// fixes issues with origin compression
 	if (auto pGameRules = I::TFGameRules())
 	{
 		if (auto pViewVectors = pGameRules->GetViewVectors())
@@ -692,7 +692,7 @@ void CMovementSimulation::RunTick(PlayerStorage& tStorage, bool bPath, std::func
 		&& !tStorage.m_MoveData.m_flForwardMove && !tStorage.m_MoveData.m_flSideMove
 		&& tStorage.m_MoveData.m_vecVelocity.Length2D() > tStorage.m_MoveData.m_flMaxSpeed * 0.015f)
 	{
-		Vec3 vDirection = tStorage.m_MoveData.m_vecVelocity.To2D().Normalized() * 450.f;
+		Vec3 vDirection = tStorage.m_MoveData.m_vecVelocity.Normalized2D() * 450.f;
 		DummyCmd.forwardmove = vDirection.x, DummyCmd.sidemove = -vDirection.y;
 		SDK::FixMovement(&DummyCmd, {}, tStorage.m_MoveData.m_vecViewAngles);
 		tStorage.m_MoveData.m_flForwardMove = DummyCmd.forwardmove, tStorage.m_MoveData.m_flSideMove = DummyCmd.sidemove;

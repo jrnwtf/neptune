@@ -54,6 +54,7 @@ void CNoSpreadProjectile::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCm
 			vAngAdd.x += Random->RandomFloat(-1.5f, 1.5f);//SDK::RandomFloat(-1.5f, 1.5f);
 			vAngAdd.y += Random->RandomFloat(-1.5f, 1.5f);//SDK::RandomFloat(-1.5f, 1.5f);
 		}
+		delete(Random);
 
 		if (!vAngAdd.IsZero())
 		{

@@ -11,6 +11,7 @@ MAKE_HOOK(ClientModeTFNormal_UpdateSteamRichPresence, S::ClientModeTFNormal_Upda
 	if (!Vars::Hooks::ClientModeTFNormal_UpdateSteamRichPresence[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	if (!F::Misc.SteamRPC())
 		CALL_ORIGINAL(rcx);
 }

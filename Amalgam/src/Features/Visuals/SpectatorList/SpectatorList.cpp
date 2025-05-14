@@ -26,9 +26,15 @@ bool CSpectatorList::GetSpectators(CTFPlayer* pTarget)
 		if (pPlayer->IsAlive() || pObserverTarget != pTarget
 			|| bLocal && !I::EngineClient->IsPlayingDemo() && F::Spectate.m_iTarget == -1)
 		{
-			auto it = m_mRespawnCache.find(pPlayer->entindex());
-			if (it != m_mRespawnCache.end())
-				m_mRespawnCache.erase(it);
+			pObserverTarget = F::Spectate.m_pOriginalTarget;
+			iObserverMode = F::Spectate.m_iOriginalMode;
+		}
+
+		if (pPlayer->IsAlive() || pObserverTarget != pTarget
+			|| bLocal && !I::EngineClient->IsPlayingDemo() && F::Spectate.m_iTarget == -1)
+		{
+			if (m_mRespawnCache.contains(iIndex))
+				m_mRespawnCache.erase(iIndex);
 			continue;
 		}
 
@@ -40,26 +46,23 @@ bool CSpectatorList::GetSpectators(CTFPlayer* pTarget)
 		default: continue;
 		}
 
-		float respawnIn = 0.0f; float respawnTime = 0.0f;
+		float flRespawnTime = 0.f, flRespawnIn = 0.f;
+		bool bRespawnTimeIncreased = false; // theoretically the respawn times could be changed by the map but oh well
 		if (auto pResource = H::Entities.GetPR())
 		{
-			respawnTime = pResource->m_flNextRespawnTime(iIndex);
-			respawnIn = std::max(respawnTime - I::GlobalVars->curtime, 0.f);
+			flRespawnTime = pResource->m_flNextRespawnTime(iIndex);
+			flRespawnIn = std::max(floorf(flRespawnTime - TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick)), 0.f);
 		}
-		bool respawnTimeIncreased = false; // theoretically the respawn times could be changed by the map but oh well
 		if (!m_mRespawnCache.contains(iIndex))
-			m_mRespawnCache[iIndex] = respawnTime;
-		if (m_mRespawnCache[iIndex] + 0.9f < respawnTime)
-		{
-			respawnTimeIncreased = true;
-			m_mRespawnCache[iIndex] = -1.f;
-		}
+			m_mRespawnCache[iIndex] = flRespawnTime;
+		else if (m_mRespawnCache[iIndex] + 0.5f < flRespawnTime)
+			bRespawnTimeIncreased = true;
 
 		PlayerInfo_t pi{};
 		if (I::EngineClient->GetPlayerInfo(iIndex, &pi))
 		{
 			std::string sName = F::PlayerUtils.GetPlayerName(iIndex, pi.name);
-			m_vSpectators.push_back({ sName, sMode, respawnIn, respawnTimeIncreased, H::Entities.IsFriend(pPlayer->entindex()), H::Entities.InParty(pPlayer->entindex()), pPlayer->entindex() });
+			m_vSpectators.emplace_back(sName, sMode, flRespawnIn, bRespawnTimeIncreased, iIndex);
 		}
 	}
 

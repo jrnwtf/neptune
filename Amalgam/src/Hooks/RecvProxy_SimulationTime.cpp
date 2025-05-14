@@ -16,6 +16,7 @@ MAKE_HOOK(RecvProxy_SimulationTime, S::RecvProxy_SimulationTime(), void,
 	if (!Vars::Hooks::RecvProxy_SimulationTime[DEFAULT_BIND])
 		return CALL_ORIGINAL(pData, pStruct, pOut);
 #endif
+
 	auto pEntity = reinterpret_cast<CBaseEntity*>(pStruct);
 	if (!pEntity || !pEntity->IsPlayer() || pEntity->entindex() == I::EngineClient->GetLocalPlayer())
 		return CALL_ORIGINAL(pData, pStruct, pOut);

@@ -19,6 +19,7 @@ MAKE_HOOK(CTFPlayer_ShouldDraw, S::CTFPlayer_ShouldDraw(), bool,
 	if (!Vars::Hooks::CTFPlayer_ShouldDraw[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	if (F::Spectate.m_iTarget != -1)
 	{
 		auto pLocal = H::Entities.GetLocal();
@@ -43,6 +44,7 @@ MAKE_HOOK(CBasePlayer_ShouldDrawThisPlayer, S::CBasePlayer_ShouldDrawThisPlayer(
 	if (!Vars::Hooks::CTFPlayer_ShouldDraw[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+
 	static const auto dwUndesired = S::CBasePlayer_BuildFirstPersonMeathookTransformations_ShouldDrawThisPlayer_Call();
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());
 
@@ -50,6 +52,7 @@ MAKE_HOOK(CBasePlayer_ShouldDrawThisPlayer, S::CBasePlayer_ShouldDrawThisPlayer(
 	{
 		if (dwRetAddr == dwUndesired)
 			return false;
+
 		auto pLocal = H::Entities.GetLocal();
 		auto pTarget = I::ClientEntityList->GetClientEntity(I::EngineClient->GetPlayerForUserID(F::Spectate.m_iTarget))->As<CTFPlayer>();
 		if (pLocal && pLocal->IsAlive() && rcx == pLocal)
@@ -114,6 +117,7 @@ MAKE_HOOK(CViewRender_DrawViewModels, S::CViewRender_DrawViewModels(), void,
 	if (!Vars::Hooks::CTFPlayer_ShouldDraw[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, viewRender, drawViewmodel);
 #endif
+
 	CALL_ORIGINAL(rcx, viewRender, F::Spectate.m_iTarget != -1 ? false : drawViewmodel);
 #endif
 }

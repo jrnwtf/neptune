@@ -2,13 +2,14 @@
 
 #include "../Backtrack/Backtrack.h"
 #include "../Players/PlayerUtils.h"
-#include "../TickHandler/TickHandler.h"
+#include "../Ticks/Ticks.h"
 #include "../Output/Output.h"
 
 void CResolver::Reset()
 {
 	m_mResolverData.clear();
 	m_mSniperDots.clear();
+
 	m_iWaitingForTarget = -1;
 	m_flWaitingForDamage = 0.f;
 	m_bWaitingForHeadshot = false;
@@ -32,12 +33,14 @@ std::optional<float> CResolver::GetPitchForSniperDot(CTFPlayer* pEntity, CTFPlay
 	if (m_mSniperDots.contains(pEntity->entindex()))
 	{
 		int iUserID = pResource->m_iUserID(pEntity->entindex());
+
 		const Vec3 vOrigin = m_mSniperDots[iUserID];
 		const Vec3 vEyeOrigin = pEntity->m_vecOrigin() + pEntity->GetViewOffset();
 		const Vec3 vDelta = vOrigin - vEyeOrigin;
 		Vec3 vAngles; Math::VectorAngles(vDelta, vAngles);
 		return vAngles.x;
 	}
+
 	return std::nullopt;
 }
 
@@ -45,9 +48,11 @@ void CResolver::FrameStageNotify()
 {
 	if (!Vars::Resolver::Enabled.Value || !I::EngineClient->IsInGame() || I::EngineClient->IsPlayingDemo())
 		return;
+	
 	auto pResource = H::Entities.GetPR();
 	if (!pResource)
 		return;
+
 	StoreSniperDots(pResource);
 
 	for (auto& pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ALL))
@@ -58,10 +63,12 @@ void CResolver::FrameStageNotify()
 
 		int iUserID = pResource->m_iUserID(pPlayer->entindex());
 		auto& tData = m_mResolverData[iUserID];
+
 		if (tData.m_flYaw)
 			tData.m_bYaw = true;
 		else
 			tData.m_bYaw = false;
+
 		if (H::Entities.GetDeltaTime(pPlayer->entindex()) && fabsf(pPlayer->m_angEyeAnglesX()) == 90.f)
 		{
 			if (auto flPitch = GetPitchForSniperDot(pPlayer, pResource))
@@ -134,9 +141,11 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 			{
 				if (pEntity->entindex() == pLocal->entindex())
 					continue;
+
 				Vec3 vCurPos = pEntity->GetCenter();
 				Vec3 vCurAngleTo = Math::CalcAngle(vLocalPos, vCurPos);
 				float flCurFOVTo = Math::CalcFov(vLocalAngles, vCurAngleTo);
+
 				if (flCurFOVTo < flMinFOV)
 				{
 					pClosest = pEntity->As<CTFPlayer>();
@@ -146,6 +155,7 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 
 			return pClosest;
 		};
+
 	if (Vars::Resolver::CycleYaw.Value)
 	{
 		if (SDK::PlatFloatTime() > m_flLastYawCycle + 0.5f)
@@ -167,6 +177,7 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 	}
 	else
 		m_flLastYawCycle = 0.f;
+
 	if (Vars::Resolver::CyclePitch.Value)
 	{
 		if (SDK::PlatFloatTime() > m_flLastPitchCycle + 0.5f)
@@ -175,14 +186,19 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 			{
 				int iUserID = pResource->m_iUserID(pTarget->entindex());
 				auto& tData = m_mResolverData[iUserID];
+
 				if (fabsf(pTarget->m_angEyeAnglesX()) != 90.f)
 					F::Output.ReportResolver("Target not using out of bounds pitch");
+
 				float& flPitch = tData.m_flPitch;
+
 				flPitch += Vars::Resolver::CyclePitch.Value;
 				flPitch = Math::NormalizeAngle(flPitch + Vars::Resolver::CyclePitch.Value, 180.f);
+
 				F::Backtrack.ResolverUpdate(pTarget);
 				F::Output.ReportResolver(pTarget->entindex(), "Cycling", "pitch", flPitch);
 			}
+
 			m_flLastPitchCycle = SDK::PlatFloatTime();
 		}
 	}
@@ -219,11 +235,14 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 			{
 				int iUserID = pResource->m_iUserID(pTarget->entindex());
 				auto& tData = m_mResolverData[iUserID];
+
 				bool& bView = tData.m_bView;
 				bView = !bView;
+
 				F::Backtrack.ResolverUpdate(pTarget);
 				F::Output.ReportResolver(pTarget->entindex(), "Cycling", "view", std::string(bView ? "view to local" : "static"));
 			}
+
 			m_flLastViewCycle = SDK::PlatFloatTime();
 		}
 	}
@@ -236,10 +255,13 @@ void CResolver::HitscanRan(CTFPlayer* pLocal, CTFPlayer* pTarget, CTFWeaponBase*
 	if (!Vars::Resolver::Enabled.Value || !Vars::Resolver::AutoResolve.Value
 		|| Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Smooth || pLocal->m_iTeamNum() == pTarget->m_iTeamNum())
 		return;
+
 	if (Vars::Resolver::AutoResolveCheatersOnly.Value && !F::PlayerUtils.HasTag(pTarget->entindex(), CHEATER_TAG))
 		return;
+
 	if (Vars::Resolver::AutoResolveHeadshotOnly.Value && (iHitbox != HITBOX_HEAD || !G::CanHeadshot))
 		return;
+
 	if (pWeapon->GetWeaponSpread())
 	{
 		// check for perfect bullet
@@ -247,9 +269,11 @@ void CResolver::HitscanRan(CTFPlayer* pLocal, CTFPlayer* pTarget, CTFWeaponBase*
 		if (flTimeSinceLastShot <= (pWeapon->GetBulletsPerShot() > 1 ? 0.25f : 1.25f))
 			return;
 	}
+
 	auto pResource = H::Entities.GetPR();
 	if (!pResource)
 		return;
+
 	m_iWaitingForTarget = pResource->m_iUserID(pTarget->entindex());
 	m_flWaitingForDamage = I::GlobalVars->curtime + F::Backtrack.GetReal(MAX_FLOWS, false) * 1.5f + 0.1f;
 	if (iHitbox == HITBOX_HEAD && G::CanHeadshot)
@@ -271,6 +295,7 @@ void CResolver::OnPlayerHurt(IGameEvent* pEvent)
 		|| I::EngineClient->GetPlayerForUserID(pEvent->GetInt("attacker")) != I::EngineClient->GetLocalPlayer()
 		|| pEvent->GetInt("userid") != m_iWaitingForTarget)
 		return;
+
 	if (m_bWaitingForHeadshot && !pEvent->GetBool("crit"))
 		return;
 
@@ -278,26 +303,32 @@ void CResolver::OnPlayerHurt(IGameEvent* pEvent)
 	m_flWaitingForDamage = 0.f;
 	m_bWaitingForHeadshot = false;
 }
+
 void CResolver::SetYaw(int iUserID, float flValue, bool bAuto)
 {
 	auto& tData = m_mResolverData[iUserID];
+
 	if (bAuto)
 	{
 		tData.m_bAutoSetYaw = true;
+
 		F::Output.ReportResolver(I::EngineClient->GetPlayerForUserID(iUserID), "Set", "yaw", "auto");
 	}
 	else
 	{
 		tData.m_flYaw = flValue;
 		tData.m_bAutoSetYaw = false;
+
 		F::Output.ReportResolver(I::EngineClient->GetPlayerForUserID(iUserID), "Set", "yaw", flValue);
 	}
+
 	F::Backtrack.ResolverUpdate(I::ClientEntityList->GetClientEntity(I::EngineClient->GetPlayerForUserID(iUserID))->As<CTFPlayer>());
 }
 
 void CResolver::SetPitch(int iUserID, float flValue, bool bInverse, bool bAuto)
 {
 	auto& tData = m_mResolverData[iUserID];
+
 	if (bAuto)
 	{
 		tData.m_bInversePitch = false;
@@ -333,6 +364,7 @@ void CResolver::SetMinwalk(int iUserID, bool bValue)
 	auto& tData = m_mResolverData[iUserID];
 
 	tData.m_bMinwalk = bValue;
+
 	F::Backtrack.ResolverUpdate(I::ClientEntityList->GetClientEntity(I::EngineClient->GetPlayerForUserID(iUserID))->As<CTFPlayer>());
 	F::Output.ReportResolver(I::EngineClient->GetPlayerForUserID(iUserID), "Set", "minwalk", bValue);
 }
@@ -340,7 +372,9 @@ void CResolver::SetMinwalk(int iUserID, bool bValue)
 void CResolver::SetView(int iUserID, bool bValue)
 {
 	auto& tData = m_mResolverData[iUserID];
+
 	tData.m_bView = bValue;
+
 	F::Backtrack.ResolverUpdate(I::ClientEntityList->GetClientEntity(I::EngineClient->GetPlayerForUserID(iUserID))->As<CTFPlayer>());
 	F::Output.ReportResolver(I::EngineClient->GetPlayerForUserID(iUserID), "Set", "view", std::string(bValue ? "view to local" : "static"));
 }
@@ -349,39 +383,40 @@ bool CResolver::GetAngles(CTFPlayer* pPlayer, float* pYaw, float* pPitch, bool* 
 {
 	if (!Vars::Resolver::Enabled.Value)
 		return false;
+
 	if (pPlayer->entindex() == I::EngineClient->GetLocalPlayer() || pPlayer->IsDormant() || !pPlayer->IsAlive() || pPlayer->IsAGhost())
 		return false;
+
 	auto pResource = H::Entities.GetPR();
 	if (!pResource)
 		return false;
+
+	int iUserID = pResource->m_iUserID(pPlayer->entindex());
+	auto& tData = m_mResolverData[iUserID];
+
+	bool bYaw = tData.m_bYaw, bPitch = tData.m_bPitch;
 	
-	try {
-		int iUserID = pResource->m_iUserID(pPlayer->entindex());
-		auto& tData = m_mResolverData[iUserID];
-		bool bYaw = tData.m_bYaw, bPitch = tData.m_bPitch;
-		
-		if (pYaw)
+	if (pYaw)
+	{
+		*pYaw = pPlayer->m_angEyeAnglesY();
+		if (bYaw && !bFake)
 		{
-			*pYaw = pPlayer->m_angEyeAnglesY();
-			if (bYaw && !bFake)
-			{
-				auto pLocal = H::Entities.GetLocal();
-				if (pLocal && tData.m_bView)
-					*pYaw = Math::CalcAngle(pPlayer->m_vecOrigin(), pLocal->m_vecOrigin()).y;
-				*pYaw += tData.m_flYaw;
-			}
+			auto pLocal = H::Entities.GetLocal();
+			if (pLocal && tData.m_bView)
+				*pYaw = Math::CalcAngle(pPlayer->m_vecOrigin(), pLocal->m_vecOrigin()).y;
+			*pYaw += tData.m_flYaw;
 		}
-		if (pPitch)
-		{
-			*pPitch = pPlayer->m_angEyeAnglesX();
-			if (bPitch)
-				*pPitch = tData.m_flPitch;
-		}
-		if (pMinwalk)
-			*pMinwalk = tData.m_bMinwalk;
-		return bYaw || bPitch;
 	}
-	catch (...) {
-		return false;
+
+	if (pPitch)
+	{
+		*pPitch = pPlayer->m_angEyeAnglesX();
+		if (bPitch)
+			*pPitch = tData.m_flPitch;
 	}
+
+	if (pMinwalk)
+		*pMinwalk = tData.m_bMinwalk;
+
+	return bYaw || bPitch;
 }

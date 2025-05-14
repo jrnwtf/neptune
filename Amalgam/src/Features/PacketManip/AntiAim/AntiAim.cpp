@@ -1,6 +1,6 @@
 #include "AntiAim.h"
 
-#include "../../TickHandler/TickHandler.h"
+#include "../../Ticks/Ticks.h"
 #include "../../Players/PlayerUtils.h"
 #include "../../Misc/Misc.h"
 #include "../../Aimbot/AutoRocketJump/AutoRocketJump.h"
@@ -205,6 +205,7 @@ void CAntiAim::MinWalk(CTFPlayer* pLocal, CUserCmd* pCmd)
 		Vec3 vMove = Math::RotatePoint(vDir, {}, { 0, -pCmd->viewangles.y, 0 });
 		pCmd->forwardmove = vMove.x * (fmodf(fabsf(pCmd->viewangles.x), 180.f) > 90.f ? -1 : 1);
 		pCmd->sidemove = -vMove.y;
+
 		pLocal->m_vecVelocity() = { 1, 1 }; // a bit stupid but it's probably fine
 	}
 }
