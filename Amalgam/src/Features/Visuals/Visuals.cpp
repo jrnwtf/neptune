@@ -8,7 +8,6 @@
 #include "CameraWindow/CameraWindow.h"
 #include "../Players/PlayerUtils.h"
 #include "../Spectate/Spectate.h"
-#include "../TickHandler/TickHandler.h"
 #include "../NavBot/NavBot.h"
 #include "../CritHack/CritHack.h"
 #include "../Misc/NamedPipe/Namedpipe.h"
@@ -449,7 +448,7 @@ void CVisuals::DrawDebugInfo(CTFPlayer* pLocal)
 			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Ground entity: {}", pGround ? pGround->GetClientClass()->m_pNetworkName : "none").c_str());
 		}
 		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Choke: {}, {}", G::Choking, I::ClientState->chokedcommands).c_str());
-		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Ticks: {}, {}", F::Ticks.m_iShiftedTicks, F::Ticks.m_iShiftedGoal).c_str());
+		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Ticks: {0}, {1}", F::Ticks.m_iShiftedTicks, F::Ticks.m_iShiftedGoal).c_str());
 		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Round state: {}, {}, {}", SDK::GetRoundState(), SDK::GetWinningTeam(), I::EngineClient->IsPlayingDemo()).c_str());
 		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Tickcount: {}", pLocal->m_nTickBase()).c_str());
 		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Entities: {} ({}, {})", I::ClientEntityList->GetMaxEntities(), I::ClientEntityList->GetHighestEntityIndex(), I::ClientEntityList->NumberOfEntities(false)).c_str());
@@ -597,7 +596,8 @@ void CVisuals::DrawNavEngine()
 	{
 		for (auto vPos : F::NavBot.m_vSlightDangerDrawlistNormal)
 		{
-			RenderBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), Color_t(255, 150, 0, 255), false);
+			H::Draw.RenderBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), false);
+			H::Draw.RenderWireframeBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), false);
 		}
 	}
 
@@ -605,7 +605,8 @@ void CVisuals::DrawNavEngine()
 	{
 		for (auto vPos : F::NavBot.m_vSlightDangerDrawlistDormant)
 		{
-			RenderBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), Color_t(255, 150, 0, 255), false);
+			H::Draw.RenderBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), false);
+			H::Draw.RenderWireframeBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), false);
 		}
 	}*/
 
@@ -616,7 +617,10 @@ void CVisuals::DrawNavEngine()
 			if (!pBlacklist->empty())
 			{
 				for (auto& tBlacklistedArea : *pBlacklist)
-					RenderBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, Vars::Colors::NavbotBlacklist.Value, false);
+				{
+					H::Draw.RenderBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, false);
+					H::Draw.RenderWireframeBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, false);
+				}
 			}
 		}
 	}
@@ -680,17 +684,19 @@ void CVisuals::DrawNavEngine()
 			Color_t baseColor = Vars::Colors::NavbotCool.Value;
 			Color_t areaColor = Color_t(baseColor.r, baseColor.g, baseColor.b, alpha);
 			
-			RenderBox(pArea->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), 
-				Vector(), areaColor, areaColor, false);
+			H::Draw.RenderBox(pArea->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), 
+				Vector(), areaColor, false);
+			H::Draw.RenderWireframeBox(pArea->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), 
+				Vector(), areaColor, false);
 			
 			// Nw -> Ne
-			RenderLine(pArea->m_nwCorner, pArea->getNeCorner(), areaColor, true);
+			H::Draw.RenderLine(pArea->m_nwCorner, pArea->getNeCorner(), areaColor, true);
 			// Nw -> Sw
-			RenderLine(pArea->m_nwCorner, pArea->getSwCorner(), areaColor, true);
+			H::Draw.RenderLine(pArea->m_nwCorner, pArea->getSwCorner(), areaColor, true);
 			// Ne -> Se
-			RenderLine(pArea->getNeCorner(), pArea->m_seCorner, areaColor, true);
+			H::Draw.RenderLine(pArea->getNeCorner(), pArea->m_seCorner, areaColor, true);
 			// Sw -> Se
-			RenderLine(pArea->getSwCorner(), pArea->m_seCorner, areaColor, true);
+			H::Draw.RenderLine(pArea->getSwCorner(), pArea->m_seCorner, areaColor, true);
 			
 			for (NavConnect& tConnection : pArea->m_connections)
 			{
@@ -714,7 +720,7 @@ void CVisuals::DrawNavEngine()
 						std::min(255, baseColor.g + 50),
 						std::min(255, baseColor.b + 50),
 						alpha - 50);
-					RenderLine(pArea->m_center, tConnection.area->m_center, connectionColor, false);
+					H::Draw.RenderLine(pArea->m_center, tConnection.area->m_center, connectionColor, false);
 				}
 			}
 		}
@@ -726,22 +732,23 @@ void CVisuals::DrawNavEngine()
 		auto pArea = F::NavEngine.map->findClosestNavSquare(vOrigin);
 		auto vEdge = pArea->getNearestPoint(Vector2D(vOrigin.x, vOrigin.y));
 		vEdge.z += PLAYER_JUMP_HEIGHT;
-		RenderBox(vEdge, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 0, 0, 255), Color_t(255, 0, 0, 255), false);
+		H::Draw.RenderBox(vEdge, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 0, 0, 255), false);
+		H::Draw.RenderWireframeBox(vEdge, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 0, 0, 255), false);
 
 		// Nw -> Ne
-		RenderLine(pArea->m_nwCorner, pArea->getNeCorner(), Vars::Colors::NavbotArea.Value, true);
+		H::Draw.RenderLine(pArea->m_nwCorner, pArea->getNeCorner(), Vars::Colors::NavbotArea.Value, true);
 		// Nw -> Sw
-		RenderLine(pArea->m_nwCorner, pArea->getSwCorner(), Vars::Colors::NavbotArea.Value, true);
+		H::Draw.RenderLine(pArea->m_nwCorner, pArea->getSwCorner(), Vars::Colors::NavbotArea.Value, true);
 		// Ne -> Se
-		RenderLine(pArea->getNeCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
+		H::Draw.RenderLine(pArea->getNeCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
 		// Sw -> Se
-		RenderLine(pArea->getSwCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
+		H::Draw.RenderLine(pArea->getSwCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
 	}
 
 	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Path && !F::NavEngine.crumbs.empty())
 	{
 		for (size_t i = 0; i < F::NavEngine.crumbs.size() - 1; i++)
-			RenderLine(F::NavEngine.crumbs[i].vec, F::NavEngine.crumbs[i + 1].vec, Vars::Colors::NavbotPath.Value, false);
+			H::Draw.RenderLine(F::NavEngine.crumbs[i].vec, F::NavEngine.crumbs[i + 1].vec, Vars::Colors::NavbotPath.Value, false);
 	}
 }
 

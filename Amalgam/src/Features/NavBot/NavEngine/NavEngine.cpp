@@ -1111,7 +1111,7 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 void CNavEngine::Render()
 {
-	if (!Vars::Misc::Movement::NavEngine::Draw.Value || !isReady())
+	if (!Vars::NavEng::NavEngine::Draw.Value || !isReady())
 		return;
 
 	auto pLocal = H::Entities.GetLocal();
@@ -1134,7 +1134,7 @@ void CNavEngine::Render()
 		}
 	}*/
 
-	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Blacklist)
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Blacklist)
 	{
 		if (auto pBlacklist = getFreeBlacklist())
 		{
@@ -1149,7 +1149,7 @@ void CNavEngine::Render()
 		}
 	}
 
-	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Area)
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Area)
 	{
 		Vector vOrigin = pLocal->GetAbsOrigin();
 		auto pArea = map->findClosestNavSquare(vOrigin);
@@ -1168,7 +1168,7 @@ void CNavEngine::Render()
 		H::Draw.RenderLine(pArea->getSwCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
 	}
 
-	if (Vars::Misc::Movement::NavEngine::Draw.Value & Vars::Misc::Movement::NavEngine::DrawEnum::Path && !crumbs.empty())
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Path && !crumbs.empty())
 	{
 		for (size_t i = 0; i < crumbs.size() - 1; i++)
 			H::Draw.RenderLine(crumbs[i].vec, crumbs[i + 1].vec, Vars::Colors::NavbotPath.Value, false);

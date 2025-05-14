@@ -1,6 +1,6 @@
 #include "FollowBot.h"
 #include <cmath>
-#include "../TickHandler/TickHandler.h"
+#include "../Ticks/Ticks.h"
 #include "../Misc/Misc.h"
 #include <direct.h>
 
