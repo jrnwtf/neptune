@@ -584,6 +584,185 @@ void CVisuals::DrawBoxes()
 	}
 }
 
+void CVisuals::DrawNavEngine()
+{
+	if (!Vars::NavEng::NavEngine::Draw.Value || !F::NavEngine.isReady())
+		return;
+
+	auto pLocal = H::Entities.GetLocal();
+	if (!pLocal || !pLocal->IsAlive() || !F::NavEngine.map)
+		return;
+
+	/*if (!F::NavBot.m_vSlightDangerDrawlistNormal.empty())
+	{
+		for (auto vPos : F::NavBot.m_vSlightDangerDrawlistNormal)
+		{
+			RenderBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), Color_t(255, 150, 0, 255), false);
+		}
+	}
+
+	if (!F::NavBot.m_vSlightDangerDrawlistDormant.empty())
+	{
+		for (auto vPos : F::NavBot.m_vSlightDangerDrawlistDormant)
+		{
+			RenderBox(vPos, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 150, 0, 255), Color_t(255, 150, 0, 255), false);
+		}
+	}*/
+
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Blacklist)
+	{
+		if (auto pBlacklist = F::NavEngine.getFreeBlacklist())
+		{
+			if (!pBlacklist->empty())
+			{
+				for (auto& tBlacklistedArea : *pBlacklist)
+					RenderBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, Vars::Colors::NavbotBlacklist.Value, false);
+			}
+		}
+	}
+
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Cool)
+	{
+		Vector vLocalOrigin = pLocal->GetAbsOrigin();
+		auto pLocalArea = F::NavEngine.map->findClosestNavSquare(vLocalOrigin);
+		
+		if (!pLocalArea)
+			return;
+		
+		const float flMaxDistance = static_cast<float>(Vars::NavEng::NavEngine::CoolRange.Value);
+		
+		std::vector<CNavArea*> areasToRender;
+		std::vector<CNavArea*> checkedAreas;
+		std::queue<CNavArea*> areaQueue;
+		
+		areaQueue.push(pLocalArea);
+		checkedAreas.push_back(pLocalArea);
+		
+		while (!areaQueue.empty())
+		{
+			CNavArea* pCurrentArea = areaQueue.front();
+			areaQueue.pop();
+			
+			float flDistance = (pCurrentArea->m_center - vLocalOrigin).Length();
+			if (flDistance <= flMaxDistance)
+			{
+				areasToRender.push_back(pCurrentArea);
+				
+				for (NavConnect& tConnection : pCurrentArea->m_connections)
+				{
+					if (!tConnection.area)
+						continue;
+					
+					bool alreadyChecked = false;
+					for (auto pCheckedArea : checkedAreas)
+					{
+						if (pCheckedArea == tConnection.area)
+						{
+							alreadyChecked = true;
+							break;
+						}
+					}
+					
+					if (!alreadyChecked)
+					{
+						areaQueue.push(tConnection.area);
+						checkedAreas.push_back(tConnection.area);
+					}
+				}
+			}
+		}
+		
+		for (auto pArea : areasToRender)
+		{
+			float flDistance = (pArea->m_center - vLocalOrigin).Length();
+			int alpha = 255 - static_cast<int>((flDistance / flMaxDistance) * 200);
+			
+			Color_t baseColor = Vars::Colors::NavbotCool.Value;
+			Color_t areaColor = Color_t(baseColor.r, baseColor.g, baseColor.b, alpha);
+			
+			RenderBox(pArea->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), 
+				Vector(), areaColor, areaColor, false);
+			
+			// Nw -> Ne
+			RenderLine(pArea->m_nwCorner, pArea->getNeCorner(), areaColor, true);
+			// Nw -> Sw
+			RenderLine(pArea->m_nwCorner, pArea->getSwCorner(), areaColor, true);
+			// Ne -> Se
+			RenderLine(pArea->getNeCorner(), pArea->m_seCorner, areaColor, true);
+			// Sw -> Se
+			RenderLine(pArea->getSwCorner(), pArea->m_seCorner, areaColor, true);
+			
+			for (NavConnect& tConnection : pArea->m_connections)
+			{
+				if (!tConnection.area)
+					continue;
+					
+				bool isInRenderList = false;
+				for (auto pRenderArea : areasToRender)
+				{
+					if (pRenderArea == tConnection.area)
+					{
+						isInRenderList = true;
+						break;
+					}
+				}
+				
+				if (isInRenderList)
+				{
+					Color_t connectionColor = Color_t(
+						std::min(255, baseColor.r + 50),
+						std::min(255, baseColor.g + 50),
+						std::min(255, baseColor.b + 50),
+						alpha - 50);
+					RenderLine(pArea->m_center, tConnection.area->m_center, connectionColor, false);
+				}
+			}
+		}
+	}
+
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Area)
+	{
+		Vector vOrigin = pLocal->GetAbsOrigin();
+		auto pArea = F::NavEngine.map->findClosestNavSquare(vOrigin);
+		auto vEdge = pArea->getNearestPoint(Vector2D(vOrigin.x, vOrigin.y));
+		vEdge.z += PLAYER_JUMP_HEIGHT;
+		RenderBox(vEdge, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Color_t(255, 0, 0, 255), Color_t(255, 0, 0, 255), false);
+
+		// Nw -> Ne
+		RenderLine(pArea->m_nwCorner, pArea->getNeCorner(), Vars::Colors::NavbotArea.Value, true);
+		// Nw -> Sw
+		RenderLine(pArea->m_nwCorner, pArea->getSwCorner(), Vars::Colors::NavbotArea.Value, true);
+		// Ne -> Se
+		RenderLine(pArea->getNeCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
+		// Sw -> Se
+		RenderLine(pArea->getSwCorner(), pArea->m_seCorner, Vars::Colors::NavbotArea.Value, true);
+	}
+
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Path && !F::NavEngine.crumbs.empty())
+	{
+		for (size_t i = 0; i < F::NavEngine.crumbs.size() - 1; i++)
+			RenderLine(F::NavEngine.crumbs[i].vec, F::NavEngine.crumbs[i + 1].vec, Vars::Colors::NavbotPath.Value, false);
+	}
+}
+
+void CVisuals::RestoreLines()
+{
+	for (auto& tLine : G::LineStorage)
+		tLine.m_flTime = I::GlobalVars->curtime + 60.f;
+}
+
+void CVisuals::RestorePaths()
+{
+	for (auto& tPath : G::PathStorage)
+		tPath.m_flTime = I::GlobalVars->curtime + 60.f;
+}
+
+void CVisuals::RestoreBoxes()
+{
+	for (auto& tBox : G::BoxStorage)
+		tBox.m_flTime = I::GlobalVars->curtime + 60.f;
+}
+
 void CVisuals::DrawServerHitboxes(CTFPlayer* pLocal)
 {
 	if (!Vars::Debug::DrawServerHitboxes.Value)
