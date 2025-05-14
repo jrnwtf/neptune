@@ -12,6 +12,9 @@ void CCameraWindow::Draw()
 
 	// Draw to screen
 	const auto renderCtx = I::MaterialSystem->GetRenderContext();
+	if (!renderCtx)
+		return;
+		
 	renderCtx->DrawScreenSpaceRectangle(
 		m_pCameraMaterial,
 		tWindowBox.x - tWindowBox.w / 2, tWindowBox.y, tWindowBox.w, tWindowBox.h,
@@ -25,7 +28,7 @@ void CCameraWindow::Draw()
 // Renders another view onto a texture
 void CCameraWindow::RenderView(void* ecx, const CViewSetup& pViewSetup)
 {
-	if (!m_bShouldDraw || !m_pCameraTexture)
+	if (!m_bShouldDraw || !m_pCameraTexture || !ecx)
 		return;
 
 	m_bDrawing = true;
@@ -51,7 +54,12 @@ void CCameraWindow::RenderView(void* ecx, const CViewSetup& pViewSetup)
 
 void CCameraWindow::RenderCustomView(void* ecx, const CViewSetup& pViewSetup, ITexture* pTexture)
 {
+	if (!ecx || !pTexture)
+		return;
+		
 	const auto renderCtx = I::MaterialSystem->GetRenderContext();
+	if (!renderCtx)
+		return;
 
 	renderCtx->PushRenderTargetAndViewport();
 	renderCtx->SetRenderTarget(pTexture);
@@ -85,7 +93,8 @@ void CCameraWindow::Initialize()
 			TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT,
 			CREATERENDERTARGETFLAGS_HDR
 		);
-		m_pCameraTexture->IncrementReferenceCount();
+		if (m_pCameraTexture)
+			m_pCameraTexture->IncrementReferenceCount();
 	}
 }
 

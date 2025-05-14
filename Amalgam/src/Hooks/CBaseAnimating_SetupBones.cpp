@@ -36,13 +36,17 @@ MAKE_HOOK(CBaseAnimating_SetupBones, S::CBaseAnimating_SetupBones(), bool,
 
 			auto pOwner = GetRootMoveParent();
 			auto pEntity = pOwner ? pOwner : pBaseEntity;
-			if (pEntity->IsPlayer() && pEntity != H::Entities.GetLocal())
+			if (pEntity && pEntity->IsPlayer() && pEntity != H::Entities.GetLocal())
 			{
 				if (pBoneToWorldOut)
 				{
-					auto bones = pEntity->As<CBaseAnimating>()->GetCachedBoneData();
-					if (bones)
-						std::memcpy(pBoneToWorldOut, bones->Base(), sizeof(matrix3x4) * std::min(nMaxBones, bones->Count()));
+					auto pBaseAnimating = pEntity->As<CBaseAnimating>();
+					if (pBaseAnimating)
+					{
+						auto bones = pBaseAnimating->GetCachedBoneData();
+						if (bones && bones->Base() && bones->Count() > 0)
+							std::memcpy(pBoneToWorldOut, bones->Base(), sizeof(matrix3x4) * std::min(nMaxBones, bones->Count()));
+					}
 				}
 
 				return true;
