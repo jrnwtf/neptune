@@ -122,6 +122,7 @@ void CCore::Load()
 	const char* randomLoadedMessage = loadedMessages[distrib(gen)];
 	I::EngineClient->ClientCmd_Unrestricted(std::format("tf_party_chat \"{}\"", randomLoadedMessage).c_str());
 	I::EngineClient->ClientCmd_Unrestricted(std::format("play shivermetimbers/shivermetimbers.mp3").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("exec autoexec").c_str());
 	SDK::Output("Amalgam", "Loaded", { 175, 150, 255 }, true, true, true);
 	
 }
