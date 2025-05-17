@@ -295,34 +295,32 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 	if (!pSet) return false;
 
 	std::vector<TickRecord*> vRecords = {};
+	if (F::Backtrack.GetRecords(tTarget.m_pEntity, vRecords))
 	{
-		if (F::Backtrack.GetRecords(tTarget.m_pEntity, vRecords))
-		{
-			vRecords = F::Backtrack.GetValidRecords(vRecords, pLocal);
-			if (vRecords.empty())
-				return false;
-		}
-		else
-		{
-			matrix3x4 aBones[MAXSTUDIOBONES];
-			if (!tTarget.m_pEntity->SetupBones(aBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, tTarget.m_pEntity->m_flSimulationTime()))
-				return false;
+		vRecords = F::Backtrack.GetValidRecords(vRecords, pLocal);
+		if (vRecords.empty())
+			return false;
+	}
+	else
+	{
+		matrix3x4 aBones[MAXSTUDIOBONES];
+		if (!tTarget.m_pEntity->SetupBones(aBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, tTarget.m_pEntity->m_flSimulationTime()))
+			return false;
 
-			std::vector<HitboxInfo> vHitboxInfos{};
-			for (int nHitbox = 0; nHitbox < pSet->numhitboxes; nHitbox++)
-			{
-				auto pBox = pSet->pHitbox(nHitbox);
-				if (!pBox) continue;
+		std::vector<HitboxInfo> vHitboxInfos{};
+		for (int nHitbox = 0; nHitbox < pSet->numhitboxes; nHitbox++)
+		{
+			auto pBox = pSet->pHitbox(nHitbox);
+			if (!pBox) continue;
 
-				const Vec3 iMin = pBox->bbmin, iMax = pBox->bbmax;
-				const int iBone = pBox->bone;
-				Vec3 vCenter{};
-				Math::VectorTransform((iMin + iMax) / 2, aBones[iBone], vCenter);
-				vHitboxInfos.emplace_back(iBone, nHitbox, vCenter, iMin, iMax);
-			}
-			F::Backtrack.m_tRecord = { tTarget.m_pEntity->m_flSimulationTime(), *reinterpret_cast<BoneMatrix*>(&aBones), vHitboxInfos, tTarget.m_pEntity->m_vecOrigin() };
-			vRecords = { &F::Backtrack.m_tRecord };
+			const Vec3 iMin = pBox->bbmin, iMax = pBox->bbmax;
+			const int iBone = pBox->bone;
+			Vec3 vCenter{};
+			Math::VectorTransform((iMin + iMax) / 2, aBones[iBone], vCenter);
+			vHitboxInfos.emplace_back(iBone, nHitbox, vCenter, iMin, iMax);
 		}
+		F::Backtrack.m_tRecord = { tTarget.m_pEntity->m_flSimulationTime(), tTarget.m_pEntity->m_vecOrigin(), Vec3(), Vec3(), *reinterpret_cast<BoneMatrix*>(&aBones), vHitboxInfos };
+		vRecords = { &F::Backtrack.m_tRecord };
 	}
 
 	float flSpread = pWeapon->GetWeaponSpread();

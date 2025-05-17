@@ -9,10 +9,12 @@
 #include "../Features/Visuals/Visuals.h"
 #include "../SDK/Events/Events.h"
 #include "../Features/Misc/NamedPipe/NamedPipe.h"
+#include "../Utils/Hash/FNV1A.h"
 
 #include <Psapi.h>
 #include <random>
 #include <vector>
+#include <TlHelp32.h>
 
 static inline std::string GetProcessName(DWORD dwProcessID)
 {
@@ -46,6 +48,57 @@ static inline bool CheckDXLevel()
 	return true;
 }
 
+const char* CCore::SearchForDLL(const char* pszDLLSearch)
+{
+	HANDLE hProcessSnap = INVALID_HANDLE_VALUE;
+	PROCESSENTRY32 pe32;
+	hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hProcessSnap == INVALID_HANDLE_VALUE)
+		return pszDLLSearch;
+
+	pe32.dwSize = sizeof(PROCESSENTRY32);
+	if (!Process32First(hProcessSnap, &pe32))
+	{
+		CloseHandle(hProcessSnap);
+		return pszDLLSearch;
+	}
+
+	do
+	{
+		if (pe32.szExeFile == strstr(pe32.szExeFile, "tf_win64.exe"))
+		{
+			HANDLE hModuleSnap = INVALID_HANDLE_VALUE;
+			MODULEENTRY32 me32;
+			hModuleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, pe32.th32ProcessID);
+			if (hModuleSnap == INVALID_HANDLE_VALUE)
+				break;
+
+			me32.dwSize = sizeof(MODULEENTRY32);
+			if (!Module32First(hModuleSnap, &me32))
+			{
+				CloseHandle(hModuleSnap);
+				break;
+			}
+
+			do
+			{
+				if (strstr(me32.szModule, pszDLLSearch))
+				{
+					CloseHandle(hProcessSnap);
+					CloseHandle(hModuleSnap);
+					return me32.szModule;
+				}
+			} while (Module32Next(hModuleSnap, &me32));
+
+			CloseHandle(hModuleSnap);
+			break;
+		}
+	} while (Process32Next(hProcessSnap, &pe32));
+
+	CloseHandle(hProcessSnap);
+	return pszDLLSearch;
+}
+
 void CCore::AppendFailText(const char* sMessage)
 {
 	ssFailStream << std::format("{}\n", sMessage);
@@ -70,6 +123,40 @@ void CCore::LogFailText()
 #endif
 }
 
+static bool ModulesLoaded()
+{
+#ifndef TEXTMODE
+	if (!SDK::GetTeamFortressWindow())
+		return false;
+#endif
+
+	if (GetModuleHandleA("client.dll"))
+	{
+		// Check I::ClientModeShared and I::UniformRandomStream here so that we wait until they get initialized
+		auto dwDest = U::Memory.FindSignature("client.dll", "48 8B 0D ? ? ? ? 48 8B 10 48 8B 19 48 8B C8 FF 92");
+		if (!dwDest || !*reinterpret_cast<void**>(U::Memory.RelToAbs(dwDest)))
+			return false;
+
+		dwDest = U::Memory.FindSignature("client.dll", "48 8B 0D ? ? ? ? F3 0F 59 CA 44 8D 42");
+		if (!dwDest || !*reinterpret_cast<void**>(U::Memory.RelToAbs(dwDest)))
+			return false;
+	}
+	else 
+		return false;
+
+	return GetModuleHandleA("engine.dll") &&
+		GetModuleHandleA("server.dll") &&
+		GetModuleHandleA("tier0.dll") &&
+		GetModuleHandleA("vstdlib.dll") &&
+		GetModuleHandleA("vgui2.dll") &&
+		GetModuleHandleA("vguimatsurface.dll") &&
+		GetModuleHandleA("materialsystem.dll") &&
+		GetModuleHandleA("inputsystem.dll") &&
+		GetModuleHandleA("vphysics.dll") &&
+		GetModuleHandleA("steamclient64.dll") &&
+		FNV1A::Hash32(U::Core.SearchForDLL("shaderapi")) != FNV1A::Hash32Const("shaderapi");
+}
+
 void CCore::Load()
 {
 	if (m_bUnload = m_bFailed = FNV1A::Hash32(GetProcessName(GetCurrentProcessId()).c_str()) != FNV1A::Hash32Const("tf_win64.exe"))
@@ -78,12 +165,8 @@ void CCore::Load()
 		return;
 	}
 
-	float flStart = SDK::PlatFloatTime();
-#ifndef TEXTMODE
-	while (!U::Memory.FindSignature("client.dll", "48 8B 0D ? ? ? ? 48 8B 10 48 8B 19 48 8B C8 FF 92") || !SDK::GetTeamFortressWindow())
-#else
-	while (!U::Memory.FindSignature("client.dll", "48 8B 0D ? ? ? ? 48 8B 10 48 8B 19 48 8B C8 FF 92"))
-#endif
+	float flStart = GetModuleHandleA("tier0.dll") ? SDK::PlatFloatTime() : 0.0f;
+	while (!ModulesLoaded())
 	{
 		Sleep(500);
 		if (m_bUnload = m_bFailed = SDK::PlatFloatTime() - flStart > 60.f)
@@ -97,7 +180,6 @@ void CCore::Load()
 			return;
 		}
 	}
-	Sleep(500);
 
 	if (m_bUnload = m_bFailed = !U::Signatures.Initialize() || !U::Interfaces.Initialize() || !CheckDXLevel())
 		return;

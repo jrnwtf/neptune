@@ -31,12 +31,11 @@ struct HitboxInfo
 struct TickRecord
 {
 	float m_flSimTime = 0.f;
-	BoneMatrix m_BoneMatrix = {};
-	std::vector<HitboxInfo> m_vHitboxInfos{};
-
 	Vec3 m_vOrigin = {};
 	Vec3 m_vMins = {};
 	Vec3 m_vMaxs = {};
+	BoneMatrix m_BoneMatrix = {};
+	std::vector<HitboxInfo> m_vHitboxInfos = {};
 	bool m_bOnShot = false;
 	Vec3 m_vBreak = {};
 	bool m_bInvalid = false;
