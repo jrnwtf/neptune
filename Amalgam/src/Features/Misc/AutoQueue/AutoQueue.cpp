@@ -74,7 +74,7 @@ void CAutoQueue::Run()
 		
 		if (nPlayerCount < Vars::Misc::Queueing::RQplt.Value)
 		{
-			I::EngineClient->ClientCmd_Unrestricted("disconnect");
+			I::TFGCClientSystem->AbandonCurrentMatch();
 			bWasInGame = false;
 			bWasDisconnected = true;
 			flLastQueueTime = 0.0f;
