@@ -1039,6 +1039,8 @@ namespace Vars
 			CVar(AutoF2Ignored, "Auto F2 ignored", false);
 			CVar(AutoF1Priority, "Auto F1 priority", false);
 			CVar(RandomVotekick, "Random votekick", false);
+			CVar(AutoVoteMap, "Auto vote map", true);
+			CVar(AutoVoteMapOption, "Auto vote map option", 2, SLIDER_CLAMP, 0, 2, 1, "%i");
 			CVar(ForceClass, "Autojoin class", 0);
 			CVarEnum(VoiceCommandSpam, "Voice command spam", 0, NONE, nullptr,
 				VA_LIST("Off", "Random", "Medic", "Thanks", "Nice Shot", "Cheers", "Jeers", "Go Go Go", "Move Up", "Go Left", "Go Right", "Yes", "No", "Incoming", "Spy", "Sentry Ahead", "Need Teleporter", "Pootis", "Need Sentry", "Activate Charge", "Help", "Battle Cry"),
@@ -1049,6 +1051,10 @@ namespace Vars
 				CVar(Interval, "Interval", 3.0f, SLIDER_CLAMP | SLIDER_PRECISION, 0.5f, 10.0f, 0.5f, "%0.1fs");
 				CVar(TeamChat, "Team chat", false);
 				CVar(Randomize, "Randomize", false);
+				CVar(TextReplace, "Text replacement", true);
+				CVar(KillSay, "Kill say", false);
+				CVar(AutoReply, "Auto reply", false);
+				CVar(VotekickResponse, "Votekick response", false);
 			SUBNAMESPACE_END(ChatSpam);
 		SUBNAMESPACE_END(Automation);
 

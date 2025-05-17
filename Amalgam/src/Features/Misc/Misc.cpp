@@ -6,6 +6,7 @@
 #include "../Aimbot/AutoRocketJump/AutoRocketJump.h"
 #include "NamedPipe/NamedPipe.h"
 #include <fstream>
+#include <format>
 
 void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
@@ -493,7 +494,10 @@ void CMisc::Event(IGameEvent* pEvent, uint32_t uHash)
 	case FNV1A::Hash32Const("client_beginconnect"):
 	case FNV1A::Hash32Const("game_newmap"):
 		m_vChatSpamLines.clear();
+		m_vKillSayLines.clear();
+		m_vAutoReplyLines.clear();
 		m_iCurrentChatSpamIndex = 0;
+		m_sLastKilledPlayerName = "";
 		[[fallthrough]];
 	case FNV1A::Hash32Const("teamplay_round_start"):
 		G::LineStorage.clear();
@@ -502,6 +506,43 @@ void CMisc::Event(IGameEvent* pEvent, uint32_t uHash)
 		break;
 	case FNV1A::Hash32Const("player_spawn"):
 		m_bPeekPlaced = false;
+		break;
+	case FNV1A::Hash32Const("vote_maps_changed"):
+		if (Vars::Misc::Automation::AutoVoteMap.Value)
+		{
+			I::EngineClient->ClientCmd_Unrestricted(std::format("next_map_vote {}", Vars::Misc::Automation::AutoVoteMapOption.Value).c_str());
+		}
+		break;
+	case FNV1A::Hash32Const("player_death"):
+		{
+			const int attacker = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("attacker"));
+			const int victim = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("userid"));
+			
+			int localPlayerIdx = I::EngineClient->GetLocalPlayer();
+			if (attacker == localPlayerIdx && victim != localPlayerIdx)
+			{
+				KillSay(victim);
+			}
+		}
+		break;
+	case FNV1A::Hash32Const("player_say"):
+		{
+			const int speaker = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("userid"));
+			const char* text = pEvent->GetString("text");
+			
+			int localPlayerIdx = I::EngineClient->GetLocalPlayer();
+			if (speaker != localPlayerIdx && text)
+			{
+				AutoReply(speaker, text);
+			}
+		}
+		break;
+	case FNV1A::Hash32Const("vote_started"):
+		{
+			const int target = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("userid"));
+			VotekickResponse(target);
+		}
+		break;
 	}
 }
 
@@ -1027,6 +1068,9 @@ void CMisc::ChatSpam(CTFPlayer* pLocal)
 			chatLine = chatLine.substr(0, 150);
 		}
 		
+		// Process text replacements
+		chatLine = ProcessTextReplacements(chatLine);
+		
 		// Build the chat command
 		std::string chatCommand;
 		if (Vars::Misc::Automation::ChatSpam::TeamChat.Value)
@@ -1092,5 +1136,468 @@ void CMisc::AutoReport()
 		
 		uint64_t steamID64 = ((uint64_t)1 << 56) | ((uint64_t)1 << 52) | ((uint64_t)1 << 32) | playerInfo.friendsID;
 		reportFunc(steamID64, 1);
+	}
+}
+
+std::string CMisc::ProcessTextReplacements(std::string text)
+{
+	if (!Vars::Misc::Automation::ChatSpam::TextReplace.Value)
+		return text;
+	
+	auto pLocal = H::Entities.GetLocal();
+	if (!pLocal)
+		return text;
+	
+	std::vector<int> allPlayers;
+	std::vector<int> enemyPlayers;
+	std::vector<int> friendlyPlayers;
+	
+	auto pResource = H::Entities.GetPR();
+	if (!pResource)
+		return text;
+	
+	int localTeam = pLocal->m_iTeamNum();
+	
+	for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
+	{
+		if (!pResource->m_bValid(i) || !pResource->m_bConnected(i))
+			continue;
+			
+		if (i == I::EngineClient->GetLocalPlayer())
+			continue;
+			
+		PlayerInfo_t pi{};
+		if (!I::EngineClient->GetPlayerInfo(i, &pi) || pi.fakeplayer)
+			continue;
+			
+		allPlayers.push_back(i);
+		
+		int playerTeam = pResource->m_iTeam(i);
+		if (playerTeam == localTeam)
+			friendlyPlayers.push_back(i);
+		else if (playerTeam > 1) // Not spectator
+			enemyPlayers.push_back(i);
+	}
+	
+	PlayerInfo_t localPi{};
+	std::string localName = "Player";
+	if (I::EngineClient->GetPlayerInfo(I::EngineClient->GetLocalPlayer(), &localPi))
+		localName = localPi.name;
+	
+	if (text.find("%randomplayer%") != std::string::npos && !allPlayers.empty())
+	{
+		int idx = SDK::RandomInt(0, allPlayers.size() - 1);
+		int playerIdx = allPlayers[idx];
+		PlayerInfo_t pi{};
+		if (I::EngineClient->GetPlayerInfo(playerIdx, &pi))
+		{
+			std::string playerName = F::PlayerUtils.GetPlayerName(playerIdx, pi.name);
+			size_t pos;
+			while ((pos = text.find("%randomplayer%")) != std::string::npos)
+				text.replace(pos, 14, playerName);
+		}
+	}
+	
+	if (text.find("%randomenemy%") != std::string::npos && !enemyPlayers.empty())
+	{
+		int idx = SDK::RandomInt(0, enemyPlayers.size() - 1);
+		int playerIdx = enemyPlayers[idx];
+		PlayerInfo_t pi{};
+		if (I::EngineClient->GetPlayerInfo(playerIdx, &pi))
+		{
+			std::string playerName = F::PlayerUtils.GetPlayerName(playerIdx, pi.name);
+			size_t pos;
+			while ((pos = text.find("%randomenemy%")) != std::string::npos)
+				text.replace(pos, 13, playerName);
+		}
+	}
+	
+	if (text.find("%randomfriendly%") != std::string::npos && !friendlyPlayers.empty())
+	{
+		int idx = SDK::RandomInt(0, friendlyPlayers.size() - 1);
+		int playerIdx = friendlyPlayers[idx];
+		PlayerInfo_t pi{};
+		if (I::EngineClient->GetPlayerInfo(playerIdx, &pi))
+		{
+			std::string playerName = F::PlayerUtils.GetPlayerName(playerIdx, pi.name);
+			size_t pos;
+			while ((pos = text.find("%randomfriendly%")) != std::string::npos)
+				text.replace(pos, 16, playerName);
+		}
+	}
+	
+	if (text.find("%lastkilled%") != std::string::npos && !m_sLastKilledPlayerName.empty())
+	{
+		size_t pos;
+		while ((pos = text.find("%lastkilled%")) != std::string::npos)
+			text.replace(pos, 12, m_sLastKilledPlayerName);
+	}
+	
+	if (text.find("%urname%") != std::string::npos)
+	{
+		size_t pos;
+		while ((pos = text.find("%urname%")) != std::string::npos)
+			text.replace(pos, 8, localName);
+	}
+	
+	if (text.find("%team%") != std::string::npos)
+	{
+		std::string teamName = "Unknown";
+		switch (localTeam)
+		{
+		case 2: teamName = "RED"; break;
+		case 3: teamName = "BLU"; break;
+		}
+		
+		size_t pos;
+		while ((pos = text.find("%team%")) != std::string::npos)
+			text.replace(pos, 6, teamName);
+	}
+	
+	return text;
+}
+
+void CMisc::KillSay(int victim)
+{
+	if (!Vars::Misc::Automation::ChatSpam::KillSay.Value || !I::EngineClient)
+		return;
+	
+	auto pLocal = H::Entities.GetLocal();
+	if (!pLocal || !pLocal->IsAlive())
+		return;
+	
+	PlayerInfo_t victimInfo{};
+	if (I::EngineClient->GetPlayerInfo(victim, &victimInfo))
+	{
+		m_iLastKilledPlayer = victim;
+		m_sLastKilledPlayerName = F::PlayerUtils.GetPlayerName(victim, victimInfo.name);
+	}
+	
+	if (m_vKillSayLines.empty())
+	{
+		try
+		{
+			char gamePath[MAX_PATH];
+			GetModuleFileNameA(GetModuleHandleA("tf_win64.exe"), gamePath, MAX_PATH);
+			std::string gameDir = gamePath;
+			size_t lastSlash = gameDir.find_last_of("\\/");
+			if (lastSlash != std::string::npos)
+				gameDir = gameDir.substr(0, lastSlash);
+			
+			std::vector<std::string> pathsToTry = {
+				"killsay.txt",
+				gameDir + "\\amalgam\\killsay.txt"
+			};
+			
+			bool fileLoaded = false;
+			
+			for (const auto& path : pathsToTry)
+			{
+				try
+				{
+					std::ifstream file(path);
+					if (file.is_open())
+					{
+						std::string line;
+						while (std::getline(file, line))
+						{
+							if (!line.empty())
+								m_vKillSayLines.push_back(line);
+						}
+						file.close();
+						
+						SDK::Output("KillSay", std::format("Loaded {} lines from {}", m_vKillSayLines.size(), path).c_str(), {}, true, true);
+						fileLoaded = true;
+						break;
+					}
+				}
+				catch (...)
+				{
+					continue;
+				}
+			}
+			
+			if (!fileLoaded)
+			{
+				try
+				{
+					std::string defaultPath = gameDir + "\\amalgam\\killsay.txt";
+					std::ofstream newFile(defaultPath);
+					
+					if (newFile.is_open())
+					{
+						newFile << "Get owned %lastkilled%\n";
+						newFile << "Nice try %lastkilled%, better luck next time\n";
+						newFile << "%lastkilled% just got destroyed by %urname%\n";
+						newFile << "%team% > all\n";
+						newFile << "Skill issue, %lastkilled%\n";
+						newFile.close();
+						
+						std::ifstream checkFile(defaultPath);
+						if (checkFile.is_open())
+						{
+							std::string line;
+							while (std::getline(checkFile, line))
+							{
+								if (!line.empty())
+									m_vKillSayLines.push_back(line);
+							}
+							checkFile.close();
+							
+							SDK::Output("KillSay", std::format("Created and loaded default file at {}", defaultPath).c_str(), {}, true, true);
+							fileLoaded = true;
+						}
+					}
+				}
+				catch (...)
+				{
+					// File operations failed, continue to fallback
+				}
+			}
+			
+			if (!fileLoaded || m_vKillSayLines.empty())
+			{
+				SDK::Output("KillSay", "Failed to load or create killsay file, using built-in messages", {}, true, true);
+				m_vKillSayLines.push_back("Get owned %lastkilled%");
+				m_vKillSayLines.push_back("Nice try %lastkilled%, better luck next time");
+				m_vKillSayLines.push_back("%lastkilled% just got destroyed by %urname%");
+			}
+		}
+		catch (...)
+		{
+			m_vKillSayLines.push_back("Get owned %lastkilled%");
+		}
+	}
+	
+	if (m_vKillSayLines.empty())
+		return;
+	
+	std::string killsayLine;
+	const size_t lineCount = m_vKillSayLines.size();
+	
+	int randomIndex = SDK::RandomInt(0, lineCount - 1);
+	if (randomIndex >= 0 && randomIndex < static_cast<int>(lineCount))
+		killsayLine = m_vKillSayLines[randomIndex];
+	else
+		killsayLine = "Get owned %lastkilled%";
+	
+	killsayLine = ProcessTextReplacements(killsayLine);
+	
+	if (killsayLine.length() > 150)
+		killsayLine = killsayLine.substr(0, 150);
+	
+	std::string chatCommand;
+	if (Vars::Misc::Automation::ChatSpam::TeamChat.Value)
+		chatCommand = "say_team \"" + killsayLine + "\"";
+	else
+		chatCommand = "say \"" + killsayLine + "\"";
+	
+	if (I::EngineClient)
+	{
+		SDK::Output("KillSay", std::format("Sending: {}", chatCommand).c_str(), {}, true, true);
+		I::EngineClient->ClientCmd_Unrestricted(chatCommand.c_str());
+	}
+}
+
+void CMisc::AutoReply(int speaker, const char* text)
+{
+	if (!Vars::Misc::Automation::ChatSpam::AutoReply.Value || !I::EngineClient || !text)
+		return;
+	
+	auto pLocal = H::Entities.GetLocal();
+	if (!pLocal || !pLocal->IsAlive())
+		return;
+	
+	std::string message = text;
+	std::transform(message.begin(), message.end(), message.begin(), ::tolower);
+	
+	bool shouldReply = false;
+	std::vector<std::string> triggers = {"bot", "cheater", "hacker", "aimbot", "cheat", "hack"};
+	
+	for (const auto& trigger : triggers)
+	{
+		if (message.find(trigger) != std::string::npos)
+		{
+			shouldReply = true;
+			break;
+		}
+	}
+	
+	if (!shouldReply)
+		return;
+	
+	if (m_vAutoReplyLines.empty())
+	{
+		try
+		{
+			char gamePath[MAX_PATH];
+			GetModuleFileNameA(GetModuleHandleA("tf_win64.exe"), gamePath, MAX_PATH);
+			std::string gameDir = gamePath;
+			size_t lastSlash = gameDir.find_last_of("\\/");
+			if (lastSlash != std::string::npos)
+				gameDir = gameDir.substr(0, lastSlash);
+			
+			std::vector<std::string> pathsToTry = {
+				"autoreply.txt",
+				gameDir + "\\amalgam\\autoreply.txt"
+			};
+			
+			bool fileLoaded = false;
+			
+			for (const auto& path : pathsToTry)
+			{
+				try
+				{
+					std::ifstream file(path);
+					if (file.is_open())
+					{
+						std::string line;
+						while (std::getline(file, line))
+						{
+							if (!line.empty())
+								m_vAutoReplyLines.push_back(line);
+						}
+						file.close();
+						
+						SDK::Output("AutoReply", std::format("Loaded {} lines from {}", m_vAutoReplyLines.size(), path).c_str(), {}, true, true);
+						fileLoaded = true;
+						break;
+					}
+				}
+				catch (...)
+				{
+					continue;
+				}
+			}
+			
+			if (!fileLoaded)
+			{
+				try
+				{
+					std::string defaultPath = gameDir + "\\amalgam\\autoreply.txt";
+					std::ofstream newFile(defaultPath);
+					
+					if (newFile.is_open())
+					{
+						newFile << "I'm not cheating, I'm just better\n";
+						newFile << "Skill issue\n";
+						newFile << "Mad cuz bad\n";
+						newFile << "It's called skill, you should try it sometime\n";
+						newFile << "You're just bad at the game\n";
+						newFile.close();
+						
+						std::ifstream checkFile(defaultPath);
+						if (checkFile.is_open())
+						{
+							std::string line;
+							while (std::getline(checkFile, line))
+							{
+								if (!line.empty())
+									m_vAutoReplyLines.push_back(line);
+							}
+							checkFile.close();
+							
+							SDK::Output("AutoReply", std::format("Created and loaded default file at {}", defaultPath).c_str(), {}, true, true);
+							fileLoaded = true;
+						}
+					}
+				}
+				catch (...)
+				{
+					// File operations failed, continue to fallback
+				}
+			}
+			
+			if (!fileLoaded || m_vAutoReplyLines.empty())
+			{
+				SDK::Output("AutoReply", "Failed to load or create autoreply file, using built-in messages", {}, true, true);
+				m_vAutoReplyLines.push_back("I'm not cheating, I'm just better");
+				m_vAutoReplyLines.push_back("Skill issue");
+				m_vAutoReplyLines.push_back("Mad cuz bad");
+			}
+		}
+		catch (...)
+		{
+			m_vAutoReplyLines.push_back("I'm not cheating, I'm just better");
+		}
+	}
+	
+	if (m_vAutoReplyLines.empty())
+		return;
+	
+	PlayerInfo_t speakerInfo{};
+	std::string speakerName;
+	if (I::EngineClient->GetPlayerInfo(speaker, &speakerInfo))
+		speakerName = F::PlayerUtils.GetPlayerName(speaker, speakerInfo.name);
+	else
+		speakerName = "Player";
+	
+	std::string replyLine;
+	const size_t lineCount = m_vAutoReplyLines.size();
+	
+	int randomIndex = SDK::RandomInt(0, lineCount - 1);
+	if (randomIndex >= 0 && randomIndex < static_cast<int>(lineCount))
+		replyLine = m_vAutoReplyLines[randomIndex];
+	else
+		replyLine = "I'm not cheating, I'm just better";
+	
+	replyLine = ProcessTextReplacements(replyLine);
+	
+	if (replyLine.length() > 150)
+		replyLine = replyLine.substr(0, 150);
+	
+	std::string chatCommand;
+	if (Vars::Misc::Automation::ChatSpam::TeamChat.Value)
+		chatCommand = "say_team \"" + replyLine + "\"";
+	else
+		chatCommand = "say \"" + replyLine + "\"";
+	
+	if (I::EngineClient)
+	{
+		SDK::Output("AutoReply", std::format("Sending: {}", chatCommand).c_str(), {}, true, true);
+		I::EngineClient->ClientCmd_Unrestricted(chatCommand.c_str());
+	}
+}
+
+void CMisc::VotekickResponse(int target)
+{
+	if (!Vars::Misc::Automation::ChatSpam::VotekickResponse.Value || !I::EngineClient)
+		return;
+	
+	auto pLocal = H::Entities.GetLocal();
+	if (!pLocal)
+		return;
+	
+	int localPlayer = I::EngineClient->GetLocalPlayer();
+	bool isLocalTarget = (target == localPlayer);
+	bool isFriendTarget = H::Entities.IsFriend(target);
+	bool isPartyTarget = H::Entities.InParty(target);
+	bool isBoatTarget = F::PlayerUtils.HasTag(target, F::PlayerUtils.TagToIndex(BOT_IGNORE_TAG));
+	
+	std::string response;
+	
+	if (isLocalTarget)
+	{
+		response = "f2, false claim";
+	}
+	else if (isFriendTarget || isPartyTarget || isBoatTarget)
+	{
+		response = "f2, they're legit";
+	}
+	else
+	{
+		response = "f1, cheater";
+	}
+	
+	std::string chatCommand;
+	if (Vars::Misc::Automation::ChatSpam::TeamChat.Value)
+		chatCommand = "say_team \"" + response + "\"";
+	else
+		chatCommand = "say \"" + response + "\"";
+	
+	if (I::EngineClient)
+	{
+		SDK::Output("VotekickResponse", std::format("Sending: {}", chatCommand).c_str(), {}, true, true);
+		I::EngineClient->ClientCmd_Unrestricted(chatCommand.c_str());
 	}
 }

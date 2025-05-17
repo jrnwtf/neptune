@@ -1592,17 +1592,22 @@ void CMenu::MenuMisc(int iTab)
 				if (Section("Automation"))
 				{
 					FDropdown(Vars::Misc::Automation::AntiBackstab, FDropdownEnum::Left); // pitch/fake _might_ slip up some auto backstabs
-					FDropdown(Vars::Misc::Automation::ForceClass, { "Off", "Scout", "Soldier", "Pyro", "Demoman", "Heavy", "Engineer", "Medic", "Sniper", "Spy" }, {0,1,3,7,4,6,9,5,2,8}, FDropdownEnum::Right);
-					FToggle(Vars::Misc::Automation::AntiAFK, FToggleEnum::Left);
-					FToggle(Vars::Misc::Automation::AntiAutobalance, FToggleEnum::Right);
-					FToggle(Vars::Misc::Automation::TauntControl, FToggleEnum::Left);
-					FToggle(Vars::Misc::Automation::KartControl, FToggleEnum::Right);
-					FToggle(Vars::Misc::Automation::BackpackExpander, FToggleEnum::Left);
-					FToggle(Vars::Misc::Automation::AcceptItemDrops, FToggleEnum::Right);
-					FToggle(Vars::Misc::Automation::AutoF2Ignored, FToggleEnum::Left);
-					FToggle(Vars::Misc::Automation::AutoF1Priority, FToggleEnum::Right);
-					FToggle(Vars::Misc::Automation::RandomVotekick, FToggleEnum::Left);;
-					FToggle(Vars::CheaterDetection::AutoIgnoreThai, FToggleEnum::Right);
+					FToggle(Vars::Misc::Automation::AntiAFK, FToggleEnum::Right);
+					FToggle(Vars::Misc::Automation::AntiAutobalance, FToggleEnum::Left);
+					FToggle(Vars::Misc::Automation::TauntControl, FToggleEnum::Right);
+					FToggle(Vars::Misc::Automation::KartControl, FToggleEnum::Left);
+					FToggle(Vars::Misc::Automation::BackpackExpander, FToggleEnum::Right);
+					FToggle(Vars::Misc::Automation::AcceptItemDrops, FToggleEnum::Left);
+					FToggle(Vars::Misc::Automation::AutoF2Ignored, FToggleEnum::Right);
+					FToggle(Vars::Misc::Automation::AutoF1Priority, FToggleEnum::Left);
+					FToggle(Vars::Misc::Automation::RandomVotekick, FToggleEnum::Right);
+					FToggle(Vars::CheaterDetection::AutoIgnoreThai, FToggleEnum::Left);
+					FToggle(Vars::Misc::Automation::AutoVoteMap, FToggleEnum::Right);
+					PushTransparent(!FGet(Vars::Misc::Automation::AutoVoteMap));
+					{
+						FSlider(Vars::Misc::Automation::AutoVoteMapOption, FSliderEnum::Right);
+					}
+					PopTransparent();
 				} EndSection();
 			}
 
@@ -1641,6 +1646,10 @@ void CMenu::MenuMisc(int iTab)
 						FSlider(Vars::Misc::Automation::ChatSpam::Interval, FSliderEnum::Left | FSliderEnum::Clamp);
 						FToggle(Vars::Misc::Automation::ChatSpam::TeamChat, FToggleEnum::Right);
 						FToggle(Vars::Misc::Automation::ChatSpam::Randomize, FToggleEnum::Left);
+						FToggle(Vars::Misc::Automation::ChatSpam::TextReplace, FToggleEnum::Right);
+						FToggle(Vars::Misc::Automation::ChatSpam::KillSay, FToggleEnum::Left);
+						FToggle(Vars::Misc::Automation::ChatSpam::AutoReply, FToggleEnum::Right);
+						FToggle(Vars::Misc::Automation::ChatSpam::VotekickResponse, FToggleEnum::Left);
 					}
 					PopTransparent();
 					FToggle(Vars::Misc::Automation::NoiseSpam, FToggleEnum::Left);
@@ -4305,7 +4314,8 @@ void CMenu::MenuNavEng(int iTab)
 							FSlider(Vars::NavEng::NavBot::AutoScopeCancelTime, FSliderEnum::None);
 						}
 						PopTransparent();	
-						FDropdown(Vars::NavEng::NavBot::WeaponSlot);
+						FDropdown(Vars::NavEng::NavBot::WeaponSlot, FDropdownEnum::Left);
+						FDropdown(Vars::Misc::Automation::ForceClass, { "Off", "Scout", "Soldier", "Pyro", "Demoman", "Heavy", "Engineer", "Medic", "Sniper", "Spy" }, {0,1,3,7,4,6,9,5,2,8}, FDropdownEnum::Right);
 					}
 					PopTransparent();
 				} EndSection();
