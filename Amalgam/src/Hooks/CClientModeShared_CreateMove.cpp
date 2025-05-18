@@ -18,6 +18,7 @@
 #include "../Features/NavBot/NavBot.h"
 #include "../Features/NavBot/FollowBot.h"
 #include "../Features/AutoJoin/AutoJoin.h"
+#include "../Features/Misc/AutoItem/AutoItem.h"
 
 #define MATH_EPSILON (1.f / 16)
 #define PSILENT_EPSILON (1.f - MATH_EPSILON)
@@ -187,10 +188,11 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 
 	// run features
 #ifndef TEXTMODE
-	F::Spectate.CreateMove(pLocal, pCmd);
+	F::Spectate.CreateMove(pCmd);
 #endif
 	F::Misc.RunPre(pLocal, pCmd);
 	F::AutoJoin.Run(pLocal);
+	F::AutoItem.Run(pLocal);
 	F::GameObjectiveController.Update();
 
 	F::Backtrack.BacktrackToCrosshair(pCmd);

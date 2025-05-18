@@ -2986,3 +2986,25 @@ public:
 	unsigned char 	m_iFlags;
 	float		m_flRollDelta;
 };
+
+// Crafting slots on crafting page
+#define CRAFTING_SLOTS_INPUT_ROWS					3
+#define CRAFTING_SLOTS_INPUT_COLUMNS				4
+#define CRAFTING_SLOTS_INPUTPANELS					(CRAFTING_SLOTS_INPUT_ROWS * CRAFTING_SLOTS_INPUT_COLUMNS)
+
+class CCraftingPanel
+{
+public:
+	// Not sure if the paddings are correct
+    byte pad0[808];
+    // Items in the input model panels
+    unsigned long long m_InputItems[CRAFTING_SLOTS_INPUTPANELS];
+    const int *m_ItemPanelCriteria[CRAFTING_SLOTS_INPUTPANELS];
+
+    byte pad1[144];
+    int m_iCurrentlySelectedRecipe;
+
+    byte pad2[72];
+
+    int m_iCraftingAttempts;
+};

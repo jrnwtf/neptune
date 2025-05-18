@@ -5,6 +5,8 @@
 #include "../NavBot/NavEngine/NavEngine.h"
 #include "../Configs/Configs.h"
 #include "../Players/PlayerUtils.h"
+#include "../Misc/AutoItem/AutoItem.h"
+#include "../Misc/Misc.h"
 #include <utility>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/join.hpp>
@@ -186,5 +188,32 @@ void CCommands::Initialize()
 				Vars::Debug::CrashLogging.Value = false; // we are voluntarily crashing, don't give out log if we don't want one
 			}
 			reinterpret_cast<void(*)()>(0)();
+		});
+
+	Register("cat_rent_item", [](const std::deque<std::string>& vArgs)
+		{
+			if (vArgs.size() != 1)
+			{
+				SDK::Output("Usage:\n\tcat_rent_item <item_def_index>");
+				return;
+			}
+
+			item_definition_index_t iDefIdx;
+			try
+			{
+				iDefIdx = atoi(vArgs[0].c_str());
+			}
+			catch (const std::invalid_argument&)
+			{
+				SDK::Output("Invalid item_def_index");
+				return;
+			}
+
+			F::AutoItem.Rent(iDefIdx);
+		});
+
+	Register("cat_achievement_unlock", [](const std::deque<std::string>& vArgs)
+		{
+			F::Misc.UnlockAchievements();
 		});
 }

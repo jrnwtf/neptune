@@ -1120,6 +1120,7 @@
     <ClCompile Include="src\Features\Aimbot\AutoDetonate\AutoDetonate.cpp" />
     <ClCompile Include="src\Features\Aimbot\AutoRocketJump\AutoRocketJump.cpp" />
     <ClCompile Include="src\Features\Aimbot\AutoHeal\AutoHeal.cpp" />
+    <ClCompile Include="src\Features\Misc\AutoItem\AutoItem.cpp" />
     <ClCompile Include="src\Features\Misc\AutoQueue\AutoQueue.cpp" />
     <ClCompile Include="src\Features\Backtrack\Backtrack.cpp" />
     <ClCompile Include="src\Features\CheaterDetection\CheaterDetection.cpp" />
@@ -1443,6 +1444,7 @@
     <ClInclude Include="src\Features\Aimbot\AutoDetonate\AutoDetonate.h" />
     <ClInclude Include="src\Features\Aimbot\AutoRocketJump\AutoRocketJump.h" />
     <ClInclude Include="src\Features\Aimbot\AutoHeal\AutoHeal.h" />
+    <ClInclude Include="src\Features\Misc\AutoItem\AutoItem.h" />
     <ClInclude Include="src\Features\Misc\AutoQueue\AutoQueue.h" />
     <ClInclude Include="src\Features\Backtrack\Backtrack.h" />
     <ClInclude Include="src\Features\CheaterDetection\CheaterDetection.h" />
@@ -1496,6 +1498,7 @@
     <ClInclude Include="src\SDK\Definitions\Interfaces\CServerTools.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\CTFGameRules.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\CTFGCClientSystem.h" />
+    <ClInclude Include="src\SDK\Definitions\Interfaces\CTFInventoryManager.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\IBaseClientDLL.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\IGameMovement.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\IInput.h" />
