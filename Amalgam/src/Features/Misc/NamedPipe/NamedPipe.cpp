@@ -701,6 +701,16 @@ namespace F::NamedPipe
         DWORD lastBroadcastTime = 0;
         const DWORD BROADCAST_INTERVAL_MS = 5000; // 5 seconds
         
+        // Add time tracking for heartbeat and status updates
+        DWORD lastHeartbeatTime = 0;
+        const DWORD MIN_HEARTBEAT_INTERVAL_MS = 2000; // 2 seconds minimum
+        const DWORD MAX_HEARTBEAT_INTERVAL_MS = 4000; // 4 seconds maximum
+        DWORD currentHeartbeatInterval = MIN_HEARTBEAT_INTERVAL_MS;
+        
+        // Time tracking for player updates
+        DWORD lastPlayerUpdateTime = 0;
+        const DWORD PLAYER_UPDATE_INTERVAL_MS = 3000; // 3 seconds
+        
         while (shouldRun)
         {
             DWORD currentTime = GetTickCount();
@@ -747,18 +757,18 @@ namespace F::NamedPipe
     
                     if (hPipe != INVALID_HANDLE_VALUE)
                     {
-    
+
                         currentReconnectAttempts = 0;
                         Log("Connected to pipe");
                         
-    
+
                         DWORD pipeMode = PIPE_READMODE_MESSAGE;
                         SetNamedPipeHandleState(hPipe, &pipeMode, NULL, NULL);
                         
-    
+
                         QueueMessage("Status", "Connected", true);
                         ProcessMessageQueue();
-    
+
                         if (botId != -1)
                         {
                             Log("Using Bot ID: " + std::to_string(botId));
@@ -769,6 +779,10 @@ namespace F::NamedPipe
                         }
                         
                         ClearLocalBots();
+                        
+                        // Reset time trackers on new connection
+                        lastHeartbeatTime = currentTime;
+                        lastPlayerUpdateTime = currentTime;
                     }
                     else
                     {
@@ -801,21 +815,31 @@ namespace F::NamedPipe
 
                 ProcessMessageQueue();
                 
-
-                QueueMessage("Status", "Heartbeat", true);
-                ProcessMessageQueue();
+                // Send heartbeat only every 2-4 seconds
+                if (currentTime - lastHeartbeatTime >= currentHeartbeatInterval)
+                {
+                    QueueMessage("Status", "Heartbeat", true);
+                    ProcessMessageQueue();
+                    lastHeartbeatTime = currentTime;
+                    
+                    // Randomize next heartbeat interval between MIN and MAX
+                    currentHeartbeatInterval = MIN_HEARTBEAT_INTERVAL_MS + 
+                        rand() % (MAX_HEARTBEAT_INTERVAL_MS - MIN_HEARTBEAT_INTERVAL_MS + 1);
+                }
                 
-
-                static int updateCounter = 0;
-                if (++updateCounter % 3 == 0) {
+                // Send player updates every PLAYER_UPDATE_INTERVAL_MS
+                if (currentTime - lastPlayerUpdateTime >= PLAYER_UPDATE_INTERVAL_MS) 
+                {
                     QueueMessage("PlayerClass", std::to_string(GetCurrentPlayerClass()), false);
                     QueueMessage("Map", GetCurrentLevelName(), false);
-                    QueueMessage("ServerInfo", "Player", false); // This will be populated by SendServerInfo internally
+                    QueueMessage("ServerInfo", "Player", false);
                     ProcessMessageQueue();
                     
                     if (I::EngineClient && I::EngineClient->IsInGame()) {
                         UpdateLocalBotIgnoreStatus();
                     }
+                    
+                    lastPlayerUpdateTime = currentTime;
                 }
                 
 
@@ -902,7 +926,8 @@ namespace F::NamedPipe
             if (hPipe == INVALID_HANDLE_VALUE) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             } else {
-                std::this_thread::sleep_for(std::chrono::milliseconds(333));
+                // Increase sleep time to reduce CPU usage
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
             }
         }
 

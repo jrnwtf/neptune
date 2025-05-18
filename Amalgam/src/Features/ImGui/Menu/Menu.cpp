@@ -4313,11 +4313,18 @@ void CMenu::MenuNavEng(int iTab)
 						{
 							FSlider(Vars::NavEng::NavBot::AutoScopeCancelTime, FSliderEnum::None);
 						}
-						PopTransparent();	
+						PopTransparent();
 						FDropdown(Vars::NavEng::NavBot::WeaponSlot, FDropdownEnum::Left);
-						FDropdown(Vars::Misc::Automation::ForceClass, { "Off", "Scout", "Soldier", "Pyro", "Demoman", "Heavy", "Engineer", "Medic", "Sniper", "Spy" }, {0,1,3,7,4,6,9,5,2,8}, FDropdownEnum::Right);
-					}
+						FDropdown(Vars::Misc::Automation::ForceClass, { "Off", "Scout", "Soldier", "Pyro", "Demoman", "Heavy", "Engineer", "Medic", "Sniper", "Spy" }, { 0,1,3,7,4,6,9,5,2,8 }, FDropdownEnum::Right);
+						FToggle(Vars::Misc::Automation::RandomClassSwitch, FToggleEnum::Left);
+						PushTransparent(!FGet(Vars::Misc::Automation::RandomClassSwitch));
+						{
+							FSlider(Vars::Misc::Automation::RandomClassInterval, FSliderEnum::Right);
+							FDropdown(Vars::Misc::Automation::ExcludeProjectileClasses, FDropdownEnum::Multi);
+						}
+						PopTransparent();
 					PopTransparent();
+				    }
 				} EndSection();
 				if (Vars::Debug::Options.Value)
 				{
