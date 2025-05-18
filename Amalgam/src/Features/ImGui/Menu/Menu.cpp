@@ -1534,6 +1534,18 @@ void CMenu::MenuMisc(int iTab)
 					FToggle(Vars::Misc::Automation::NoiseSpam, FToggleEnum::Left);
 					FDropdown(Vars::Misc::Automation::VoiceCommandSpam);
 				} EndSection();
+				if (Section("Auto-Item"))
+				{
+					FDropdown(Vars::Misc::Automation::AutoItem::Enable);
+					FTooltip("Allows you to automatically rent and craft items, very useful for bots.");
+					FSlider(Vars::Misc::Automation::AutoItem::Interval);
+					FSDropdown(Vars::Misc::Automation::AutoItem::Primary, FDropdownEnum::Left);
+					FSDropdown(Vars::Misc::Automation::AutoItem::FirstHat, FDropdownEnum::Right);
+					FSDropdown(Vars::Misc::Automation::AutoItem::Secondary, FDropdownEnum::Left);
+					FSDropdown(Vars::Misc::Automation::AutoItem::SecondHat, FDropdownEnum::Right);
+					FSDropdown(Vars::Misc::Automation::AutoItem::Melee, FDropdownEnum::Left);
+					FSDropdown(Vars::Misc::Automation::AutoItem::ThirdHat, FDropdownEnum::Right);
+				} EndSection();
 			}
 
 			/* Column 2 */

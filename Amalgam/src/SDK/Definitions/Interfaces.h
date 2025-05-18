@@ -34,6 +34,7 @@
 #include "Interfaces/ViewRenderBeams.h"
 #include "Interfaces/VPhysics.h"
 #include "Interfaces/CServerTools.h"
+#include "Interfaces/CTFInventoryManager.h"
 
 #ifndef TEXTMODE
 #include <d3d9.h>

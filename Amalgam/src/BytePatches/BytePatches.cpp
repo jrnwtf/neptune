@@ -62,6 +62,11 @@ bool CBytePatches::Initialize()
 		BytePatch("engine.dll", "0F 82 ? ? ? ? 4A 63 84 2F", 0x0, "90 90 90 90 90 90"), // skybox fix
 		//BytePatch("server.dll", "75 ? 44 38 A7 ? ? ? ? 75 ? 41 3B DD", 0x0, "EB"), // listen server speedhack
 		BytePatch("vguimatsurface.dll", "66 83 FE ? 0F 84", 0x0, "66 83 FE 00"), // include '&' in text size
+
+		// CStorePage::DoPreviewItem
+		BytePatch("client.dll", "40 53 48 81 EC ? ? ? ? 0F B7 DA", 0xe8, "A7"),
+		// engine->ClientCmd_Unrestricted( "disconnect" );
+		BytePatch("client.dll", "73 ? 48 8D 0D ? ? ? ? FF 15 ? ? ? ? 32 C0", 0x0, "EB")
 	};
 
 	bool bFail{false};
