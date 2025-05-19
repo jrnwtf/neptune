@@ -142,6 +142,11 @@ void CMenu::DrawMenu()
 		);
 			PopFont();
 
+		SetCursorPos({ H::Draw.Scale(8), vWindowSize.y - H::Draw.Scale(60) });
+		PushStyleColor(ImGuiCol_Text, F::Render.Accent.Value);
+		FText("dsc.gg/nptntf");
+		PopStyleColor();
+
 		static std::string sSearch = "";
 		SetCursorPos({ H::Draw.Scale(8), vWindowSize.y - H::Draw.Scale(37) });
 		FInputText("Search...", sSearch, ImGuiInputTextFlags_None, H::Draw.Scale(123));
