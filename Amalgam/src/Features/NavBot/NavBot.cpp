@@ -240,16 +240,22 @@ std::vector<CBaseEntity*> CNavBot::GetEntities(CTFPlayer* pLocal, bool bHealth)
 bool CNavBot::GetHealth(CUserCmd* pCmd, CTFPlayer* pLocal, bool bLowPrio)
 {
 	const Priority_list ePriority = bLowPrio ? lowprio_health : health;
-	static Timer tHealthCooldown{};
-	static Timer tRepathTimer;
-	if (!tHealthCooldown.Check(1.f))
-		return F::NavEngine.current_priority == ePriority;
+	static int iLastHealth = 0;
+	static bool bIsPathingForHealth = false;
+	
+	// Check if we need to refresh the path (either health changed or we're not pathing yet)
+	bool bShouldRefresh = iLastHealth != pLocal->m_iHealth() || 
+	                      !bIsPathingForHealth ||
+	                      (F::NavEngine.current_priority == ePriority && F::NavEngine.crumbs.empty());
+	
+	// Update last health
+	iLastHealth = pLocal->m_iHealth();
 
 	// This should also check if pLocal is valid
 	if (ShouldSearchHealth(pLocal, bLowPrio))
 	{
-		// Already pathing, only try to repath every 2s
-		if (F::NavEngine.current_priority == ePriority && !tRepathTimer.Run(2.f))
+		// If we're already pathing for health and don't need to refresh, continue
+		if (F::NavEngine.current_priority == ePriority && !bShouldRefresh)
 			return true;
 
 		auto vHealthpacks = GetEntities(pLocal, true);
@@ -289,6 +295,7 @@ bool CNavBot::GetHealth(CUserCmd* pCmd, CTFPlayer* pLocal, bool bLowPrio)
 		{
 			if (F::NavEngine.navTo(pBestEnt->GetAbsOrigin(), ePriority, true, pBestEnt->GetAbsOrigin().DistToSqr(vLocalOrigin) > pow(200.0f, 2)))
 			{
+				bIsPathingForHealth = true;
 				// Check if we are close enough to the health pack to pick it up (unless its not a health pack)
 				if (pBestEnt->GetAbsOrigin().DistToSqr(pLocal->GetAbsOrigin()) < pow(75.0f, 2) && !pBestEnt->IsDispenser())
 				{
@@ -307,11 +314,12 @@ bool CNavBot::GetHealth(CUserCmd* pCmd, CTFPlayer* pLocal, bool bLowPrio)
 				return true;
 			}
 		}
-
-		tHealthCooldown.Update();
 	}
 	else if (F::NavEngine.current_priority == ePriority)
+	{
 		F::NavEngine.cancelPath();
+		bIsPathingForHealth = false;
+	}
 
 	return false;
 }
@@ -1095,12 +1103,13 @@ bool CNavBot::RunSafeReload(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 
 bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
-	static Timer tStaynearCooldown{};
-	static Timer tInvalidTargetTimer{};
 	static int iStayNearTargetIdx = -1;
+	static Vector vLastTargetPos;
+	static Vector vLastLocalPos;
+	static int iCheckCounter = 0;
 
 	// Stay near is expensive so we have to cache. We achieve this by only checking a pre-determined amount of players every
-	// CreateMove
+	// CreateMove, rotating through them
 	constexpr int MAX_STAYNEAR_CHECKS_RANGE = 3;
 	constexpr int MAX_STAYNEAR_CHECKS_CLOSE = 2;
 
@@ -1111,10 +1120,32 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		return false;
 	}
 
-	// Don't constantly path, it's slow.
-	// Far range classes do not need to repath nearly as often as close range ones.
-	if (!tStaynearCooldown.Run(m_tSelectedConfig.m_bPreferFar ? 2.f : 0.5f))
-		return F::NavEngine.current_priority == staynear;
+	// Check if there's been significant movement from either us or the target
+	Vector vLocalPos = pLocal->GetAbsOrigin();
+	bool bPositionChanged = vLastLocalPos.DistToSqr(vLocalPos) > pow(100.0f, 2);
+	vLastLocalPos = vLocalPos;
+	
+	// Also check if target position changed
+	bool bTargetMoved = false;
+	if (iStayNearTargetIdx != -1)
+	{
+		auto vTargetPos = F::NavParser.GetDormantOrigin(iStayNearTargetIdx);
+		if (vTargetPos && vLastTargetPos.DistToSqr(*vTargetPos) > pow(100.0f, 2))
+		{
+			bTargetMoved = true;
+			vLastTargetPos = *vTargetPos;
+		}
+	}
+
+	// Don't repath unless:
+	// 1. We're not already pathing for staynear
+	// 2. Or the player or target has moved significantly
+	// 3. Or we have no path crumbs left
+	bool bShouldRepath = F::NavEngine.current_priority != staynear || 
+	                     bPositionChanged || 
+	                     bTargetMoved || 
+	                     (F::NavEngine.current_priority == staynear && F::NavEngine.crumbs.empty()) ||
+	                     (++iCheckCounter % 20 == 0); // Periodic check every 20 frames as fallback
 
 	// Too high priority, so don't try
 	if (F::NavEngine.current_priority > staynear)
@@ -1127,8 +1158,6 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	// Check and use our previous target if available
 	if (iPreviousTargetValid)
 	{
-		tInvalidTargetTimer.Update();
-
 		// Check if target is RAGE status - if so, always keep targeting them
 		int iPriority = H::Entities.GetPriority(iStayNearTargetIdx);
 		if (iPriority > F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(DEFAULT_TAG)].m_iPriority)
@@ -1141,7 +1170,7 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		if (vOrigin)
 		{
 			// Check if current target area is valid
-			if (F::NavEngine.isPathing())
+			if (F::NavEngine.isPathing() && !bShouldRepath)
 			{
 				auto pCrumbs = F::NavEngine.getCrumbs();
 				// We cannot just use the last crumb, as it is always nullptr
@@ -1160,15 +1189,15 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		// Else we try to path again
 		if (StayNearTarget(iStayNearTargetIdx))
 			return true;
-
 	}
-	// Our previous target wasn't properly checked, try again unless
-	else if (iPreviousTargetValid == -1 && !tInvalidTargetTimer.Check(0.1f))
+	// Our previous target wasn't properly checked
+	else if (iPreviousTargetValid == -1)
+	{
 		return F::NavEngine.current_priority == staynear;
+	}
 
 	// Failed, invalidate previous target and try others
 	iStayNearTargetIdx = -1;
-	tInvalidTargetTimer.Update();
 
 	// Cancel path so that we dont follow old target
 	if (F::NavEngine.current_priority == staynear)
@@ -1196,6 +1225,8 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		if (StayNearTarget(iPlayerIdx))
 		{
 			iStayNearTargetIdx = iPlayerIdx;
+			if (auto vOrigin = F::NavParser.GetDormantOrigin(iPlayerIdx))
+				vLastTargetPos = *vOrigin;
 			return true;
 		}
 	}
@@ -1237,13 +1268,13 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 			if (StayNearTarget(iIdx))
 			{
 				iStayNearTargetIdx = iIdx;
+				if (auto vOrigin = F::NavParser.GetDormantOrigin(iIdx))
+					vLastTargetPos = *vOrigin;
 				return true;
 			}
 		}
 	}
 
-	// Stay near failed to find any good targets, add extra delay
-	tStaynearCooldown += 3.f;
 	return false;
 }
 
@@ -2033,25 +2064,45 @@ bool CNavBot::CaptureObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 
 bool CNavBot::Roam(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
-	static Timer tRoamTimer;
 	static std::vector<CNavArea*> vVisitedAreas;
-	static Timer tVisitedAreasClearTimer;
 	static CNavArea* pCurrentTargetArea = nullptr;
 	static int iConsecutiveFails = 0;
+	static int iVisitedAreasCounter = 0;
+	static Vector vLastLocalPos;
 
-	// Clear visited areas every 60 seconds to allow revisiting
-	if (tVisitedAreasClearTimer.Run(60.f))
+	// Clear visited areas if we've visited too many (prevents memory bloat)
+	if (vVisitedAreas.size() > 20)
 	{
 		vVisitedAreas.clear();
 		iConsecutiveFails = 0;
 	}
 
-	// Don't path constantly
-	if (!tRoamTimer.Run(2.f))
-		return false;
+	// Check if player has moved significantly since last check
+	Vector vLocalPos = pLocal->GetAbsOrigin();
+	bool bPlayerMoved = vLastLocalPos.DistToSqr(vLocalPos) > pow(200.0f, 2);
+	vLastLocalPos = vLocalPos;
 
+	// If we have a current target and are pathing, continue unless the player has moved significantly
+	if (pCurrentTargetArea && F::NavEngine.current_priority == patrol && !bPlayerMoved)
+		return true;
+
+	// Don't try to path if higher priority task is running
 	if (F::NavEngine.current_priority > patrol)
 		return false;
+
+	// Reset current target
+	pCurrentTargetArea = nullptr;
+
+	// Increment counter for visited areas periodic check
+	iVisitedAreasCounter++;
+	
+	// If we've gone a while without finding new areas, clear the visited list
+	if (iVisitedAreasCounter >= 600) // ~10 seconds at 60fps
+	{
+		vVisitedAreas.clear();
+		iConsecutiveFails = 0;
+		iVisitedAreasCounter = 0;
+	}
 
 	// Defend our objective if possible
 	if (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::DefendObjectives)
@@ -2117,13 +2168,6 @@ bool CNavBot::Roam(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		}
 	}
 	m_bDefending = false;
-
-	// If we have a current target and are pathing, continue
-	if (pCurrentTargetArea && F::NavEngine.current_priority == patrol)
-		return true;
-
-	// Reset current target
-	pCurrentTargetArea = nullptr;
 
 	std::vector<CNavArea*> vValidAreas;
 
