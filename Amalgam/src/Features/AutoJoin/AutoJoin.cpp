@@ -52,7 +52,7 @@ void CAutoJoin::Run(CTFPlayer* pLocal)
 					
 					if (pLocal->m_iTeamNum() == TF_TEAM_RED || pLocal->m_iTeamNum() == TF_TEAM_BLUE)
 					{
-						I::EngineClient->ClientCmd_Unrestricted(std::format("join_class {}", m_aClassNames[selectedClass - 1]).c_str());
+						I::EngineClient->ClientCmd_Unrestricted(std::format("joinclass {}", m_aClassNames[selectedClass - 1]).c_str());
 						I::EngineClient->ClientCmd_Unrestricted("menuclosed");
 					}
 				}
@@ -61,7 +61,7 @@ void CAutoJoin::Run(CTFPlayer* pLocal)
 			{
 				if (pLocal->m_iTeamNum() == TF_TEAM_RED || pLocal->m_iTeamNum() == TF_TEAM_BLUE)
 				{
-					I::EngineClient->ClientCmd_Unrestricted(std::format("join_class {}", m_aClassNames[Vars::Misc::Automation::ForceClass.Value - 1]).c_str());
+					I::EngineClient->ClientCmd_Unrestricted(std::format("joinclass {}", m_aClassNames[Vars::Misc::Automation::ForceClass.Value - 1]).c_str());
 					I::EngineClient->ClientCmd_Unrestricted("menuclosed");
 				}
 				else

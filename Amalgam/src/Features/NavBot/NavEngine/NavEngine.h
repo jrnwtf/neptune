@@ -261,6 +261,7 @@ public:
 	void vischeckPath();
 	void checkBlacklist();
 	void updateStuckTime();
+	void smoothPath();
 	void Run(CUserCmd* pCmd);
 	void Reset(bool bForced = false);
 	void Render();

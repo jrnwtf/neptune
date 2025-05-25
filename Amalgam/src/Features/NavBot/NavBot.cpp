@@ -2787,14 +2787,25 @@ void CNavBot::AutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 
 	CNavArea* pCurrentDestinationArea = nullptr;
 	auto pCrumbs = F::NavEngine.getCrumbs();
-	if (pCrumbs->size() > 4)
+	if (pCrumbs && pCrumbs->size() > 4)
 		pCurrentDestinationArea = pCrumbs->at(4).navarea;
 
 	auto vLocalOrigin = pLocal->GetAbsOrigin();
-	if (!F::NavEngine.IsNavMeshLoaded())
+	
+	// Check if NavEngine is ready before trying to find a nav square
+	if (!F::NavEngine.isReady() || !F::NavEngine.IsNavMeshLoaded())
 		return;
-
-	auto pLocalNav = pCurrentDestinationArea ? pCurrentDestinationArea : F::NavEngine.findClosestNavSquare(vLocalOrigin);
+		
+	CNavArea* pLocalNav = nullptr;
+	
+	// First try to use the destination area if available
+	if (pCurrentDestinationArea && std::isfinite(pCurrentDestinationArea->m_center.x) && 
+	    std::isfinite(pCurrentDestinationArea->m_center.y) && std::isfinite(pCurrentDestinationArea->m_center.z))
+		pLocalNav = pCurrentDestinationArea;
+	// Otherwise try to find the closest nav square
+	else if (std::isfinite(vLocalOrigin.x) && std::isfinite(vLocalOrigin.y) && std::isfinite(vLocalOrigin.z)) 
+		pLocalNav = F::NavEngine.findClosestNavSquare(vLocalOrigin);
+		
 	if (!pLocalNav)
 		return;
 
@@ -2914,6 +2925,16 @@ void CNavBot::AutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 				vTo = vPredictedPos;
 
 			vTo.z += PLAYER_JUMP_HEIGHT;
+			
+			// Additional validation for the target vector
+			if (std::isfinite(vTo.x) && std::isfinite(vTo.y) && std::isfinite(vTo.z))
+				bResult = CheckVisibility(vTo, iEntIndex);
+		}
+		// Fallback: if we can't find a nav area, try using the predicted position directly
+		else if (std::isfinite(vPredictedPos.x) && std::isfinite(vPredictedPos.y) && std::isfinite(vPredictedPos.z))
+		{
+			Vector vTo = vPredictedPos;
+			vTo.z += PLAYER_JUMP_HEIGHT;
 			bResult = CheckVisibility(vTo, iEntIndex);
 		}
 		if (!bSimple)
@@ -2945,32 +2966,6 @@ void CNavBot::RunAutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* 
 		return;
 
 	AutoScope(pLocal, pWeapon, pCmd);
-}
-
-void CNavBot::RunForceWeapon(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
-{
-	if (!pLocal || !pLocal->IsAlive() || !pWeapon)
-		return;
-
-	if (!Vars::NavEng::NavBot::WeaponSlot.Value)
-		return;
-
-	static Timer tSlotTimer{};
-	if (!tSlotTimer.Run(0.2f))
-		return;
-
-	m_iCurrentSlot = pWeapon->GetSlot() + 1;
-
-	// Use best slot without considering reload
-	int iNewSlot = Vars::NavEng::NavBot::WeaponSlot.Value == Vars::NavEng::NavBot::WeaponSlotEnum::Best ?
-		GetBestSlot(pLocal, static_cast<slots>(m_iCurrentSlot), GetNearestPlayerDistance(pLocal, pWeapon)) : Vars::NavEng::NavBot::WeaponSlot.Value;
-
-	if (iNewSlot > 0)
-	{
-		auto sCommand = "slot" + std::to_string(iNewSlot);
-		if (m_iCurrentSlot != iNewSlot)
-			I::EngineClient->ClientCmd_Unrestricted(sCommand.c_str());
-	}
 }
 
 void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)

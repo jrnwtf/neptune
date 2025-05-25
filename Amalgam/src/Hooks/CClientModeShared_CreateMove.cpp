@@ -200,7 +200,6 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	F::EnginePrediction.Start(pLocal, pCmd);
 	F::Aimbot.Run(pLocal, pWeapon, pCmd);
 	F::NavBot.RunAutoScope(pLocal, pWeapon, pCmd);
-	F::NavBot.RunForceWeapon(pLocal, pWeapon);
 	F::NavBot.Run(pLocal, pWeapon, pCmd);
 	F::FollowBot.Run(pLocal, pWeapon, pCmd);
 	F::NavEngine.Run(pCmd);

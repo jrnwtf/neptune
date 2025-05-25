@@ -159,39 +159,77 @@ CNavArea* CNavParser::Map::findClosestNavSquare(const Vector& vec)
 	float overall_best_dist = FLT_MAX, best_dist = FLT_MAX;
 	// If multiple candidates for LocalNav have been found, pick the closest
 	CNavArea* overall_best_square = nullptr, * best_square = nullptr;
-	for (auto& i : navfile.m_areas)
+	
+	// Additional safety check for invalid vectors
+	if (!std::isfinite(vec.x) || !std::isfinite(vec.y) || !std::isfinite(vec.z))
+		return nullptr;
+		
+	try
 	{
-		// Marked bad, do not use if local origin
-		if (pLocal->GetAbsOrigin() == vec)
+		for (auto& i : navfile.m_areas)
 		{
-			auto key = std::pair<CNavArea*, CNavArea*>(&i, &i);
-			if (vischeck_cache.count(key) && vischeck_cache[key].vischeck_state == -1)
+			// Marked bad, do not use if local origin
+			if (pLocal->GetAbsOrigin() == vec)
+			{
+				auto key = std::pair<CNavArea*, CNavArea*>(&i, &i);
+				if (vischeck_cache.count(key) && vischeck_cache[key].vischeck_state == -1)
+					continue;
+			}
+
+			// Check for valid center coordinates
+			if (!std::isfinite(i.m_center.x) || !std::isfinite(i.m_center.y) || !std::isfinite(i.m_center.z))
 				continue;
+
+			float dist = i.m_center.DistToSqr(vec);
+			// Check for NaN or other invalid values
+			if (!std::isfinite(dist))
+				continue;
+				
+			if (dist < best_dist)
+			{
+				best_dist = dist;
+				best_square = &i;
+			}
+
+			if (overall_best_dist < dist)
+				continue;
+
+			auto center_corrected = i.m_center;
+			center_corrected.z += PLAYER_JUMP_HEIGHT;
+
+			// Check if we are within x and y bounds of an area
+			// Add extra validation for IsOverlapping and visibility check
+			if (!i.IsOverlapping(vec))
+				continue;
+				
+			// Skip visibility check if already found a better match
+			if (overall_best_dist < dist)
+				continue;
+				
+			bool isVisible = false;
+			try {
+				isVisible = F::NavParser.IsVectorVisibleNavigation(vec_corrected, center_corrected);
+			}
+			catch (...) {
+				// If visibility check fails, skip this area
+				continue;
+			}
+			
+			if (!isVisible)
+				continue;
+
+			overall_best_dist = dist;
+			overall_best_square = &i;
+
+			// Early return if the area is overlapping and visible
+			if (overall_best_dist == best_dist)
+				return overall_best_square;
 		}
-
-		float dist = i.m_center.DistToSqr(vec);
-		if (dist < best_dist)
-		{
-			best_dist = dist;
-			best_square = &i;
-		}
-
-		if (overall_best_dist < dist)
-			continue;
-
-		auto center_corrected = i.m_center;
-		center_corrected.z += PLAYER_JUMP_HEIGHT;
-
-		// Check if we are within x and y bounds of an area
-		if (!i.IsOverlapping(vec) || !F::NavParser.IsVectorVisibleNavigation(vec_corrected, center_corrected))
-			continue;
-
-		overall_best_dist = dist;
-		overall_best_square = &i;
-
-		// Early return if the area is overlapping and visible
-		if (overall_best_dist == best_dist)
-			return overall_best_square;
+	}
+	catch (...)
+	{
+		// If anything goes wrong, return nullptr
+		return nullptr;
 	}
 
 	return overall_best_square ? overall_best_square : best_square;
@@ -465,7 +503,11 @@ bool CNavParser::IsPlayerPassableNavigation(Vector origin, Vector target, unsign
 	Vector right_ray_endpos = right_ray_origin + relative_endpos;
 	SDK::Trace(right_ray_origin, right_ray_endpos, mask, &Filter, &trace);
 
-	// Return if the right ray hit something
+	if (!trace.DidHit())
+	{
+		SDK::Trace(origin, origin + relative_endpos, mask, &Filter, &trace);
+	}
+
 	return !trace.DidHit();
 }
 
@@ -517,7 +559,7 @@ Vector CNavParser::handleDropdown(Vector current_pos, Vector next_pos)
 		return GetForwardVector(current_pos, vec_angles, PLAYER_WIDTH * 2.5f);
 	}
 	// Handle upward movement
-	if (height_diff > 0)
+	else if (height_diff > 0)
 	{
 		// If it's within jump height, move closer to help with the jump
 		if (height_diff <= PLAYER_JUMP_HEIGHT)
@@ -614,6 +656,10 @@ bool CNavEngine::navTo(const Vector& destination, int priority, bool should_repa
 	}
 
 	crumbs.push_back({ nullptr, destination });
+	
+	// Smooth the path to avoid zigzags and sharp turns
+	smoothPath();
+	
 	inactivity.Update();
 
 	current_priority = priority;
@@ -624,6 +670,92 @@ bool CNavEngine::navTo(const Vector& destination, int priority, bool should_repa
 		last_destination = destination;
 
 	return true;
+}
+
+// Smooths the path by removing unnecessary zigzags and creating more direct routes
+void CNavEngine::smoothPath()
+{
+	if (crumbs.size() < 3)
+		return;
+	
+	std::vector<CNavParser::Crumb> smoothed_crumbs;
+	smoothed_crumbs.push_back(crumbs.front());
+	
+	const auto pLocal = H::Entities.GetLocal();
+	if (!pLocal || !pLocal->IsAlive())
+		return;
+	
+	for (size_t i = 0; i < crumbs.size() - 1; i++)
+	{
+		Vector current = crumbs[i].vec;
+		current.z += PLAYER_JUMP_HEIGHT;
+		
+		const size_t max_look_ahead = 3;
+		size_t furthest_visible = i + 1;
+		
+		for (size_t j = i + 2; j < crumbs.size() && j <= i + max_look_ahead; j++)
+		{
+			Vector target = crumbs[j].vec;
+			target.z += PLAYER_JUMP_HEIGHT;
+			
+			// Check if we can directly see this point and path to it
+			if (F::NavParser.IsPlayerPassableNavigation(current, target))
+			{
+				furthest_visible = j;
+			}
+			else
+			{
+				// Can't see further, stop looking
+				break;
+			}
+		}
+		
+		// Only skip points if we can see at least 2 ahead
+		if (furthest_visible > i + 1)
+		{
+			// Add intermediate points for smoother movement, keeping at least
+			// one intermediate crumb for every two we skip
+			size_t steps = furthest_visible - i;
+			size_t points_to_add = steps / 2;
+			
+			// Always add at least one intermediate point for large jumps
+			if (steps >= 3 && points_to_add < 1)
+				points_to_add = 1;
+				
+			// Add intermediate points
+			for (size_t k = 1; k <= points_to_add; k++)
+			{
+				size_t idx = i + (k * steps) / (points_to_add + 1);
+				if (idx < furthest_visible && idx > i)
+				{
+					// Don't add duplicate points
+					if (smoothed_crumbs.empty() || smoothed_crumbs.back().vec != crumbs[idx].vec)
+						smoothed_crumbs.push_back(crumbs[idx]);
+				}
+			}
+			
+			// Skip to the furthest visible point
+			i = furthest_visible - 1;
+		}
+		
+		// Add the furthest visible point
+		if (furthest_visible < crumbs.size() && (smoothed_crumbs.empty() || smoothed_crumbs.back().vec != crumbs[furthest_visible].vec))
+		{
+			smoothed_crumbs.push_back(crumbs[furthest_visible]);
+		}
+	}
+	
+	// Make sure we keep the final destination
+	if (smoothed_crumbs.back().vec != crumbs.back().vec)
+	{
+		smoothed_crumbs.push_back(crumbs.back());
+	}
+	
+	// Replace the original path with the smoothed one only if it has enough points
+	if (smoothed_crumbs.size() > 1 && smoothed_crumbs.size() >= crumbs.size() / 3)
+	{
+		crumbs = smoothed_crumbs;
+	}
 }
 
 void CNavEngine::vischeckPath()
@@ -927,7 +1059,12 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
 	static Timer tLastJump;
 	static int iTicksSinceJump{ 0 };
-	static bool bCrouch{ false }; // Used to determine if we want to jump or if we want to crouch
+	static bool bCrouch{ false };
+	static Vector vPreviousPosition = Vector(0, 0, 0);
+	static Timer tStuckCheck{};
+	static bool bWasStuck = false;
+	static Vector vAvoidDir = Vector(0, 0, 0);
+	static Timer tAvoidTimer{};
 
 	size_t crumbs_amount = crumbs.size();
 	// No more crumbs, reset status
@@ -935,7 +1072,7 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	{
 		// Invalidate last crumb
 		last_crumb.navarea = nullptr;
-
+		vPreviousPosition = Vector(0, 0, 0);
 		repath_on_fail = false;
 		current_priority = 0;
 		return;
@@ -961,6 +1098,8 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	}
 
 	const auto vLocalOrigin = pLocal->GetAbsOrigin();
+	if (!F::NavEngine.IsNavMeshLoaded())
+		return;
 
 	if (reset_z && !F::Ticks.m_bWarp && !F::Ticks.m_bDoubletap)
 	{
@@ -982,6 +1121,29 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	Vector current_vec = crumbs[0].vec;
 	if (reset_z)
 		current_vec.z = vLocalOrigin.z;
+
+	// Check if we're stuck by comparing position with previous tick
+	bool bCurrentlyStuck = false;
+	if (vPreviousPosition.DistToSqr(vLocalOrigin) < 1.0f && vel.Length2D() < 10.0f && tStuckCheck.Check(0.2f))
+	{
+		bCurrentlyStuck = true;
+
+		// Only trigger stuck behavior if we've been stuck for a short time
+		if (!bWasStuck)
+		{
+			bWasStuck = true;
+			
+			float angle = SDK::RandomFloat(0.0f, 2.0f * PI);
+			vAvoidDir = Vector(cos(angle), sin(angle), 0.0f);
+			tAvoidTimer.Update();
+		}
+	}
+	else if (vel.Length2D() > 50.0f)
+	{
+		bWasStuck = false;
+	}
+
+	vPreviousPosition = vLocalOrigin;
 
 	// We are close enough to the crumb to have reached it
 	if (current_vec.DistToSqr(vLocalOrigin) < pow(50.0f, 2))
@@ -1021,7 +1183,6 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 	}
 
 	auto pWeapon = pLocal->m_hActiveWeapon().Get()->As<CTFWeaponBase>();
-	//if ( !G::DoubleTap && !G::Warp )
 	{
 		// Detect when jumping is necessary.
 		// 1. No jumping if zoomed (or revved)
@@ -1053,7 +1214,7 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 						if (height_diff > pLocal->m_flStepSize() && height_diff <= PLAYER_JUMP_HEIGHT)
 							bShouldJump = true;
 						// Also jump if we're stuck and it might help
-						else if (inactivity.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2))
+						else if (inactivity.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2) || bCurrentlyStuck)
 						{
 							auto pLocalNav = map->findClosestNavSquare(pLocal->GetAbsOrigin());
 							if (pLocalNav && !(pLocalNav->m_attributeFlags & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS)))
@@ -1106,7 +1267,23 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 		}
 	}
 
-	SDK::WalkTo(pCmd, pLocal, current_vec);
+	if (bWasStuck && !tAvoidTimer.Check(0.5f))
+	{
+		Vector vMoveDirection = vAvoidDir;
+		
+		pCmd->forwardmove = vMoveDirection.x * 450.0f;
+		pCmd->sidemove = vMoveDirection.y * 450.0f;
+		
+		if (pLocal->OnSolid() && tLastJump.Check(0.4f))
+		{
+			pCmd->buttons |= IN_JUMP;
+			tLastJump.Update();
+		}
+	}
+	else
+	{
+		SDK::WalkTo(pCmd, pLocal, current_vec);
+	}
 }
 
 void CNavEngine::Render()
