@@ -67,6 +67,14 @@ private:
 	// Overwrite to return true for payload carts as an example
 	bool m_bOverwriteCapture = false;
 private:
+	bool IsValidTarget(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iEntIndex);
+	bool IsAreaValid(CNavArea* pArea, const Vector& vRefPosition, float flMinDist, float flMaxDist, bool bCheckBlacklist = true);
+	
+	template<typename T>
+	std::vector<std::pair<T*, float>> SortEntitiesByDistance(const std::vector<T*>& entities, const Vector& vOrigin);
+	
+	bool TryNavigateTo(const Vector& vTarget, Priority_list priority, bool bAllowRepath = true);
+	bool DefendObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
 	bool ShouldAssist(CTFPlayer* pLocal, int iTargetIdx);
 	int ShouldTarget(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iPlayerIdx);
 	int ShouldTargetBuilding(CTFPlayer* pLocal, int iEntIdx);

@@ -82,35 +82,35 @@ bool CNavBot::ShouldSearchAmmo(CTFPlayer* pLocal)
 	return false;
 }
 
-int CNavBot::ShouldTarget(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iPlayerIdx)
+bool CNavBot::IsValidTarget(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iEntIndex) 
 {
-	auto pEntity = I::ClientEntityList->GetClientEntity(iPlayerIdx);
+	auto pEntity = I::ClientEntityList->GetClientEntity(iEntIndex);
 	if (!pEntity || !pEntity->IsPlayer())
-		return -1;
+		return false;
 
 	auto pPlayer = pEntity->As<CTFPlayer>();
 	if (!pPlayer->IsAlive() || pPlayer == pLocal)
-		return -1;
+		return false;
 
 	// pipe local playa
 	PlayerInfo_t pi{};
-	if (I::EngineClient->GetPlayerInfo(iPlayerIdx, &pi) && F::NamedPipe::IsLocalBot(pi.friendsID))
-		return 0;
+	if (I::EngineClient->GetPlayerInfo(iEntIndex, &pi) && F::NamedPipe::IsLocalBot(pi.friendsID))
+		return false;
 
-	if (F::PlayerUtils.IsIgnored(iPlayerIdx))
-		return 0;
+	if (F::PlayerUtils.IsIgnored(iEntIndex))
+		return false;
 
-	if (Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Friends && H::Entities.IsFriend(iPlayerIdx)
-		|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Party && H::Entities.InParty(iPlayerIdx)
+	if (Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Friends && H::Entities.IsFriend(iEntIndex)
+		|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Party && H::Entities.InParty(iEntIndex)
 		|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Invulnerable && pPlayer->IsInvulnerable() && G::SavedDefIndexes[SLOT_MELEE] != Heavy_t_TheHolidayPunch
 		|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Cloaked && pPlayer->IsInvisible() && pPlayer->GetInvisPercentage() >= Vars::Aimbot::General::IgnoreCloak.Value
 		|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::DeadRinger && pPlayer->m_bFeignDeathReady()
 		|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Taunting && pPlayer->IsTaunting()
 		|| Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Disguised && pPlayer->InCond(TF_COND_DISGUISED))
-		return 0;
+		return false;
 
 	if (pPlayer->m_iTeamNum() == pLocal->m_iTeamNum())
-		return 0;
+		return false;
 
 	if (Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Vaccinator)
 	{
@@ -118,19 +118,94 @@ int CNavBot::ShouldTarget(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iPlayer
 		{
 		case EWeaponType::HITSCAN:
 			if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BULLET_RESIST) && SDK::AttribHookValue(0, "mod_pierce_resists_absorbs", pWeapon) != 0)
-				return 0;
+				return false;
 			break;
 		case EWeaponType::PROJECTILE:
 			if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_FIRE_RESIST) && (G::SavedWepIds[SLOT_PRIMARY] == TF_WEAPON_FLAMETHROWER && G::SavedWepIds[SLOT_SECONDARY] == TF_WEAPON_FLAREGUN))
-				return 0;
+				return false;
 			else if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BULLET_RESIST) && G::SavedWepIds[SLOT_PRIMARY] == TF_WEAPON_COMPOUND_BOW)
-				return 0;
+				return false;
 			else if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BLAST_RESIST))
-				return 0;
+				return false;
 		}
 	}
 
-	return 1;
+	return true;
+}
+
+// Area validation helper
+bool CNavBot::IsAreaValid(CNavArea* pArea, const Vector& vRefPosition, float flMinDist, float flMaxDist, bool bCheckBlacklist) 
+{
+	if (!pArea)
+		return false;
+		
+	// Check blacklist
+	if (bCheckBlacklist && F::NavEngine.getFreeBlacklist()->find(pArea) != F::NavEngine.getFreeBlacklist()->end())
+		return false;
+		
+	// Check spawn room
+	if (pArea->m_TFattributeFlags & (TF_NAV_SPAWN_ROOM_BLUE | TF_NAV_SPAWN_ROOM_RED | TF_NAV_SPAWN_ROOM_EXIT))
+		return false;
+		
+	// Check distance if reference position is provided
+	if (!vRefPosition.IsZero()) {
+		float flDist = pArea->m_center.DistToSqr(vRefPosition);
+		if ((flMinDist > 0 && flDist < pow(flMinDist, 2)) || 
+			(flMaxDist > 0 && flDist > pow(flMaxDist, 2)))
+			return false;
+	}
+	
+	return true;
+}
+
+// Entity sorting helper
+template<typename T>
+std::vector<std::pair<T*, float>> CNavBot::SortEntitiesByDistance(const std::vector<T*>& entities, const Vector& vOrigin) 
+{
+	std::vector<std::pair<T*, float>> vSorted;
+	vSorted.reserve(entities.size());
+	
+	for (auto pEntity : entities) {
+		if (!pEntity)
+			continue;
+		float flDist = pEntity->GetAbsOrigin().DistToSqr(vOrigin);
+		vSorted.emplace_back(pEntity, flDist);
+	}
+	
+	std::sort(vSorted.begin(), vSorted.end(), 
+		[](const std::pair<T*, float>& a, const std::pair<T*, float>& b) {
+			return a.second < b.second;
+		});
+	
+	return vSorted;
+}
+
+// Navigation helper
+bool CNavBot::TryNavigateTo(const Vector& vTarget, Priority_list priority, bool bAllowRepath) 
+{
+	static Vector vLastTarget;
+	static Timer tRepathTimer;
+	
+	// Already on correct path and not time to repath
+	if (F::NavEngine.current_priority == priority && 
+		vLastTarget.DistToSqr(vTarget) < pow(50.0f, 2) &&
+		!tRepathTimer.Run(2.0f)) {
+		return true;
+	}
+	
+	// Try to path
+	if (F::NavEngine.navTo(vTarget, priority, true, !F::NavEngine.isPathing())) {
+		vLastTarget = vTarget;
+		return true;
+	}
+	
+	return false;
+}
+
+// Replace the ShouldTarget function with the new IsValidTarget helper
+int CNavBot::ShouldTarget(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iPlayerIdx)
+{
+	return IsValidTarget(pLocal, pWeapon, iPlayerIdx) ? 1 : 0;
 }
 
 int CNavBot::ShouldTargetBuilding(CTFPlayer* pLocal, int iEntIdx)
@@ -1108,11 +1183,6 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	static Vector vLastLocalPos;
 	static int iCheckCounter = 0;
 
-	// Stay near is expensive so we have to cache. We achieve this by only checking a pre-determined amount of players every
-	// CreateMove, rotating through them
-	constexpr int MAX_STAYNEAR_CHECKS_RANGE = 3;
-	constexpr int MAX_STAYNEAR_CHECKS_CLOSE = 2;
-
 	// Stay near is off
 	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::StalkEnemies))
 	{
@@ -1137,15 +1207,12 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		}
 	}
 
-	// Don't repath unless:
-	// 1. We're not already pathing for staynear
-	// 2. Or the player or target has moved significantly
-	// 3. Or we have no path crumbs left
+	// Don't repath unless needed
 	bool bShouldRepath = F::NavEngine.current_priority != staynear || 
 	                     bPositionChanged || 
 	                     bTargetMoved || 
 	                     (F::NavEngine.current_priority == staynear && F::NavEngine.crumbs.empty()) ||
-	                     (++iCheckCounter % 20 == 0); // Periodic check every 20 frames as fallback
+	                     (++iCheckCounter % 20 == 0);
 
 	// Too high priority, so don't try
 	if (F::NavEngine.current_priority > staynear)
@@ -1154,9 +1221,8 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		return false;
 	}
 
-	int iPreviousTargetValid = IsStayNearTargetValid(pLocal, pWeapon, iStayNearTargetIdx);
-	// Check and use our previous target if available
-	if (iPreviousTargetValid)
+	// First check if previous target is still valid
+	if (iStayNearTargetIdx > 0)
 	{
 		// Check if target is RAGE status - if so, always keep targeting them
 		int iPriority = H::Entities.GetPriority(iStayNearTargetIdx);
@@ -1169,11 +1235,10 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		auto vOrigin = F::NavParser.GetDormantOrigin(iStayNearTargetIdx);
 		if (vOrigin)
 		{
-			// Check if current target area is valid
+			// Check if current target area is still valid
 			if (F::NavEngine.isPathing() && !bShouldRepath)
 			{
 				auto pCrumbs = F::NavEngine.getCrumbs();
-				// We cannot just use the last crumb, as it is always nullptr
 				if (pCrumbs->size() > 2)
 				{
 					auto tLastCrumb = (*pCrumbs)[pCrumbs->size() - 2];
@@ -1182,29 +1247,23 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 						return true;
 				}
 			}
-			// Else Check our origin for validity (Only for ranged classes)
-			else if (m_tSelectedConfig.m_bPreferFar && IsAreaValidForStayNear(*vOrigin, F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin())))
+			// Try to path again
+			if (StayNearTarget(iStayNearTargetIdx))
 				return true;
 		}
-		// Else we try to path again
-		if (StayNearTarget(iStayNearTargetIdx))
-			return true;
-	}
-	// Our previous target wasn't properly checked
-	else if (iPreviousTargetValid == -1)
-	{
-		return F::NavEngine.current_priority == staynear;
 	}
 
-	// Failed, invalidate previous target and try others
+	// Previous target invalid, find a new one
 	iStayNearTargetIdx = -1;
 
-	// Cancel path so that we dont follow old target
+	// Cancel path so that we don't follow old target
 	if (F::NavEngine.current_priority == staynear)
 		F::NavEngine.cancelPath();
 
+	// First check for high priority (RAGE) targets
 	std::vector<std::pair<int, int>> vPriorityPlayers{};
 	std::unordered_set<int> sHasPriority{};
+	
 	for (const auto& pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
 	{
 		int iPriority = H::Entities.GetPriority(pEntity->entindex());
@@ -1214,12 +1273,16 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 			sHasPriority.insert(pEntity->entindex());
 		}
 	}
-	std::sort(vPriorityPlayers.begin(), vPriorityPlayers.end(), [](std::pair<int, int> a, std::pair<int, int> b) { return a.second > b.second; });
+	
+	std::sort(vPriorityPlayers.begin(), vPriorityPlayers.end(), 
+	         [](std::pair<int, int> a, std::pair<int, int> b) { 
+	             return a.second > b.second; 
+	         });
 
-	// First check for RAGE players - they get highest priority
+	// Try RAGE targets first
 	for (auto [iPlayerIdx, _] : vPriorityPlayers)
 	{
-		if (!IsStayNearTargetValid(pLocal, pWeapon, iPlayerIdx))
+		if (!IsValidTarget(pLocal, pWeapon, iPlayerIdx))
 			continue;
 
 		if (StayNearTarget(iPlayerIdx))
@@ -1231,40 +1294,36 @@ bool CNavBot::StayNear(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		}
 	}
 
-	// Then check other players
-	int iCalls = 0;
-	auto iAdvanceCount = m_tSelectedConfig.m_bPreferFar ? MAX_STAYNEAR_CHECKS_RANGE : MAX_STAYNEAR_CHECKS_CLOSE;
+	// Then try regular targets sorted by distance
+	auto vLocalOrigin = pLocal->GetAbsOrigin();
 	std::vector<std::pair<int, float>> vSortedPlayers{};
+	
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
 	{
-		if (iCalls >= iAdvanceCount)
-			break;
-		iCalls++;
-
-		// Skip RAGE players as we already checked them
+		// Skip RAGE players already checked
 		if (sHasPriority.contains(pEntity->entindex()))
 			continue;
 
 		auto iPlayerIdx = pEntity->entindex();
-		if (!IsStayNearTargetValid(pLocal, pWeapon, iPlayerIdx))
-		{
-			iCalls--;
+		if (!IsValidTarget(pLocal, pWeapon, iPlayerIdx))
 			continue;
-		}
 
 		auto vOrigin = F::NavParser.GetDormantOrigin(iPlayerIdx);
 		if (!vOrigin)
 			continue;
 
-		vSortedPlayers.push_back({ iPlayerIdx, vOrigin->DistToSqr(pLocal->GetAbsOrigin()) });
+		vSortedPlayers.push_back({ iPlayerIdx, vOrigin->DistToSqr(vLocalOrigin) });
 	}
+	
 	if (!vSortedPlayers.empty())
 	{
-		std::sort(vSortedPlayers.begin(), vSortedPlayers.end(), [](std::pair<int, float> a, std::pair<int, float> b) { return a.second < b.second; });
+		std::sort(vSortedPlayers.begin(), vSortedPlayers.end(), 
+		         [](std::pair<int, float> a, std::pair<int, float> b) { 
+		             return a.second < b.second; 
+		         });
 
 		for (auto [iIdx, _] : vSortedPlayers)
 		{
-			// Succeeded pathing
 			if (StayNearTarget(iIdx))
 			{
 				iStayNearTargetIdx = iIdx;
@@ -2069,8 +2128,9 @@ bool CNavBot::Roam(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	static int iConsecutiveFails = 0;
 	static int iVisitedAreasCounter = 0;
 	static Vector vLastLocalPos;
+	static Timer tClearTimer;
 
-	// Clear visited areas if we've visited too many (prevents memory bloat)
+	// Limit visited areas list size
 	if (vVisitedAreas.size() > 20)
 	{
 		vVisitedAreas.clear();
@@ -2097,91 +2157,33 @@ bool CNavBot::Roam(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	iVisitedAreasCounter++;
 	
 	// If we've gone a while without finding new areas, clear the visited list
-	if (iVisitedAreasCounter >= 600) // ~10 seconds at 60fps
+	if (tClearTimer.Run(10.f))
 	{
 		vVisitedAreas.clear();
 		iConsecutiveFails = 0;
 		iVisitedAreasCounter = 0;
 	}
 
-	// Defend our objective if possible
-	if (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::DefendObjectives)
+	// Try to defend objectives if enabled
+	if (DefendObjectives(pLocal, pWeapon))
 	{
-		int iEnemyTeam = pLocal->m_iTeamNum() == TF_TEAM_BLUE ? TF_TEAM_RED : TF_TEAM_BLUE;
-
-		std::optional<Vector> vTarget;
-		const auto vLocalOrigin = pLocal->GetAbsOrigin();
-
-		switch (F::GameObjectiveController.m_eGameMode)
-		{
-		case TF_GAMETYPE_CP:
-			vTarget = GetControlPointGoal(vLocalOrigin, iEnemyTeam);
-			break;
-		case TF_GAMETYPE_ESCORT:
-			vTarget = GetPayloadGoal(vLocalOrigin, iEnemyTeam);
-			break;
-		default:
-			break;
-		}
-		if (vTarget)
-		{
-			if (auto pClosestNav = F::NavEngine.findClosestNavSquare(*vTarget))
-			{
-				// Get closest enemy to vicheck
-				CBaseEntity* pClosestEnemy = nullptr;
-				float flBestDist = FLT_MAX;
-				for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
-				{
-					if (!ShouldTarget(pLocal, pWeapon, pEntity->entindex()))
-						continue;
-
-					float flDist = pEntity->GetAbsOrigin().DistToSqr(pClosestNav->m_center);
-					if (flDist > pow(flBestDist, 2))
-						continue;
-
-					flBestDist = flDist;
-					pClosestEnemy = pEntity;
-				}
-
-				std::optional<Vector> vVischeckPoint;
-				if (pClosestEnemy && flBestDist <= 1000.f)
-				{
-					vVischeckPoint = pClosestEnemy->GetAbsOrigin();
-					vVischeckPoint->z += PLAYER_JUMP_HEIGHT;
-				}
-
-				if (auto vClosestSpot = FindClosestHidingSpot(pClosestNav, vVischeckPoint, 5))
-				{
-					if ((*vClosestSpot).first->m_center.DistToSqr(vLocalOrigin) <= pow(250.0f, 2))
-					{
-						F::NavEngine.cancelPath();
-						m_bDefending = true;
-						return true;
-					}
-					if (F::NavEngine.navTo((*vClosestSpot).first->m_center, patrol, true, !F::NavEngine.isPathing()))
-					{
-						m_bDefending = true;
-						return true;
-					}
-				}
-			}
-		}
+		return true;
 	}
-	m_bDefending = false;
+	else
+	{
+		m_bDefending = false;
+	}
 
+	// Get valid areas for roaming
 	std::vector<CNavArea*> vValidAreas;
+	vValidAreas.reserve(F::NavEngine.getNavFile()->m_areas.size() / 4); // Reserve a reasonable amount
 
-	// Get all nav areas
 	for (auto& tArea : F::NavEngine.getNavFile()->m_areas)
 	{
-		// Skip if area is blacklisted
-		if (F::NavEngine.getFreeBlacklist()->find(&tArea) != F::NavEngine.getFreeBlacklist()->end())
+		// Use our helper to check if area is valid
+		if (!IsAreaValid(&tArea, pLocal->GetAbsOrigin(), 0, 0))
 			continue;
-
-		// Dont run in spawn bitch
-		if (tArea.m_TFattributeFlags & (TF_NAV_SPAWN_ROOM_BLUE | TF_NAV_SPAWN_ROOM_RED | TF_NAV_SPAWN_ROOM_EXIT))
-			continue;
-
+			
 		// Skip if we recently visited this area
 		if (std::find(vVisitedAreas.begin(), vVisitedAreas.end(), &tArea) != vVisitedAreas.end())
 			continue;
@@ -2209,42 +2211,22 @@ bool CNavBot::Roam(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	// Reset fail counter since we found valid areas
 	iConsecutiveFails = 0;
 
-	// Different strategies for area selection
-	std::vector<CNavArea*> vPotentialTargets;
-
-	// Strategy 1: Try to find areas that are far from current position
-	for (auto pArea : vValidAreas)
-	{
-		float flDist = pArea->m_center.DistToSqr(pLocal->GetAbsOrigin());
-		if (flDist > pow(2000.0f, 2))
-			vPotentialTargets.push_back(pArea);
-	}
-
-	// Strategy 2: If no far areas found, try areas that are at medium distance
-	if (vPotentialTargets.empty())
-	{
-		for (auto pArea : vValidAreas)
-		{
-			float flDist = pArea->m_center.DistToSqr(pLocal->GetAbsOrigin());
-			if (flDist > pow(1000.0f, 2) && flDist <= pow(2000.0f, 2))
-				vPotentialTargets.push_back(pArea);
-		}
-	}
-
-	// Strategy 3: If still no areas found, use any valid area
-	if (vPotentialTargets.empty())
-		vPotentialTargets = vValidAreas;
-
-	// Shuffle the potential targets to add randomness
-	for (size_t i = vPotentialTargets.size() - 1; i > 0; i--)
-	{
-		int j = rand() % (i + 1);
-		std::swap(vPotentialTargets[i], vPotentialTargets[j]);
-	}
+	// Sort areas by distance (far to near) to promote exploration
+	std::sort(vValidAreas.begin(), vValidAreas.end(), 
+	         [&vLocalPos](CNavArea* a, CNavArea* b) {
+	             return a->m_center.DistToSqr(vLocalPos) > b->m_center.DistToSqr(vLocalPos);
+	         });
 
 	// Try to path to potential targets
-	for (auto pArea : vPotentialTargets)
+	for (int i = 0; i < std::min(10, (int)vValidAreas.size()); i++)
 	{
+		// Add some randomness to avoid predictable patterns
+		int iRandIndex = i + (rand() % std::min(3, (int)vValidAreas.size() - i));
+		if (iRandIndex >= vValidAreas.size())
+			iRandIndex = i;
+			
+		auto pArea = vValidAreas[iRandIndex];
+		
 		if (F::NavEngine.navTo(pArea->m_center, patrol))
 		{
 			pCurrentTargetArea = pArea;
@@ -2256,111 +2238,90 @@ bool CNavBot::Roam(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	return false;
 }
 
-// Check if a position is safe from stickies and projectiles
-static bool IsPositionSafe(Vector vPos, int iLocalTeam)
+// Add a new helper function for objective defense (extracted from Roam)
+bool CNavBot::DefendObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
-	if (!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Stickies) &&
-		!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Projectiles))
-		return true;
+	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::DefendObjectives))
+		return false;
+		
+	int iEnemyTeam = pLocal->m_iTeamNum() == TF_TEAM_BLUE ? TF_TEAM_RED : TF_TEAM_BLUE;
 
-	for (auto pEntity : H::Entities.GetGroup(EGroupType::WORLD_PROJECTILES))
+	std::optional<Vector> vTarget;
+	const auto vLocalOrigin = pLocal->GetAbsOrigin();
+
+	switch (F::GameObjectiveController.m_eGameMode)
 	{
-		if (pEntity->m_iTeamNum() == iLocalTeam)
+	case TF_GAMETYPE_CP:
+		vTarget = this->GetControlPointGoal(vLocalOrigin, iEnemyTeam);
+		break;
+	case TF_GAMETYPE_ESCORT:
+		vTarget = this->GetPayloadGoal(vLocalOrigin, iEnemyTeam);
+		break;
+	default:
+		break;
+	}
+	
+	if (!vTarget)
+		return false;
+		
+	auto pClosestNav = F::NavEngine.findClosestNavSquare(*vTarget);
+	if (!pClosestNav)
+		return false;
+
+	// Find good defensive position
+	std::optional<Vector> vVischeckPoint;
+	
+	// Check if any enemies are nearby to defend against
+	CBaseEntity* pClosestEnemy = nullptr;
+	float flBestDist = 1000.f;
+	
+	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
+	{
+		if (!IsValidTarget(pLocal, pWeapon, pEntity->entindex()))
 			continue;
 
-		auto iClassId = pEntity->GetClassID();
-		// Check for stickies
-		if (Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Stickies && iClassId == ETFClassID::CTFGrenadePipebombProjectile)
-		{
-			// Skip non-sticky projectiles
-			if (pEntity->As<CTFGrenadePipebombProjectile>()->m_iType() != TF_GL_MODE_REMOTE_DETONATE)
-				continue;
+		float flDist = pEntity->GetAbsOrigin().DistToSqr(pClosestNav->m_center);
+		if (flDist > pow(flBestDist, 2))
+			continue;
 
-			float flDist = pEntity->m_vecOrigin().DistToSqr(vPos);
-			if (flDist < pow(Vars::NavEng::NavBot::StickyDangerRange.Value, 2))
-				return false;
-		}
-
-		// Check for rockets and pipes
-		if (Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Projectiles)
-		{
-			if (iClassId == ETFClassID::CTFProjectile_Rocket ||
-				(iClassId == ETFClassID::CTFGrenadePipebombProjectile && pEntity->As<CTFGrenadePipebombProjectile>()->m_iType() == TF_GL_MODE_REGULAR))
-			{
-				float flDist = pEntity->m_vecOrigin().DistToSqr(vPos);
-				if (flDist < pow(Vars::NavEng::NavBot::ProjectileDangerRange.Value, 2))
-					return false;
-			}
-		}
+		flBestDist = sqrt(flDist);
+		pClosestEnemy = pEntity;
 	}
-	return true;
-}
 
-bool CNavBot::EscapeProjectiles(CTFPlayer* pLocal)
-{
-	if (!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Stickies) &&
-		!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Projectiles))
-		return false;
-
-	// Don't interrupt higher priority tasks
-	if (F::NavEngine.current_priority > danger)
-		return false;
-
-	// Check if current position is unsafe
-	if (IsPositionSafe(pLocal->GetAbsOrigin(), pLocal->m_iTeamNum()))
+	if (pClosestEnemy)
 	{
-		if (F::NavEngine.current_priority == danger)
+		vVischeckPoint = pClosestEnemy->GetAbsOrigin();
+		vVischeckPoint->z += PLAYER_JUMP_HEIGHT;
+	}
+
+	if (auto vClosestSpot = this->FindClosestHidingSpot(pClosestNav, vVischeckPoint, 5))
+	{
+		if ((*vClosestSpot).first->m_center.DistToSqr(vLocalOrigin) <= pow(250.0f, 2))
+		{
 			F::NavEngine.cancelPath();
-		return false;
-	}
-
-	auto pLocalNav = F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin());
-	if (!pLocalNav)
-		return false;
-
-	// Find safe nav areas sorted by distance
-	std::vector<std::pair<CNavArea*, float>> vSafeAreas;
-	for (auto& tArea : F::NavEngine.getNavFile()->m_areas)
-	{
-		// Skip current area
-		if (&tArea == pLocalNav)
-			continue;
-
-		// Skip if area is blacklisted
-		if (F::NavEngine.getFreeBlacklist()->find(&tArea) != F::NavEngine.getFreeBlacklist()->end())
-			continue;
-
-		if (IsPositionSafe(tArea.m_center, pLocal->m_iTeamNum()))
+			m_bDefending = true;
+			return true;
+		}
+		
+		if (F::NavEngine.navTo((*vClosestSpot).first->m_center, patrol, true, !F::NavEngine.isPathing()))
 		{
-			float flDist = tArea.m_center.DistToSqr(pLocal->GetAbsOrigin());
-			vSafeAreas.push_back({ &tArea, flDist });
+			m_bDefending = true;
+			return true;
 		}
 	}
-
-	// Sort by distance
-	std::sort(vSafeAreas.begin(), vSafeAreas.end(),
-			  [](const std::pair<CNavArea*, float>& a, const std::pair<CNavArea*, float>& b)
-			  {
-				  return a.second < b.second;
-			  });
-
-	// Try to path to closest safe area
-	for (auto& pArea : vSafeAreas)
-	{
-		if (F::NavEngine.navTo(pArea.first->m_center, danger))
-			return true;
-	}
-
+	
 	return false;
 }
 
+// Finally, clean up the EscapeDanger function
 bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 {
 	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::EscapeDanger))
 		return false;
 
 	// Don't escape while we have the intel
-	if (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::DontEscapeDangerIntel && F::GameObjectiveController.m_eGameMode == TF_GAMETYPE_CTF)
+	if (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::DontEscapeDangerIntel && 
+	    F::GameObjectiveController.m_eGameMode == TF_GAMETYPE_CTF)
 	{
 		auto iFlagCarrierIdx = F::FlagController.GetCarrier(pLocal->m_iTeamNum());
 		if (iFlagCarrierIdx == pLocal->entindex())
@@ -2368,196 +2329,150 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 	}
 
 	// Priority too high
-	if (F::NavEngine.current_priority > danger || F::NavEngine.current_priority == prio_melee || F::NavEngine.current_priority == run_safe_reload)
+	if (F::NavEngine.current_priority > danger || 
+	    F::NavEngine.current_priority == prio_melee || 
+	    F::NavEngine.current_priority == run_safe_reload)
 		return false;
 
 	auto pLocalNav = F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin());
+	if (!pLocalNav)
+		return false;
 
 	// Check if we're in spawn - if so, ignore danger and focus on getting out
-	if (pLocalNav && (pLocalNav->m_TFattributeFlags & TF_NAV_SPAWN_ROOM_RED || pLocalNav->m_TFattributeFlags & TF_NAV_SPAWN_ROOM_BLUE))
+	if (pLocalNav->m_TFattributeFlags & (TF_NAV_SPAWN_ROOM_RED | TF_NAV_SPAWN_ROOM_BLUE))
 		return false;
 
 	auto pBlacklist = F::NavEngine.getFreeBlacklist();
-	
-	// Check if we're in any danger
-	bool bInHighDanger = false;
-	bool bInMediumDanger = false;
-	bool bInLowDanger = false;
-	
-	if (pBlacklist && pBlacklist->contains(pLocalNav))
+	if (!pBlacklist || !pBlacklist->contains(pLocalNav))
 	{
-		// Check building spot - don't run away from that
-		if ((*pBlacklist)[pLocalNav].value == BR_BAD_BUILDING_SPOT)
-			return false;
+		// No longer in danger
+		if (F::NavEngine.current_priority == danger)
+			F::NavEngine.cancelPath();
+		return false;
+	}
+	
+	// Determine danger level
+	BlacklistReason_enum eReason = (*pBlacklist)[pLocalNav].value;
+	
+	// Check building spot - don't run away from that
+	if (eReason == BR_BAD_BUILDING_SPOT)
+		return false;
+		
+	// Categorize danger levels
+	bool bInHighDanger = (eReason == BR_SENTRY || eReason == BR_STICKY || eReason == BR_ENEMY_INVULN);
+	bool bInMediumDanger = (eReason == BR_SENTRY_MEDIUM || eReason == BR_ENEMY_NORMAL);
+	bool bInLowDanger = (eReason == BR_SENTRY_LOW || eReason == BR_ENEMY_DORMANT);
+	
+	// Only escape from high danger by default
+	// Also escape from medium danger if health is low
+	bool bShouldEscape = bInHighDanger || 
+	                   (bInMediumDanger && pLocal->m_iHealth() < pLocal->GetMaxHealth() * 0.5f);
+	
+	// If we're not in high danger and on an important task, we might not need to escape
+	bool bImportantTask = (F::NavEngine.current_priority == capture || 
+	                      F::NavEngine.current_priority == health ||
+	                      F::NavEngine.current_priority == engineer);
+	
+	if (!bShouldEscape && bImportantTask)
+		return false;
+	
+	// If we're in low danger only and on any task, don't escape
+	if (bInLowDanger && !bInMediumDanger && !bInHighDanger && F::NavEngine.current_priority != 0)
+		return false;
+
+	static CNavArea* pTargetArea = nullptr;
+	// Already running and our target is still valid
+	if (F::NavEngine.current_priority == danger && 
+	    pTargetArea && !pBlacklist->contains(pTargetArea))
+		return true;
+
+	// Find safe areas to escape to
+	std::vector<std::pair<CNavArea*, float>> vSafeAreas;
+	vSafeAreas.reserve(F::NavEngine.getNavFile()->m_areas.size() / 8);
+	
+	// Determine the reference position to stay close to
+	Vector vReferencePosition = pLocal->GetAbsOrigin();
+	bool bHasTarget = false;
+
+	// If we were pursuing a specific objective, try to stay close to it
+	if (F::NavEngine.current_priority != 0 && 
+	    F::NavEngine.current_priority != danger && 
+	    !F::NavEngine.crumbs.empty())
+	{
+		// Use the last crumb in our path as the reference position
+		vReferencePosition = F::NavEngine.crumbs.back().vec;
+		bHasTarget = true;
+	}
+
+	// Find all potentially safe areas
+	for (auto& tArea : F::NavEngine.getNavFile()->m_areas)
+	{
+		// Skip if area is blacklisted with high danger
+		auto it = pBlacklist->find(&tArea);
+		if (it != pBlacklist->end())
+		{
+			// Check danger level - allow pathing through medium or low danger if needed
+			BlacklistReason_enum danger = it->second.value;
 			
-		// Determine danger level
-		switch ((*pBlacklist)[pLocalNav].value)
-		{
-		case BR_SENTRY:
-		case BR_STICKY:
-		case BR_ENEMY_INVULN:
-			bInHighDanger = true;
-			break;
-		case BR_SENTRY_MEDIUM:
-		case BR_ENEMY_NORMAL:
-			bInMediumDanger = true;
-			break;
-		case BR_SENTRY_LOW:
-		case BR_ENEMY_DORMANT:
-			bInLowDanger = true;
-			break;
-		}
-		
-		// Only escape from high danger by default
-		// Also escape from medium danger if health is low
-		bool bShouldEscape = bInHighDanger || 
-		                    (bInMediumDanger && pLocal->m_iHealth() < pLocal->GetMaxHealth() * 0.5f);
-		
-		// If we're not in high danger and on an important task, we might not need to escape
-		bool bImportantTask = (F::NavEngine.current_priority == capture || 
-		                      F::NavEngine.current_priority == health ||
-		                      F::NavEngine.current_priority == engineer);
-		
-		if (!bShouldEscape && bImportantTask)
-			return false;
-		
-		// If we're in low danger only and on any task, don't escape
-		if (bInLowDanger && !bInMediumDanger && !bInHighDanger && F::NavEngine.current_priority != 0)
-			return false;
-
-		static CNavArea* pTargetArea = nullptr;
-		// Already running and our target is still valid
-		if (F::NavEngine.current_priority == danger && !pBlacklist->contains(pTargetArea))
-			return true;
-
-		// Determine the reference position to stay close to
-		Vector vReferencePosition;
-		bool bHasTarget = false;
-
-		// If we were pursuing a specific objective or following a target, try to stay close to it
-		if (F::NavEngine.current_priority != 0 && F::NavEngine.current_priority != danger && !F::NavEngine.crumbs.empty())
-		{
-			// Use the last crumb in our path as the reference position
-			vReferencePosition = F::NavEngine.crumbs.back().vec;
-			bHasTarget = true;
-		}
-		else
-		{
-			// Use current position if we don't have a target
-			vReferencePosition = pLocal->GetAbsOrigin();
-		}
-
-		std::vector<std::pair<CNavArea*, float>> vSafeAreas;
-		// Copy areas and calculate distances
-		for (auto& tArea : F::NavEngine.getNavFile()->m_areas)
-		{
-			// Skip if area is blacklisted with high danger
-			auto it = pBlacklist->find(&tArea);
-			if (it != pBlacklist->end())
-			{
-				// Check danger level - allow pathing through medium or low danger if we have a target
-				BlacklistReason_enum danger = it->second.value;
-				
-				// Skip high danger areas
-				if (danger == BR_SENTRY || danger == BR_STICKY || danger == BR_ENEMY_INVULN)
-					continue;
-					
-				// Skip medium danger areas if we don't have a target or have low health
-				if ((danger == BR_SENTRY_MEDIUM || danger == BR_ENEMY_NORMAL) && 
-				    (!bHasTarget || pLocal->m_iHealth() < pLocal->GetMaxHealth() * 0.5f))
-					continue;
-			}
-
-			float flDistToReference = tArea.m_center.DistToSqr(vReferencePosition);
-			float flDistToCurrent = tArea.m_center.DistToSqr(pLocal->GetAbsOrigin());
-			
-			// Only consider areas that are not too far away and reachable
-			if (flDistToCurrent < pow(2000.0f, 2))
-			{
-				// If we have a target, prioritize staying near it
-				float flScore = bHasTarget ? flDistToReference : flDistToCurrent;
-				vSafeAreas.push_back({ &tArea, flScore });
-			}
-		}
-
-		// Sort by score (closer to reference position is better)
-		std::sort(vSafeAreas.begin(), vSafeAreas.end(), [](const std::pair<CNavArea*, float>& a, const std::pair<CNavArea*, float>& b) -> bool
-		{
-			return a.second < b.second;
-		});
-
-		int iCalls = 0;
-		// Try to path to safe areas
-		for (auto& pArea : vSafeAreas)
-		{
-			// Try the 10 closest areas (increased from 5 to give more options)
-			iCalls++;
-			if (iCalls > 10)
-				break;
-
-			// Check if this area is safe (not near enemy)
-			bool bIsSafe = true;
-			for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
-			{
-				if (!ShouldTarget(pLocal, pLocal->m_hActiveWeapon().Get()->As<CTFWeaponBase>(), pEntity->entindex()))
-					continue;
-
-				// If enemy is too close to this area, mark it as unsafe
-				float flDist = pEntity->GetAbsOrigin().DistToSqr(pArea.first->m_center);
-				if (flDist < pow(m_tSelectedConfig.m_flMinFullDanger * 1.2f, 2))
-				{
-					bIsSafe = false;
-					break;
-				}
-			}
-
-			// Skip unsafe areas
-			if (!bIsSafe)
+			// Skip high danger areas
+			if (danger == BR_SENTRY || danger == BR_STICKY || danger == BR_ENEMY_INVULN)
 				continue;
-
-			if (F::NavEngine.navTo(pArea.first->m_center, danger))
-			{
-				pTargetArea = pArea.first;
-				return true;
-			}
+				
+			// Skip medium danger areas if we have low health
+			if ((danger == BR_SENTRY_MEDIUM || danger == BR_ENEMY_NORMAL) && 
+			    pLocal->m_iHealth() < pLocal->GetMaxHealth() * 0.5f)
+				continue;
 		}
 
-		// If we couldn't find a safe area close to the target, fall back to any safe area
-		if (iCalls <= 0 || (bInHighDanger && iCalls < 10))
+		float flDistToReference = tArea.m_center.DistToSqr(vReferencePosition);
+		float flDistToCurrent = tArea.m_center.DistToSqr(pLocal->GetAbsOrigin());
+		
+		// Only consider areas that are not too far away
+		if (flDistToCurrent < pow(2000.0f, 2))
 		{
-			std::vector<CNavArea*> vAreaPointers;
-			// Get all areas
-			for (auto& tArea : F::NavEngine.getNavFile()->m_areas)
-				vAreaPointers.push_back(&tArea);
-
-			// Sort by distance to player
-			std::sort(vAreaPointers.begin(), vAreaPointers.end(), [&](CNavArea* a, CNavArea* b) -> bool
-			{
-				return a->m_center.DistToSqr(pLocal->GetAbsOrigin()) < b->m_center.DistToSqr(pLocal->GetAbsOrigin());
-			});
-
-			// Try to path to any non-blacklisted area
-			for (auto& pArea : vAreaPointers)
-			{
-				auto it = pBlacklist->find(pArea);
-				if (it == pBlacklist->end() || 
-				   (bInHighDanger && (it->second.value == BR_SENTRY_LOW || it->second.value == BR_ENEMY_DORMANT)))
-				{
-					iCalls++;
-					if (iCalls > 5)
-						break;
-					if (F::NavEngine.navTo(pArea->m_center, danger))
-					{
-						pTargetArea = pArea;
-						return true;
-					}
-				}
-			}
+			// If we have a target, prioritize staying near it
+			float flScore = bHasTarget ? flDistToReference : flDistToCurrent;
+			vSafeAreas.push_back({ &tArea, flScore });
 		}
 	}
-	// No longer in danger
-	else if (F::NavEngine.current_priority == danger)
-		F::NavEngine.cancelPath();
+
+	// Sort by score (closer to reference position is better)
+	std::sort(vSafeAreas.begin(), vSafeAreas.end(), 
+	         [](const std::pair<CNavArea*, float>& a, const std::pair<CNavArea*, float>& b) {
+	             return a.second < b.second;
+	         });
+
+	// Try the first 10 areas
+	for (int i = 0; i < std::min(10, (int)vSafeAreas.size()); i++)
+	{
+		auto pArea = vSafeAreas[i].first;
+		
+		// Check if this area is safe from enemies
+		bool bIsSafe = true;
+		for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
+		{
+			if (!IsValidTarget(pLocal, pLocal->m_hActiveWeapon().Get()->As<CTFWeaponBase>(), pEntity->entindex()))
+				continue;
+
+			// If enemy is too close to this area, mark it as unsafe
+			float flDist = pEntity->GetAbsOrigin().DistToSqr(pArea->m_center);
+			if (flDist < pow(m_tSelectedConfig.m_flMinFullDanger * 1.2f, 2))
+			{
+				bIsSafe = false;
+				break;
+			}
+		}
+
+		// Skip unsafe areas
+		if (!bIsSafe)
+			continue;
+
+		if (F::NavEngine.navTo(pArea->m_center, danger))
+		{
+			pTargetArea = pArea;
+			return true;
+		}
+	}
 
 	return false;
 }
@@ -3088,18 +3003,9 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 	UpdateSlot(pLocal, pWeapon, tClosestEnemy);
 	UpdateEnemyBlacklist(pLocal, pWeapon, m_iCurrentSlot);
 
-	// TODO:
-	// Add engie logic and target sentries logic. (Done)
-	// Also maybe add some spy sapper logic? (No.)
-	// Fix defend and help capture logic
-	// Fix reload stuff because its really janky
-	// Finish auto wewapon stuff
-	// Make a better closest enemy lorgic
-
 	if (EscapeSpawn(pLocal)
-		|| EscapeProjectiles(pLocal)
-		|| MeleeAttack(pCmd, pLocal, m_iCurrentSlot, tClosestEnemy)
 		|| EscapeDanger(pLocal)
+		|| MeleeAttack(pCmd, pLocal, m_iCurrentSlot, tClosestEnemy)
 		|| GetHealth(pCmd, pLocal)
 		|| GetAmmo(pCmd, pLocal)
 		//|| RunReload( pLocal, pWeapon )
