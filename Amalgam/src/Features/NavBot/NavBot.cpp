@@ -40,42 +40,24 @@ bool CNavBot::ShouldSearchAmmo(CTFPlayer* pLocal)
 	if (F::NavEngine.current_priority > ammo)
 		return false;
 
-	for (int i = 0; i < 2; i++)
+	auto pWeapon = pLocal->m_hActiveWeapon().Get()->As<CTFWeaponBase>();
+	if (!pWeapon)
+		return false;
+
+	// Special check for sniper - check reserve ammo directly
+	if (pLocal->m_iClass() == TF_CLASS_SNIPER && pWeapon->GetWeaponID() == TF_WEAPON_SNIPERRIFLE && 
+		pLocal->GetAmmoCount(pWeapon->m_iPrimaryAmmoType()) <= 5)
+		return true;
+
+	// Check all weapons in inventory
+	for (int i = 0; i < MAX_WEAPONS; i++)
 	{
-		auto pWeapon = pLocal->GetWeaponFromSlot(i);
-		if (!pWeapon || SDK::WeaponDoesNotUseAmmo(pWeapon))
+		auto pTempWeapon = pLocal->GetWeaponFromSlot(i);
+		if (!pTempWeapon)
 			continue;
 
-		int iWepID = pWeapon->GetWeaponID();
-		int iMaxClip = pWeapon->GetWeaponInfo() ? pWeapon->GetWeaponInfo()->iMaxClip1 : 0;
-		int iCurClip = pWeapon->m_iClip1();
-		
-		if ((iWepID == TF_WEAPON_SNIPERRIFLE ||
-			iWepID == TF_WEAPON_SNIPERRIFLE_CLASSIC ||
-			iWepID == TF_WEAPON_SNIPERRIFLE_DECAP) &&
-			pLocal->GetAmmoCount(pWeapon->m_iPrimaryAmmoType()) <= 5)
-			return true;
-
-		if (!pWeapon->HasAmmo())
-			return true;
-
-		int iMaxAmmo = SDK::GetWeaponMaxReserveAmmo(iWepID, pWeapon->m_iItemDefinitionIndex());
-		if (!iMaxAmmo)
-			continue;
-
-		// Reserve ammo
-		int iResAmmo = pLocal->GetAmmoCount(pWeapon->m_iPrimaryAmmoType());
-		
-		// If clip and reserve are both very low, definitely get ammo
-		if (iMaxClip > 0 && iCurClip <= iMaxClip * 0.25f && iResAmmo <= iMaxAmmo * 0.25f)
-			return true;
-			
-		// Don't search for ammo if we have more than 60% of max reserve
-		if (iResAmmo >= iMaxAmmo * 0.6f)
-			continue;
-			
-		// Search for ammo if we're below 33% of capacity
-		if (iResAmmo <= iMaxAmmo / 3)
+		// Check if weapon uses primary ammo and has no ammo
+		if (!SDK::WeaponDoesNotUseAmmo(pTempWeapon) && !pTempWeapon->HasAmmo())
 			return true;
 	}
 
@@ -401,7 +383,6 @@ bool CNavBot::GetHealth(CUserCmd* pCmd, CTFPlayer* pLocal, bool bLowPrio)
 
 bool CNavBot::GetAmmo(CUserCmd* pCmd, CTFPlayer* pLocal, bool bForce)
 {
-	static Timer tRepathTimer;
 	static Timer tAmmoCooldown{};
 	static bool bWasForce = false;
 
@@ -411,13 +392,18 @@ bool CNavBot::GetAmmo(CUserCmd* pCmd, CTFPlayer* pLocal, bool bForce)
 	if (bForce || ShouldSearchAmmo(pLocal))
 	{
 		// Already pathing, only try to repath every 2s
-		if (F::NavEngine.current_priority == ammo && !tRepathTimer.Run(2.f))
-			return true;
+		static Timer tRepathTimer;
+		if (F::NavEngine.current_priority == ammo)
+		{
+			if (!tRepathTimer.Run(2.f))
+				return true;
+		}
 		else
 			bWasForce = false;
 
-		auto vAmmopacks = GetEntities(pLocal);
+		auto vAmmopacks = GetEntities(pLocal, false);
 		auto vDispensers = GetDispensers(pLocal);
+
 		auto vTotalEnts = vAmmopacks;
 
 		// Add dispensers and sort list again
@@ -427,55 +413,20 @@ bool CNavBot::GetAmmo(CUserCmd* pCmd, CTFPlayer* pLocal, bool bForce)
 			vTotalEnts.reserve(vAmmopacks.size() + vDispensers.size());
 			vTotalEnts.insert(vTotalEnts.end(), vDispensers.begin(), vDispensers.end());
 			std::sort(vTotalEnts.begin(), vTotalEnts.end(), [&](CBaseEntity* a, CBaseEntity* b) -> bool
-					  {
-						  return a->GetAbsOrigin().DistToSqr(vLocalOrigin) < b->GetAbsOrigin().DistToSqr(vLocalOrigin);
-					  });
-		}
-
-		// If we have no targets, return false
-		if (vTotalEnts.empty())
-		{
-			tAmmoCooldown.Update();
-			return false;
-		}
-
-		// Find the best entity to path to by comparing path distances
-		CBaseEntity* pBestEnt = vTotalEnts.front();
-
-		if (vTotalEnts.size() > 1)
-		{
-			F::NavEngine.navTo(pBestEnt->GetAbsOrigin(), ammo, true, pBestEnt->GetAbsOrigin().DistToSqr(vLocalOrigin) > pow(200.0f, 2));
-			const auto iFirstTargetPoints = F::NavEngine.crumbs.size();
-			F::NavEngine.cancelPath();
-
-			F::NavEngine.navTo(vTotalEnts.at(1)->GetAbsOrigin(), ammo, true, vTotalEnts.at(1)->GetAbsOrigin().DistToSqr(vLocalOrigin) > pow(200.0f, 2));
-			const auto iSecondTargetPoints = F::NavEngine.crumbs.size();
-			F::NavEngine.cancelPath();
-			pBestEnt = iSecondTargetPoints < iFirstTargetPoints ? vTotalEnts.at(1) : pBestEnt;
-		}
-
-		// Finally path to the best entity
-		if (F::NavEngine.navTo(pBestEnt->GetAbsOrigin(), ammo, true, pBestEnt->GetAbsOrigin().DistToSqr(vLocalOrigin) > pow(200.0f, 2)))
-		{
-			// When we're close enough to an ammo pack, actively try to pick it up
-			if (pBestEnt->GetAbsOrigin().DistToSqr(pLocal->GetAbsOrigin()) < pow(75.0f, 2) && !pBestEnt->IsDispenser())
-			{
-				// Try to touch the ammo pack
-				auto pLocalNav = F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin());
-				if (pLocalNav)
 				{
-					Vector2D vTo = { pBestEnt->GetAbsOrigin().x, pBestEnt->GetAbsOrigin().y };
-					Vector vPathPoint = pLocalNav->getNearestPoint(vTo);
-					vPathPoint.z = pBestEnt->GetAbsOrigin().z;
-
-					// Walk towards the ammo pack
-					SDK::WalkTo(pCmd, pLocal, vPathPoint);
-				}
-			}
-			bWasForce = bForce;
-			return true;
+					return a->GetAbsOrigin().DistToSqr(vLocalOrigin) < b->GetAbsOrigin().DistToSqr(vLocalOrigin);
+				});
 		}
 
+		for (const auto ammopack : vTotalEnts)
+		{
+			// If we succeed, don't try to path to other packs
+			if (F::NavEngine.navTo(ammopack->GetAbsOrigin(), ammo, true, ammopack->GetAbsOrigin().DistToSqr(vLocalOrigin) > pow(200.0f, 2)))
+			{
+				bWasForce = bForce;
+				return true;
+			}
+		}
 		tAmmoCooldown.Update();
 	}
 	else if (F::NavEngine.current_priority == ammo && !bWasForce)
