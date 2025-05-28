@@ -1,8 +1,10 @@
 #pragma once
+#include <Windows.h>
 #include "Definitions/Definitions.h"
 #include "Definitions/Main/CUserCmd.h"
 #include "../Utils/Signatures/Signatures.h"
 #include "../Utils/Memory/Memory.h"
+#include "../Utils/Interfaces/Interfaces.h"
 
 MAKE_SIGNATURE(RandomSeed, "client.dll", "0F B6 1D ? ? ? ? 89 9D", 0x0);
 
@@ -99,5 +101,31 @@ namespace G
 	{
 		static auto pRandomSeed = reinterpret_cast<int*>(U::Memory.RelToAbs(S::RandomSeed()));
 		return pRandomSeed;
+	}
+	
+	inline float GetFPS()
+	{
+		static float lastFrameTime = 0.0f;
+		static float lastQueryTime = 0.0f;
+		static float cachedFPS = 60.0f;
+		
+		LARGE_INTEGER currentTime, frequency;
+		QueryPerformanceCounter(&currentTime);
+		QueryPerformanceFrequency(&frequency);
+		
+		float currentTimeFloat = static_cast<float>(currentTime.QuadPart) / static_cast<float>(frequency.QuadPart);
+		float deltaTime = currentTimeFloat - lastFrameTime;
+		
+		if (currentTimeFloat - lastQueryTime > 0.5f)
+		{
+			if (deltaTime > 0.0001f)
+			{
+				cachedFPS = 1.0f / deltaTime;
+			}
+			lastQueryTime = currentTimeFloat;
+		}
+		
+		lastFrameTime = currentTimeFloat;
+		return cachedFPS;
 	}
 };

@@ -319,9 +319,13 @@ namespace Vars
 				Tapfire = 1 << 0, WaitForHeadshot = 1 << 1, WaitForCharge = 1 << 2, ScopedOnly = 1 << 3, AutoScope = 1 << 4, AutoRev = 1 << 5, ExtinguishTeam = 1 << 6);
 			CVar(PointScale, "Point scale", 0.f, SLIDER_CLAMP | SLIDER_PRECISION, 0.f, 100.f, 5.f, "%g%%");
 			CVar(TapFireDist, "Tapfire distance", 1000.f, SLIDER_MIN | SLIDER_PRECISION, 250.f, 1000.f, 50.f);
+			CVar(TargetEveryone, "Target everyone directly", false);
 
 			CVar(BoneSizeSubtract, "Bone size subtract", 1.f, NOSAVE | DEBUGVAR | SLIDER_MIN, 0.f, 4.f, 0.25f);
 			CVar(BoneSizeMinimumScale, "Bone size minimum scale", 1.f, NOSAVE | DEBUGVAR | SLIDER_CLAMP, 0.f, 1.f, 0.1f);
+			CVarEnum(LowFPSOptimizations, "Low FPS optimizations", 0b00111, DROPDOWN_MULTI, nullptr,
+				VA_LIST("Target everyone directly", "Reduce hitboxes", "Simplify hitbox scans", "Skip backtracking records", "Use faster visibility checks"),
+				TargetAll = 1 << 0, ReduceHitboxes = 1 << 1, SimplifyScans = 1 << 2, SkipBacktracking = 1 << 3, FastVisChecks = 1 << 4);
 		SUBNAMESPACE_END(Hitscan);
 
 		SUBNAMESPACE_BEGIN(Projectile)
@@ -1058,8 +1062,8 @@ namespace Vars
 				CVar(AutoScopeCancelTime, "Auto scope cancel time", 3, SLIDER_MIN, 1, 5, 1, "%is");
 
 				CVarEnum(Preferences, "Preferences", 0b0, DROPDOWN_MULTI, nullptr,
-					VA_LIST("Get health", "Get ammo", "Reload weapons", "Stalk enemies", "Defend objectives", "Capture objectives", "Help capture objectives", "Escape danger", "Safe capping", "Target sentries", "Auto engie", "##Divider", "Target sentries low range", "Help capture objective friend only", "Dont escape danger with intel", "Group with others"),
-					SearchHealth = 1 << 0, SearchAmmo = 1 << 1, ReloadWeapons = 1 << 2, StalkEnemies = 1 << 3, DefendObjectives = 1 << 4, CaptureObjectives = 1 << 5, HelpCaptureObjectives = 1 << 6, EscapeDanger = 1 << 7, SafeCapping = 1 << 8, TargetSentries = 1 << 9, AutoEngie = 1 << 10, TargetSentriesLowRange = 1 << 11, HelpFriendlyCaptureObjectives = 1 << 12, DontEscapeDangerIntel = 1 << 13, GroupWithOthers = 1 << 14);
+					VA_LIST("Get health", "Get ammo", "Reload weapons", "Stalk enemies", "Defend objectives", "Capture objectives", "Help capture objectives", "Escape danger", "Safe capping", "Target sentries", "Auto engie", "##Divider", "Target sentries low range", "Help capture objective friend only", "Dont escape danger with intel", "Group with others", "No randomize CP"),
+					SearchHealth = 1 << 0, SearchAmmo = 1 << 1, ReloadWeapons = 1 << 2, StalkEnemies = 1 << 3, DefendObjectives = 1 << 4, CaptureObjectives = 1 << 5, HelpCaptureObjectives = 1 << 6, EscapeDanger = 1 << 7, SafeCapping = 1 << 8, TargetSentries = 1 << 9, AutoEngie = 1 << 10, TargetSentriesLowRange = 1 << 11, HelpFriendlyCaptureObjectives = 1 << 12, DontEscapeDangerIntel = 1 << 13, GroupWithOthers = 1 << 14, NoRandomizeCP = 1 << 15);
 				
 				CVar(StickyDangerRange, "Sticky danger range", 600, NOSAVE | DEBUGVAR, 50, 1500, 50);
 				CVar(ProjectileDangerRange, "Projectile danger range", 600, NOSAVE | DEBUGVAR, 50, 1500, 50);

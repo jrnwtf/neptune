@@ -432,9 +432,15 @@ bool CNavBot::GetAmmo(CUserCmd* pCmd, CTFPlayer* pLocal, bool bForce)
 					  });
 		}
 
-		CBaseEntity* pBestEnt = nullptr;
-		if (!vTotalEnts.empty())
-			pBestEnt = vTotalEnts.front();
+		// If we have no targets, return false
+		if (vTotalEnts.empty())
+		{
+			tAmmoCooldown.Update();
+			return false;
+		}
+
+		// Find the best entity to path to by comparing path distances
+		CBaseEntity* pBestEnt = vTotalEnts.front();
 
 		if (vTotalEnts.size() > 1)
 		{
@@ -448,28 +454,26 @@ bool CNavBot::GetAmmo(CUserCmd* pCmd, CTFPlayer* pLocal, bool bForce)
 			pBestEnt = iSecondTargetPoints < iFirstTargetPoints ? vTotalEnts.at(1) : pBestEnt;
 		}
 
-		if (pBestEnt)
+		// Finally path to the best entity
+		if (F::NavEngine.navTo(pBestEnt->GetAbsOrigin(), ammo, true, pBestEnt->GetAbsOrigin().DistToSqr(vLocalOrigin) > pow(200.0f, 2)))
 		{
-			if (F::NavEngine.navTo(pBestEnt->GetAbsOrigin(), ammo, true, pBestEnt->GetAbsOrigin().DistToSqr(vLocalOrigin) > pow(200.0f, 2)))
+			// When we're close enough to an ammo pack, actively try to pick it up
+			if (pBestEnt->GetAbsOrigin().DistToSqr(pLocal->GetAbsOrigin()) < pow(75.0f, 2) && !pBestEnt->IsDispenser())
 			{
-				// Check if we are close enough to the ammo pack to pick it up (unless its not an ammo pack)
-				if (pBestEnt->GetAbsOrigin().DistToSqr(pLocal->GetAbsOrigin()) < pow(75.0f, 2) && !pBestEnt->IsDispenser())
+				// Try to touch the ammo pack
+				auto pLocalNav = F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin());
+				if (pLocalNav)
 				{
-					// Try to touch the ammo pack
-					auto pLocalNav = F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin());
-					if (pLocalNav)
-					{
-						Vector2D vTo = { pBestEnt->GetAbsOrigin().x, pBestEnt->GetAbsOrigin().y };
-						Vector vPathPoint = pLocalNav->getNearestPoint(vTo);
-						vPathPoint.z = pBestEnt->GetAbsOrigin().z;
+					Vector2D vTo = { pBestEnt->GetAbsOrigin().x, pBestEnt->GetAbsOrigin().y };
+					Vector vPathPoint = pLocalNav->getNearestPoint(vTo);
+					vPathPoint.z = pBestEnt->GetAbsOrigin().z;
 
-						// Walk towards the ammo pack
-						SDK::WalkTo(pCmd, pLocal, vPathPoint);
-					}
+					// Walk towards the ammo pack
+					SDK::WalkTo(pCmd, pLocal, vPathPoint);
 				}
-				bWasForce = bForce;
-				return true;
 			}
+			bWasForce = bForce;
+			return true;
 		}
 
 		tAmmoCooldown.Update();
@@ -1851,18 +1855,17 @@ std::optional<Vector> CNavBot::GetControlPointGoal(const Vector vLocalOrigin, in
 		{
 			vPreviousPosition = *vPosition;
 
-			// Create spread out formation based on player index and class
-			constexpr float flBaseRadius = 120.0f;
+			if (!(Vars::NavEng::NavBot::Preferences.Value & (1 << 15))) // NoRandomizeCP = 1 << 15
+			{
+				constexpr float flBaseRadius = 120.0f;
+				iTeammatesOnPoint++;
 
-			// Add ourselves to the total amount
-			iTeammatesOnPoint++;
+				float flAngle = PI * 2 * (float)(I::EngineClient->GetLocalPlayer() % iTeammatesOnPoint) / iTeammatesOnPoint;
+				float flRadius = flBaseRadius + SDK::RandomFloat(-10.0f, 10.0f);
+				Vector vOffset(cos(flAngle) * flRadius, sin(flAngle) * flRadius, 0.0f);
 
-			// Add some randomization but keep formation
-			float flAngle = PI * 2 * (float)(I::EngineClient->GetLocalPlayer() % iTeammatesOnPoint) / iTeammatesOnPoint;
-			float flRadius = flBaseRadius + SDK::RandomFloat(-10.0f, 10.0f);
-			Vector vOffset(cos(flAngle) * flRadius, sin(flAngle) * flRadius, 0.0f);
-
-			vAdjustedPos += vOffset;
+				vAdjustedPos += vOffset;
+			}
 		}
 	}
 	// If close enough, don't move

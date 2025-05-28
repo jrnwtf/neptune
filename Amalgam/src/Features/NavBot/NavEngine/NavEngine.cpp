@@ -60,12 +60,44 @@ bool CNavParser::IsSetupTime()
 
 bool CNavParser::IsVectorVisibleNavigation(Vector from, Vector to, unsigned int mask)
 {
-	Ray_t ray;
-	ray.Init(from, to);	
-	CGameTrace trace_visible;
-	CTraceFilterNavigation Filter{};
-	I::EngineTrace->TraceRay(ray, mask, &Filter, &trace_visible);
-	return trace_visible.fraction == 1.0f;
+	// Validate input vectors to prevent crashes
+	if (!std::isfinite(from.x) || !std::isfinite(from.y) || !std::isfinite(from.z) ||
+		!std::isfinite(to.x) || !std::isfinite(to.y) || !std::isfinite(to.z))
+		return false;
+		
+	// Skip if vectors are too close
+	if (from.DistToSqr(to) < 1.0f)
+		return true;
+		
+	// Skip if vectors are too far (likely to fail anyway)
+	if (from.DistToSqr(to) > pow(3000.0f, 2))
+		return false;
+
+	try
+	{
+		Ray_t ray;
+		ray.Init(from, to);	
+		CGameTrace trace_visible;
+		CTraceFilterNavigation Filter{};
+		
+		I::EngineTrace->TraceRay(ray, mask, &Filter, &trace_visible);
+		
+		// If we hit something but it's very close to the destination, still consider it visible
+		if (trace_visible.fraction < 1.0f && trace_visible.fraction > 0.97f)
+		{
+			// Check if end point is close enough to destination
+			float dist_to_end = trace_visible.endpos.DistToSqr(to);
+			if (dist_to_end < pow(20.0f, 2))
+				return true;
+		}
+		
+		return trace_visible.fraction == 1.0f;
+	}
+	catch (...)
+	{
+		// If trace fails for any reason, assume not visible
+		return false;
+	}
 }
 
 void CNavParser::DoSlowAim(Vector& input_angle, float speed, Vector viewangles)
@@ -476,7 +508,36 @@ void CNavParser::Map::UpdateRespawnRooms()
 
 bool CNavParser::IsPlayerPassableNavigation(Vector origin, Vector target, unsigned int mask)
 {
+	if (!std::isfinite(origin.x) || !std::isfinite(origin.y) || !std::isfinite(origin.z) ||
+		!std::isfinite(target.x) || !std::isfinite(target.y) || !std::isfinite(target.z))
+		return false;
+	
+	if (origin.DistToSqr(target) < 1.0f)
+		return true;
+	
+	if (origin.DistToSqr(target) > pow(2000.0f, 2))
+		return false;
+	
 	Vector tr = target - origin;
+	float height_diff = tr.z;
+	
+	if (height_diff < -PLAYER_JUMP_HEIGHT * 1.2f)
+	{
+		Vector ground_check = target;
+		ground_check.z -= 100.0f;
+		
+		trace_t ground_trace;
+		CTraceFilterHitscan ground_filter{};
+		SDK::Trace(target, ground_check, mask, &ground_filter, &ground_trace);
+		
+		if (ground_trace.fraction > 0.7f)
+			return false;
+	}
+	else if (height_diff > PLAYER_JUMP_HEIGHT * 0.95f)
+	{
+		return false;
+	}
+	
 	Vector angles;
 	Math::VectorAngles(tr, angles);
 
@@ -486,12 +547,13 @@ bool CNavParser::IsPlayerPassableNavigation(Vector origin, Vector target, unsign
 
 	float tr_length = tr.Length();
 	Vector relative_endpos = forward * tr_length;
-
+	
+	float adjusted_half_width = HALF_PLAYER_WIDTH * 0.8f;
+	
 	trace_t trace;
 	CTraceFilterNavigation Filter{};
 
-	// We want to keep the same angle for these two bounding box traces
-	Vector left_ray_origin = origin - right * HALF_PLAYER_WIDTH;
+	Vector left_ray_origin = origin - right * adjusted_half_width;
 	Vector left_ray_endpos = left_ray_origin + relative_endpos;
 	SDK::Trace(left_ray_origin, left_ray_endpos, mask, &Filter, &trace);
 
@@ -499,16 +561,31 @@ bool CNavParser::IsPlayerPassableNavigation(Vector origin, Vector target, unsign
 	if (trace.DidHit())
 		return false;
 
-	Vector right_ray_origin = origin + right * HALF_PLAYER_WIDTH;
+	Vector right_ray_origin = origin + right * adjusted_half_width;
 	Vector right_ray_endpos = right_ray_origin + relative_endpos;
 	SDK::Trace(right_ray_origin, right_ray_endpos, mask, &Filter, &trace);
 
-	if (!trace.DidHit())
+	if (trace.DidHit())
+		return false;
+		
+	SDK::Trace(origin, origin + relative_endpos, mask, &Filter, &trace);
+	
+	if (trace.DidHit())
+		return false;
+		
+	if (tr_length > 100.0f)
 	{
-		SDK::Trace(origin, origin + relative_endpos, mask, &Filter, &trace);
+		Vector top_ray_origin = origin;
+		top_ray_origin.z += PLAYER_HEIGHT * 0.7f;
+		Vector top_ray_endpos = top_ray_origin + relative_endpos;
+		
+		SDK::Trace(top_ray_origin, top_ray_endpos, mask, &Filter, &trace);
+		
+		if (trace.DidHit())
+			return false;
 	}
-
-	return !trace.DidHit();
+	
+	return true;
 }
 
 Vector CNavParser::GetForwardVector(Vector origin, Vector viewangles, float distance)
@@ -766,13 +843,57 @@ void CNavEngine::vischeckPath()
 		return;
 
 	const auto timestamp = TICKCOUNT_TIMESTAMP(Vars::NavEng::NavEngine::VischeckCacheTime.Value);
+	
+	// Use static counter to implement incremental checking (don't check all crumbs at once)
+	static size_t check_index = 0;
+	static constexpr size_t MAX_CHECKS_PER_FRAME = 3; // Limit checks per frame to reduce performance impact
+	
+	// Reset check index if it's out of bounds
+	if (check_index >= crumbs.size() - 1)
+		check_index = 0;
+	
+	// Get local player for advanced checks
+	auto pLocal = H::Entities.GetLocal();
+	if (!pLocal || !pLocal->IsAlive())
+		return;
+	
+	Vector vLocalOrigin = pLocal->GetAbsOrigin();
+	size_t checks_done = 0;
+	bool path_invalid = false;
 
-	// Iterate all the crumbs
-	for (auto it = crumbs.begin(), next = it + 1; next != crumbs.end(); it++, next++)
+	// Check up to MAX_CHECKS_PER_FRAME crumbs per frame or until we find an invalid path
+	for (size_t i = 0; i < std::min(crumbs.size() - 1, MAX_CHECKS_PER_FRAME) && !path_invalid; i++)
 	{
+		// Calculate which crumb pair to check
+		size_t current_idx = (check_index + i) % (crumbs.size() - 1);
+		auto it = crumbs.begin() + current_idx;
+		auto next = it + 1;
+		
+		if (next == crumbs.end())
+			continue;
+		
 		auto current_crumb = *it;
 		auto next_crumb = *next;
+		
+		// Skip checking pairs that are too far from the player
+		float dist_to_current = vLocalOrigin.DistToSqr(current_crumb.vec);
+		if (dist_to_current > pow(1500.0f, 2))
+			continue;
+			
 		auto key = std::pair<CNavArea*, CNavArea*>(current_crumb.navarea, next_crumb.navarea);
+
+		// Skip if we already have a valid cache entry
+		if (map->vischeck_cache.count(key) && 
+			map->vischeck_cache[key].expire_tick > I::GlobalVars->tickcount)
+		{
+			// If it's already known to be invalid, abort pathing
+			if (map->vischeck_cache[key].vischeck_state <= 0)
+			{
+				path_invalid = true;
+				break;
+			}
+			continue;
+		}
 
 		auto current_center = current_crumb.vec;
 		current_center.z += PLAYER_JUMP_HEIGHT;
@@ -780,17 +901,69 @@ void CNavEngine::vischeckPath()
 		auto next_center = next_crumb.vec;
 		next_center.z += PLAYER_JUMP_HEIGHT;
 		
-		// Check if we can pass, if not, abort pathing and mark as bad
-		if (!F::NavParser.IsPlayerPassableNavigation(current_center, next_center))
+		// Check if there's a height difference and adjust checking strategy
+		float height_diff = next_center.z - current_center.z;
+		bool is_steep = std::abs(height_diff) > PLAYER_JUMP_HEIGHT / 2.0f;
+		
+		try
 		{
-			// Mark as invalid for a while
-			map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, -1 };
-			abandonPath();
+			bool is_passable = false;
+			
+			// For steep paths or long distances, use more thorough checking
+			if (is_steep || current_center.DistToSqr(next_center) > pow(200.0f, 2))
+			{
+				// Use multiple intermediate points for more accurate checking of long or steep paths
+				Vector dir = next_center - current_center;
+				float dist = dir.Length();
+				dir.Normalize();
+				
+				const int check_points = 3; // Number of intermediate points to check
+				bool all_points_passable = true;
+				
+				for (int j = 1; j < check_points && all_points_passable; j++)
+				{
+					Vector check_point = current_center + dir * (dist * j / check_points);
+					all_points_passable = F::NavParser.IsPlayerPassableNavigation(current_center, check_point) &&
+										 F::NavParser.IsPlayerPassableNavigation(check_point, next_center);
+				}
+				
+				is_passable = all_points_passable;
+			}
+			else
+			{
+				// Simple direct check for short, flat paths
+				is_passable = F::NavParser.IsPlayerPassableNavigation(current_center, next_center);
+			}
+			
+			// Check if we can pass, if not, abort pathing and mark as bad
+			if (!is_passable)
+			{
+				// Mark as invalid for a while
+				map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, -1 };
+				path_invalid = true;
+			}
+			// Else we can update the cache (if not marked bad before this)
+			else if (!map->vischeck_cache.count(key) || map->vischeck_cache[key].vischeck_state != -1)
+			{
+				map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, 1 };
+			}
 		}
-		// Else we can update the cache (if not marked bad before this)
-		else if (!map->vischeck_cache.count(key) || map->vischeck_cache[key].vischeck_state != -1)
-			map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, 1 };
+		catch (...)
+		{
+			// Handle exceptions during visibility check - mark as unknown but don't fail the path
+			map->vischeck_cache[key] = CNavParser::CachedConnection{ TICKCOUNT_TIMESTAMP(10), 0 };
+			SDK::Output("CNavEngine", "Exception during visibility check", { 255, 100, 100 }, Vars::Debug::Logging.Value);
+		}
+		
+		checks_done++;
 	}
+	
+	// Update the check index for next time
+	check_index = (check_index + checks_done) % (crumbs.size() - 1);
+	
+	// If we found an invalid path segment, abandon the path
+	if (path_invalid)
+		abandonPath();
 }
 
 static Timer blacklist_check_timer{};

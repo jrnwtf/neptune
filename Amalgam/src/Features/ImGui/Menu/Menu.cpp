@@ -208,7 +208,9 @@ void CMenu::MenuAimbot(int iTab)
 					FDropdown(Vars::Aimbot::General::Target, FDropdownEnum::Left);
 					FDropdown(Vars::Aimbot::General::Ignore, FDropdownEnum::Right);
 					FSlider(Vars::Aimbot::General::AimFOV);
+					PushTransparent(Vars::Aimbot::Hitscan::TargetEveryone.Value);
 					FSlider(Vars::Aimbot::General::MaxTargets, FSliderEnum::Left);
+					PopTransparent();
 					PushTransparent(!(FGet(Vars::Aimbot::General::Ignore) & Vars::Aimbot::General::IgnoreEnum::Cloaked));
 					{
 						FSlider(Vars::Aimbot::General::IgnoreCloak, FSliderEnum::Right);
@@ -324,6 +326,8 @@ void CMenu::MenuAimbot(int iTab)
 					FDropdown(Vars::Aimbot::Hitscan::Hitboxes, FDropdownEnum::Left);
 					FDropdown(Vars::Aimbot::Hitscan::Modifiers, FDropdownEnum::Right);
 					FSlider(Vars::Aimbot::Hitscan::PointScale);
+					FToggle(Vars::Aimbot::Hitscan::TargetEveryone, FToggleEnum::Left);
+					FDropdown(Vars::Aimbot::Hitscan::LowFPSOptimizations, FDropdownEnum::Right);
 					PushTransparent(!(FGet(Vars::Aimbot::Hitscan::Modifiers) & Vars::Aimbot::Hitscan::ModifiersEnum::Tapfire));
 					{
 						FSlider(Vars::Aimbot::Hitscan::TapFireDist);
