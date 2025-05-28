@@ -266,7 +266,7 @@ void CCore::Unload()
 		return;
 	}
 
-	std::vector<const char*> unloadedMessages = { "FUCK YOU NIGGER.", "KYS", "BARK BARK", "???" };
+	std::vector<const char*> unloadedMessages = { "FUCK YOU *nword*.", "KYS", "BARK BARK", "???" };
 	std::random_device rdUnload;
 	std::mt19937 genUnload(rdUnload());
 	std::uniform_int_distribution<> distribUnload(0, static_cast<int>(unloadedMessages.size()) - 1);

@@ -38,17 +38,19 @@ enum Priority_list
 	danger
 };
 
-// Basic Blacklist reasons, you can add your own externally and use them
+// Basic Blacklist reasons, you can add your own externally and use them (?????????? why the fuck its in navengine.h?????)
 enum BlacklistReason_enum
 {
-	BR_SENTRY,
-	BR_SENTRY_MEDIUM,
-	BR_SENTRY_LOW,
-	BR_STICKY,
-	BR_ENEMY_NORMAL,
-	BR_ENEMY_DORMANT,
-	BR_ENEMY_INVULN,
-	BR_BAD_BUILDING_SPOT,
+	INVALID = 0,
+	STICKY = 1,
+	SENTRY = 2,
+	SENTRY_MEDIUM = 3,
+	SENTRY_LOW = 4,
+	ENEMY_NORMAL = 5,
+	ENEMY_INVULN = 6,
+	ENEMY_DORMANT = 7,
+	BAD_BUILDING_SPOT = 9,
+	ENEMY_SLIGHT_DANGER = 10,
 	// Always last
 	BLACKLIST_LENGTH
 };
@@ -261,7 +263,6 @@ public:
 	void vischeckPath();
 	void checkBlacklist();
 	void updateStuckTime();
-	void smoothPath();
 	void Run(CUserCmd* pCmd);
 	void Reset(bool bForced = false);
 	void Render();

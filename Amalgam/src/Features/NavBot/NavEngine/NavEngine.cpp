@@ -3,6 +3,8 @@
 #include "../../Misc/Misc.h"
 #include <direct.h>
 
+inline float Sqr(float f) { return f * f; }
+
 std::optional<Vector> CNavParser::GetDormantOrigin(int iIndex)
 {
 	if (!iIndex)
@@ -278,8 +280,10 @@ void CNavParser::Map::updateIgnores()
 		return;
 
 	// Clear the blacklist
-	F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_SENTRY));
-	F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_INVULN));
+	F::NavEngine.clearFreeBlacklist(BlacklistReason(SENTRY));
+	F::NavEngine.clearFreeBlacklist(BlacklistReason(ENEMY_INVULN));
+	F::NavEngine.clearFreeBlacklist(BlacklistReason(STICKY));
+
 	if (Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Players)
 	{
 		for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
@@ -291,32 +295,53 @@ void CNavParser::Map::updateIgnores()
 			if (!pPlayer->IsAlive())
 				continue;
 
-			if (pPlayer->IsInvulnerable() &&
-				// Cant do the funny (We are not heavy or we do not have the holiday punch equipped)
-				(pLocal->m_iClass() != TF_CLASS_HEAVY || G::SavedDefIndexes[SLOT_MELEE] != Heavy_t_TheHolidayPunch))
+			auto player_origin = F::NavParser.GetDormantOrigin(pPlayer->entindex());
+			if (!player_origin)
+				continue;
+
+			if (pPlayer->IsInvulnerable())
 			{
-				// Get origin of the player
-				auto player_origin = F::NavParser.GetDormantOrigin(pPlayer->entindex());
-				if (player_origin)
+				player_origin->z += PLAYER_JUMP_HEIGHT;
+
+				for (auto& i : navfile.m_areas)
 				{
-					player_origin.value().z += PLAYER_JUMP_HEIGHT;
+					Vector area = i.m_center;
+					area.z += PLAYER_JUMP_HEIGHT;
 
-					// Actual player check
-					for (auto& i : navfile.m_areas)
+					float flDistSqr = player_origin->DistToSqr(area);
+					if (flDistSqr <= pow(1000.0f, 2))
 					{
-						Vector area = i.m_center;
-						area.z += PLAYER_JUMP_HEIGHT;
+						if (!F::NavParser.IsVectorVisibleNavigation(*player_origin, area, MASK_SHOT))
+							continue;
 
-						// Check if player is close to us
-						float flDistSqr = player_origin.value().DistToSqr(area);
-						if (flDistSqr <= pow(1000.0f, 2))
+						free_blacklist[&i] = ENEMY_INVULN;
+					}
+				}
+			}
+			else
+			{
+				player_origin->z += PLAYER_JUMP_HEIGHT;
+
+				// For normal players, create a danger zone around them
+				for (auto& i : navfile.m_areas)
+				{
+					Vector area = i.m_center;
+					area.z += PLAYER_JUMP_HEIGHT;
+
+					float flDistSqr = player_origin->DistToSqr(area);
+					
+					// Full danger zone - closest to enemy player
+					if (flDistSqr <= pow(300.0f, 2))
+					{
+						if (F::NavParser.IsVectorVisibleNavigation(*player_origin, area, MASK_SHOT))
+							free_blacklist[&i] = ENEMY_NORMAL;
+					}
+					else if (flDistSqr <= pow(500.0f, 2))
+					{
+						if (F::NavParser.IsVectorVisibleNavigation(*player_origin, area, MASK_SHOT))
 						{
-							// Check if player can hurt us
-							if (!F::NavParser.IsVectorVisibleNavigation(player_origin.value(), area, MASK_SHOT))
-								continue;
-
-							// Blacklist
-							free_blacklist[&i] = BR_ENEMY_INVULN;
+							if (free_blacklist.find(&i) == free_blacklist.end())
+								free_blacklist[&i] = ENEMY_SLIGHT_DANGER;
 						}
 					}
 				}
@@ -355,13 +380,11 @@ void CNavParser::Map::updateIgnores()
 								continue;
 
 							// For dormant sentries we need to add the jump height to the z
-							// if ( pSentry->IsDormant( ) )
 							building_origin->z += PLAYER_JUMP_HEIGHT;
 
-							// Define range tiers for sentry danger
-							const float flHighDangerRange = 900.0f; // Full blacklist
-							const float flMediumDangerRange = 1050.0f; // Caution range (try to avoid)
-							const float flLowDangerRange = 1200.0f; // Safe for some classes
+							// Define sentry danger range tiers
+							const float flHighDangerRange = 900.0f;
+							const float flMediumDangerRange = 1100.0f;
 
 							// Actual building check
 							for (auto& i : navfile.m_areas)
@@ -372,41 +395,24 @@ void CNavParser::Map::updateIgnores()
 								float flDistSqr = building_origin->DistToSqr(area);
 								
 								// High danger - close to sentry
-								if (flDistSqr <= pow(flHighDangerRange + HALF_PLAYER_WIDTH, 2))
+								if (flDistSqr <= pow(flHighDangerRange, 2))
 								{
 									// Check if sentry can see us
 									if (F::NavParser.IsVectorVisibleNavigation(*building_origin, area, MASK_SHOT))
 									{
 										// High danger - full blacklist
-										free_blacklist[&i] = BR_SENTRY;
+										free_blacklist[&i] = SENTRY;
 									}
 								}
 								// Medium danger - within sentry range but further away
-								else if (flDistSqr <= pow(flMediumDangerRange + HALF_PLAYER_WIDTH, 2))
+								else if (flDistSqr <= pow(flMediumDangerRange, 2))
 								{
 									// Only blacklist if sentry can see this area
 									if (F::NavParser.IsVectorVisibleNavigation(*building_origin, area, MASK_SHOT))
 									{
-										// Medium sentry danger - can pass through if necessary
+										// Only set to medium danger if not already high danger
 										if (free_blacklist.find(&i) == free_blacklist.end())
-										{
-											// Only set to medium danger if not already high danger
-											free_blacklist[&i] = BR_SENTRY_MEDIUM;
-										}
-									}
-								}
-								// Low danger - edge of sentry range (only for weak classes)
-								else if (!is_strong_class && flDistSqr <= pow(flLowDangerRange + HALF_PLAYER_WIDTH, 2))
-								{
-									// Only blacklist if sentry can see this area
-									if (F::NavParser.IsVectorVisibleNavigation(*building_origin, area, MASK_SHOT))
-									{
-										// Low sentry danger - can pass through if necessary
-										if (free_blacklist.find(&i) == free_blacklist.end())
-										{
-											// Only set to low danger if not already higher danger
-											free_blacklist[&i] = BR_SENTRY_LOW;
-										}
+											free_blacklist[&i] = SENTRY_MEDIUM;
 									}
 								}
 							}
@@ -417,6 +423,7 @@ void CNavParser::Map::updateIgnores()
 		}
 	}
 
+	// Check for stickies
 	auto stickytimestamp = TICKCOUNT_TIMESTAMP(Vars::NavEng::NavEngine::StickyIgnoreTime.Value);
 	if (Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Stickies)
 	{
@@ -434,17 +441,12 @@ void CNavParser::Map::updateIgnores()
 				Vector area = i.m_center;
 				area.z += PLAYER_JUMP_HEIGHT;
 
-				// Out of range
+				// Check sticky range
 				if (sticky_origin.DistToSqr(area) <= pow(130.0f + HALF_PLAYER_WIDTH, 2))
 				{
-					CGameTrace trace = {};
-					CTraceFilterProjectile filter = {};
-					SDK::Trace(sticky_origin, area, MASK_SHOT, &filter, &trace);
-
-					// Check if Sticky can see the reason
-					if (trace.fraction == 1.0f)
-						free_blacklist[&i] = { BR_STICKY, stickytimestamp };
-					// Blacklist because it's in range of the sticky, but stickies make no noise, so blacklist it for a specific timeframe
+					// Check if Sticky can see the area
+					if (F::NavParser.IsVectorVisibleNavigation(sticky_origin, area, MASK_SHOT))
+						free_blacklist[&i] = { STICKY, stickytimestamp };
 				}
 			}
 		}
@@ -515,73 +517,81 @@ bool CNavParser::IsPlayerPassableNavigation(Vector origin, Vector target, unsign
 	if (origin.DistToSqr(target) < 1.0f)
 		return true;
 	
-	if (origin.DistToSqr(target) > pow(2000.0f, 2))
+	// Don't try to path too far, it's likely to fail anyway
+	if (origin.DistToSqr(target) > pow(1500.0f, 2))
 		return false;
 	
 	Vector tr = target - origin;
-	float height_diff = tr.z;
-	
-	if (height_diff < -PLAYER_JUMP_HEIGHT * 1.2f)
-	{
-		Vector ground_check = target;
-		ground_check.z -= 100.0f;
-		
-		trace_t ground_trace;
-		CTraceFilterHitscan ground_filter{};
-		SDK::Trace(target, ground_check, mask, &ground_filter, &ground_trace);
-		
-		if (ground_trace.fraction > 0.7f)
-			return false;
-	}
-	else if (height_diff > PLAYER_JUMP_HEIGHT * 0.95f)
-	{
-		return false;
-	}
-	
 	Vector angles;
 	Math::VectorAngles(tr, angles);
 
 	Vector forward, right;
 	Math::AngleVectors(angles, &forward, &right, nullptr);
 	right.z = 0;
+	right.Normalize();
 
 	float tr_length = tr.Length();
 	Vector relative_endpos = forward * tr_length;
 	
-	float adjusted_half_width = HALF_PLAYER_WIDTH * 0.8f;
+	// Use slightly smaller width than the player to avoid getting stuck
+	float adjusted_half_width = HALF_PLAYER_WIDTH * 0.9f;
 	
-	trace_t trace;
-	CTraceFilterNavigation Filter{};
+	// Rays on both sides to check for walls
+	trace_t left_trace, right_trace, center_trace;
+	CTraceFilterNavigation filter{};
 
+	// Left and right rays check side clearance
 	Vector left_ray_origin = origin - right * adjusted_half_width;
 	Vector left_ray_endpos = left_ray_origin + relative_endpos;
-	SDK::Trace(left_ray_origin, left_ray_endpos, mask, &Filter, &trace);
+	SDK::Trace(left_ray_origin, left_ray_endpos, mask, &filter, &left_trace);
 
 	// Left ray hit something
-	if (trace.DidHit())
+	if (left_trace.DidHit())
 		return false;
 
 	Vector right_ray_origin = origin + right * adjusted_half_width;
 	Vector right_ray_endpos = right_ray_origin + relative_endpos;
-	SDK::Trace(right_ray_origin, right_ray_endpos, mask, &Filter, &trace);
+	SDK::Trace(right_ray_origin, right_ray_endpos, mask, &filter, &right_trace);
 
-	if (trace.DidHit())
+	// Right ray hit something
+	if (right_trace.DidHit())
 		return false;
 		
-	SDK::Trace(origin, origin + relative_endpos, mask, &Filter, &trace);
+	// Center ray for direct obstacles
+	SDK::Trace(origin, target, mask, &filter, &center_trace);
 	
-	if (trace.DidHit())
+	if (center_trace.DidHit())
 		return false;
 		
+	// Additional height check for longer paths
 	if (tr_length > 100.0f)
 	{
 		Vector top_ray_origin = origin;
-		top_ray_origin.z += PLAYER_HEIGHT * 0.7f;
-		Vector top_ray_endpos = top_ray_origin + relative_endpos;
+		top_ray_origin.z += PLAYER_HEIGHT * 0.75f;  // Check near the player's head
+		SDK::Trace(top_ray_origin, top_ray_origin + relative_endpos, mask, &filter, &center_trace);
 		
-		SDK::Trace(top_ray_origin, top_ray_endpos, mask, &Filter, &trace);
+		if (center_trace.DidHit())
+			return false;
+	}
+	
+	// Check if the height difference is too great (too steep to climb or too far to fall)
+	float height_diff = target.z - origin.z;
+	
+	// Too high to jump
+	if (height_diff > PLAYER_JUMP_HEIGHT)
+		return false;
 		
-		if (trace.DidHit())
+	// Too steep a drop - check if there's ground below
+	if (height_diff < -PLAYER_JUMP_HEIGHT * 1.5f)
+	{
+		Vector ground_check = target;
+		ground_check.z -= 60.0f;
+		
+		trace_t ground_trace;
+		SDK::Trace(target, ground_check, mask, &filter, &ground_trace);
+		
+		// No ground found - likely a pit or very long drop
+		if (ground_trace.fraction > 0.9f)
 			return false;
 	}
 	
@@ -608,48 +618,29 @@ Vector CNavParser::handleDropdown(Vector current_pos, Vector next_pos)
 	Vector to_target = (next_pos - current_pos);
 	float height_diff = to_target.z;
 
-	// Handle drops more carefully
+	// Only handle drops (when next position is lower than current)
 	if (height_diff < 0)
 	{
-		float drop_distance = -height_diff;
-
-		// Small drops (less than jump height) - no special handling needed
-		if (drop_distance <= PLAYER_JUMP_HEIGHT)
-			return current_pos;
-
-		// Medium drops - move out a bit to prevent getting stuck
-		if (drop_distance <= PLAYER_HEIGHT)
+		// For significant drops, move outward so we drop correctly
+		if (-height_diff > PLAYER_JUMP_HEIGHT)
 		{
+			// Remove Z component and normalize for direction
 			to_target.z = 0;
 			to_target.Normalize();
+			
+			// Create angles for the move direction
 			QAngle angles;
 			Math::VectorAngles(to_target, angles);
-			Vector vec_angles(angles.x, angles.y, angles.z);
-			return GetForwardVector(current_pos, vec_angles, PLAYER_WIDTH * 1.5f);
-		}
-		// Large drops - move out significantly to prevent fall damage
-		to_target.z = 0;
-		to_target.Normalize();
-		QAngle angles;
-		Math::VectorAngles(to_target, angles);
-		Vector vec_angles(angles.x, angles.y, angles.z);
-		return GetForwardVector(current_pos, vec_angles, PLAYER_WIDTH * 2.5f);
-	}
-	// Handle upward movement
-	else if (height_diff > 0)
-	{
-		// If it's within jump height, move closer to help with the jump
-		if (height_diff <= PLAYER_JUMP_HEIGHT)
-		{
-			to_target.z = 0;
-			to_target.Normalize();
-			QAngle angles;
-			Math::VectorAngles(-to_target, angles);
-			Vector vec_angles(angles.x, angles.y, angles.z);
-			return GetForwardVector(current_pos, vec_angles, PLAYER_WIDTH * 0.5f);
+			
+			// Move outward more for bigger drops to avoid getting stuck
+			float move_distance = PLAYER_WIDTH * 2.0f;
+			if (-height_diff > PLAYER_HEIGHT * 2)
+				move_distance = PLAYER_WIDTH * 3.0f;
+				
+			// Move outward in the direction of the drop
+			return GetForwardVector(current_pos, angles, move_distance);
 		}
 	}
-
 	return current_pos;
 }
 
@@ -657,17 +648,27 @@ NavPoints CNavParser::determinePoints(CNavArea* current, CNavArea* next)
 {
 	auto area_center = current->m_center;
 	auto next_center = next->m_center;
+	
 	// Gets a vector on the edge of the current area that is as close as possible to the center of the next area
 	auto area_closest = current->getNearestPoint(Vector2D(next_center.x, next_center.y));
+	
 	// Do the same for the other area
 	auto next_closest = next->getNearestPoint(Vector2D(area_center.x, area_center.y));
 
-	// Use one of them as a center point, the one that is either x or y alligned with a center
-	// Of the areas. This will avoid walking into walls.
+	// Use one of them as a center point, prioritize the one that's aligned with area centers
+	// This helps avoid walking into walls
 	auto center_point = area_closest;
 
-	// Determine if alligned, if not, use the other one as the center point
-	if (center_point.x != area_center.x && center_point.y != area_center.y && center_point.x != next_center.x && center_point.y != next_center.y)
+	// Check if the point is aligned with either area center on X or Y axis
+	bool is_aligned = false;
+	if (fabs(center_point.x - area_center.x) < 1.0f || fabs(center_point.y - area_center.y) < 1.0f || 
+		fabs(center_point.x - next_center.x) < 1.0f || fabs(center_point.y - next_center.y) < 1.0f)
+	{
+		is_aligned = true;
+	}
+
+	// If not aligned with centers, try the other point
+	if (!is_aligned)
 	{
 		center_point = next_closest;
 		// Use the point closest to next_closest on the "original" mesh for z
@@ -734,9 +735,6 @@ bool CNavEngine::navTo(const Vector& destination, int priority, bool should_repa
 
 	crumbs.push_back({ nullptr, destination });
 	
-	// Smooth the path to avoid zigzags and sharp turns
-	smoothPath();
-	
 	inactivity.Update();
 
 	current_priority = priority;
@@ -749,92 +747,6 @@ bool CNavEngine::navTo(const Vector& destination, int priority, bool should_repa
 	return true;
 }
 
-// Smooths the path by removing unnecessary zigzags and creating more direct routes
-void CNavEngine::smoothPath()
-{
-	if (crumbs.size() < 3)
-		return;
-	
-	std::vector<CNavParser::Crumb> smoothed_crumbs;
-	smoothed_crumbs.push_back(crumbs.front());
-	
-	const auto pLocal = H::Entities.GetLocal();
-	if (!pLocal || !pLocal->IsAlive())
-		return;
-	
-	for (size_t i = 0; i < crumbs.size() - 1; i++)
-	{
-		Vector current = crumbs[i].vec;
-		current.z += PLAYER_JUMP_HEIGHT;
-		
-		const size_t max_look_ahead = 3;
-		size_t furthest_visible = i + 1;
-		
-		for (size_t j = i + 2; j < crumbs.size() && j <= i + max_look_ahead; j++)
-		{
-			Vector target = crumbs[j].vec;
-			target.z += PLAYER_JUMP_HEIGHT;
-			
-			// Check if we can directly see this point and path to it
-			if (F::NavParser.IsPlayerPassableNavigation(current, target))
-			{
-				furthest_visible = j;
-			}
-			else
-			{
-				// Can't see further, stop looking
-				break;
-			}
-		}
-		
-		// Only skip points if we can see at least 2 ahead
-		if (furthest_visible > i + 1)
-		{
-			// Add intermediate points for smoother movement, keeping at least
-			// one intermediate crumb for every two we skip
-			size_t steps = furthest_visible - i;
-			size_t points_to_add = steps / 2;
-			
-			// Always add at least one intermediate point for large jumps
-			if (steps >= 3 && points_to_add < 1)
-				points_to_add = 1;
-				
-			// Add intermediate points
-			for (size_t k = 1; k <= points_to_add; k++)
-			{
-				size_t idx = i + (k * steps) / (points_to_add + 1);
-				if (idx < furthest_visible && idx > i)
-				{
-					// Don't add duplicate points
-					if (smoothed_crumbs.empty() || smoothed_crumbs.back().vec != crumbs[idx].vec)
-						smoothed_crumbs.push_back(crumbs[idx]);
-				}
-			}
-			
-			// Skip to the furthest visible point
-			i = furthest_visible - 1;
-		}
-		
-		// Add the furthest visible point
-		if (furthest_visible < crumbs.size() && (smoothed_crumbs.empty() || smoothed_crumbs.back().vec != crumbs[furthest_visible].vec))
-		{
-			smoothed_crumbs.push_back(crumbs[furthest_visible]);
-		}
-	}
-	
-	// Make sure we keep the final destination
-	if (smoothed_crumbs.back().vec != crumbs.back().vec)
-	{
-		smoothed_crumbs.push_back(crumbs.back());
-	}
-	
-	// Replace the original path with the smoothed one only if it has enough points
-	if (smoothed_crumbs.size() > 1 && smoothed_crumbs.size() >= crumbs.size() / 3)
-	{
-		crumbs = smoothed_crumbs;
-	}
-}
-
 void CNavEngine::vischeckPath()
 {
 	static Timer vischeck_timer{};
@@ -844,126 +756,45 @@ void CNavEngine::vischeckPath()
 
 	const auto timestamp = TICKCOUNT_TIMESTAMP(Vars::NavEng::NavEngine::VischeckCacheTime.Value);
 	
-	// Use static counter to implement incremental checking (don't check all crumbs at once)
-	static size_t check_index = 0;
-	static constexpr size_t MAX_CHECKS_PER_FRAME = 3; // Limit checks per frame to reduce performance impact
-	
-	// Reset check index if it's out of bounds
-	if (check_index >= crumbs.size() - 1)
-		check_index = 0;
-	
-	// Get local player for advanced checks
-	auto pLocal = H::Entities.GetLocal();
-	if (!pLocal || !pLocal->IsAlive())
-		return;
-	
-	Vector vLocalOrigin = pLocal->GetAbsOrigin();
-	size_t checks_done = 0;
-	bool path_invalid = false;
-
-	// Check up to MAX_CHECKS_PER_FRAME crumbs per frame or until we find an invalid path
-	for (size_t i = 0; i < std::min(crumbs.size() - 1, MAX_CHECKS_PER_FRAME) && !path_invalid; i++)
+	// Check vischeck cache for each crumb pair along the path
+	for (unsigned int i = 0; i < crumbs.size() - 1; ++i)
 	{
-		// Calculate which crumb pair to check
-		size_t current_idx = (check_index + i) % (crumbs.size() - 1);
-		auto it = crumbs.begin() + current_idx;
-		auto next = it + 1;
+		auto current_crumb = crumbs[i];
+		auto next_crumb = crumbs[i + 1];
 		
-		if (next == crumbs.end())
-			continue;
-		
-		auto current_crumb = *it;
-		auto next_crumb = *next;
-		
-		// Skip checking pairs that are too far from the player
-		float dist_to_current = vLocalOrigin.DistToSqr(current_crumb.vec);
-		if (dist_to_current > pow(1500.0f, 2))
+		if (!current_crumb.navarea || !next_crumb.navarea)
 			continue;
 			
 		auto key = std::pair<CNavArea*, CNavArea*>(current_crumb.navarea, next_crumb.navarea);
-
-		// Skip if we already have a valid cache entry
+		
+		// Skip if already cached as valid
 		if (map->vischeck_cache.count(key) && 
-			map->vischeck_cache[key].expire_tick > I::GlobalVars->tickcount)
-		{
-			// If it's already known to be invalid, abort pathing
-			if (map->vischeck_cache[key].vischeck_state <= 0)
-			{
-				path_invalid = true;
-				break;
-			}
+			map->vischeck_cache[key].expire_tick > I::GlobalVars->tickcount &&
+			map->vischeck_cache[key].vischeck_state > 0)
 			continue;
-		}
-
+			
+		// Prepare the points for vischeck
 		auto current_center = current_crumb.vec;
 		current_center.z += PLAYER_JUMP_HEIGHT;
 
 		auto next_center = next_crumb.vec;
 		next_center.z += PLAYER_JUMP_HEIGHT;
 		
-		// Check if there's a height difference and adjust checking strategy
-		float height_diff = next_center.z - current_center.z;
-		bool is_steep = std::abs(height_diff) > PLAYER_JUMP_HEIGHT / 2.0f;
-		
-		try
+		// Check if we can pass between the two points
+		if (!F::NavParser.IsPlayerPassableNavigation(current_center, next_center))
 		{
-			bool is_passable = false;
-			
-			// For steep paths or long distances, use more thorough checking
-			if (is_steep || current_center.DistToSqr(next_center) > pow(200.0f, 2))
-			{
-				// Use multiple intermediate points for more accurate checking of long or steep paths
-				Vector dir = next_center - current_center;
-				float dist = dir.Length();
-				dir.Normalize();
-				
-				const int check_points = 3; // Number of intermediate points to check
-				bool all_points_passable = true;
-				
-				for (int j = 1; j < check_points && all_points_passable; j++)
-				{
-					Vector check_point = current_center + dir * (dist * j / check_points);
-					all_points_passable = F::NavParser.IsPlayerPassableNavigation(current_center, check_point) &&
-										 F::NavParser.IsPlayerPassableNavigation(check_point, next_center);
-				}
-				
-				is_passable = all_points_passable;
-			}
-			else
-			{
-				// Simple direct check for short, flat paths
-				is_passable = F::NavParser.IsPlayerPassableNavigation(current_center, next_center);
-			}
-			
-			// Check if we can pass, if not, abort pathing and mark as bad
-			if (!is_passable)
-			{
-				// Mark as invalid for a while
-				map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, -1 };
-				path_invalid = true;
-			}
-			// Else we can update the cache (if not marked bad before this)
-			else if (!map->vischeck_cache.count(key) || map->vischeck_cache[key].vischeck_state != -1)
-			{
-				map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, 1 };
-			}
+			// Mark as invalid and abort pathing
+			map->vischeck_cache[key] = { timestamp, -1 };
+			SDK::Output("CNavEngine", "Found blocked path segment during vischeck", { 255, 100, 100 }, Vars::Debug::Logging.Value);
+			abandonPath();
+			return;
 		}
-		catch (...)
+		else
 		{
-			// Handle exceptions during visibility check - mark as unknown but don't fail the path
-			map->vischeck_cache[key] = CNavParser::CachedConnection{ TICKCOUNT_TIMESTAMP(10), 0 };
-			SDK::Output("CNavEngine", "Exception during visibility check", { 255, 100, 100 }, Vars::Debug::Logging.Value);
+			// Mark as valid in cache
+			map->vischeck_cache[key] = { timestamp, 1 };
 		}
-		
-		checks_done++;
 	}
-	
-	// Update the check index for next time
-	check_index = (check_index + checks_done) % (crumbs.size() - 1);
-	
-	// If we found an invalid path segment, abandon the path
-	if (path_invalid)
-		abandonPath();
 }
 
 static Timer blacklist_check_timer{};
@@ -1255,29 +1086,24 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 		time_spent_on_crumb.Update();
 	current_crumb = crumbs[0];
 
-	// Ensure we do not try to walk downwards unless we are falling
-	static std::vector<float> fall_vec{};
-	Vector vel = pLocal->GetAbsVelocity();
-
-	fall_vec.push_back(vel.z);
-	if (fall_vec.size() > 10)
-		fall_vec.erase(fall_vec.begin());
-
-	bool reset_z = true;
-	for (const auto& entry : fall_vec)
-	{
-		if (!(entry <= 0.01f && entry >= -0.01f))
-			reset_z = false;
-	}
-
+	// Get local info
 	const auto vLocalOrigin = pLocal->GetAbsOrigin();
+	Vector vel = pLocal->GetAbsVelocity();
+	
 	if (!F::NavEngine.IsNavMeshLoaded())
 		return;
 
-	if (reset_z && !F::Ticks.m_bWarp && !F::Ticks.m_bDoubletap)
-	{
+	// Current navigation point
+	Vector current_vec = crumbs[0].vec;
+	
+	// Check Z elevation - don't adjust Z if we're falling
+	bool reset_z = true;
+	if (vel.z < -10.0f)
 		reset_z = false;
 
+	if (reset_z && !F::Ticks.m_bWarp && !F::Ticks.m_bDoubletap)
+	{
+		// Check if we're on ground or building
 		Vector end = vLocalOrigin;
 		end.z -= 100.0f;
 
@@ -1286,14 +1112,10 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 		Filter.pSkip = pLocal;
 		SDK::TraceHull(vLocalOrigin, end, pLocal->m_vecMins(), pLocal->m_vecMaxs(), MASK_PLAYERSOLID, &Filter, &trace);
 
-		// Only reset if we are standing on a building
-		if (trace.DidHit() && trace.m_pEnt && trace.m_pEnt->IsBuilding())
-			reset_z = true;
+		// Reset Z if we're on solid ground or a building
+		if (trace.DidHit() && (trace.m_pEnt && trace.m_pEnt->IsBuilding() || pLocal->OnSolid()))
+			current_vec.z = vLocalOrigin.z;
 	}
-
-	Vector current_vec = crumbs[0].vec;
-	if (reset_z)
-		current_vec.z = vLocalOrigin.z;
 
 	// Check if we're stuck by comparing position with previous tick
 	bool bCurrentlyStuck = false;
@@ -1327,13 +1149,14 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 		if (!--crumbs_amount)
 			return;
 		inactivity.Update();
+		
+		// Get next nav point after advancing
+		current_vec = crumbs[0].vec;
+		if (reset_z)
+			current_vec.z = vLocalOrigin.z;
 	}
 
-	current_vec = crumbs[0].vec;
-	if (reset_z)
-		current_vec.z = vLocalOrigin.z;
-
-	// We are close enough to the second crumb, Skip both (This is especially helpful with drop-downs)
+	// We are close enough to the second crumb, skip directly to it
 	if (crumbs.size() > 1 && crumbs[1].vec.DistToSqr(vLocalOrigin) < pow(50.0f, 2))
 	{
 		last_crumb = crumbs[1];
@@ -1344,87 +1167,82 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 			return;
 		inactivity.Update();
 	}
-	// If we make any progress at all, reset this
-	// If we spend way too long on this crumb, ignore the logic below
-	else if (!time_spent_on_crumb.Check(Vars::NavEng::NavEngine::StuckDetectTime.Value))
+	// Update inactivity timer if we're making progress
+	else if (!time_spent_on_crumb.Check(Vars::NavEng::NavEngine::StuckDetectTime.Value) && vel.Get2D().Length() > 40.0f)
 	{
-		// 44.0f -> Revved brass beast, do not use z axis as jumping counts towards that. Yes this will mean long falls will trigger it, but that is not really bad.
-		if (!vel.Get2D().IsZero(40.0f))
-			inactivity.Update();
-		else
-			SDK::Output("CNavEngine", std::format("Spent too much time on the crumb, assuming were stuck, 2Dvelocity: ({},{})", fabsf(vel.Get2D().x), fabsf(vel.Get2D().y)).c_str(), { 255, 131, 131 }, Vars::Debug::Logging.Value, Vars::Debug::Logging.Value);
+		inactivity.Update();
 	}
 
 	auto pWeapon = pLocal->m_hActiveWeapon().Get()->As<CTFWeaponBase>();
+	if (pWeapon)
 	{
-		// Detect when jumping is necessary.
-		// 1. No jumping if zoomed (or revved)
-		// 2. Jump if it's necessary to do so based on z values
-		// 3. Jump if stuck (not getting closer) for more than stuck_time/2
-		if (pWeapon)
+		// Check if we need to jump
+		auto iWepID = pWeapon->GetWeaponID();
+		bool bCanJump = true;
+		
+		// Don't jump if scoped or revved up
+		if ((iWepID == TF_WEAPON_SNIPERRIFLE || iWepID == TF_WEAPON_SNIPERRIFLE_CLASSIC || iWepID == TF_WEAPON_SNIPERRIFLE_DECAP) && 
+			!CanJumpIfScoped(pLocal, pWeapon))
+			bCanJump = false;
+			
+		if (iWepID == TF_WEAPON_MINIGUN && (pCmd->buttons & IN_ATTACK2))
+			bCanJump = false;
+			
+		if (bCanJump)
 		{
-			auto iWepID = pWeapon->GetWeaponID();
-			if ((iWepID != TF_WEAPON_SNIPERRIFLE &&
-				iWepID != TF_WEAPON_SNIPERRIFLE_CLASSIC &&
-				iWepID != TF_WEAPON_SNIPERRIFLE_DECAP) ||
-				CanJumpIfScoped(pLocal, pWeapon))
+			float height_diff = crumbs[0].vec.z - vLocalOrigin.z;
+			bool bShouldJump = false;
+			
+			// Check for upcoming drops to avoid jumping right before
+			bool bPreventJump = false;
+			if (crumbs.size() > 1)
 			{
-				if (iWepID != TF_WEAPON_MINIGUN || !(pCmd->buttons & IN_ATTACK2))
+				float next_height_diff = crumbs[0].vec.z - crumbs[1].vec.z;
+				if (next_height_diff < 0 && next_height_diff < -PLAYER_JUMP_HEIGHT)
+					bPreventJump = true;
+			}
+			
+			if (!bPreventJump)
+			{
+				// Jump if we need to go up
+				if (height_diff > pLocal->m_flStepSize() && height_diff <= PLAYER_JUMP_HEIGHT)
+					bShouldJump = true;
+				// Jump if stuck
+				else if (inactivity.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2) || bCurrentlyStuck)
 				{
-					bool bShouldJump = false;
-					float height_diff = crumbs[0].vec.z - pLocal->GetAbsOrigin().z;
+					auto pLocalNav = map->findClosestNavSquare(vLocalOrigin);
+					if (pLocalNav && !(pLocalNav->m_attributeFlags & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS)))
+						bShouldJump = true;
+				}
+			}
+			
+			if (bShouldJump && tLastJump.Check(0.2f))
+			{
+				// Jump first, then crouch until landing
+				pCmd->buttons |= bCrouch ? IN_DUCK : IN_JUMP;
 
-					bool bPreventJump = false;
-					if (crumbs.size() > 1)
-					{
-						float next_height_diff = crumbs[0].vec.z - crumbs[1].vec.z;
-						if (next_height_diff < 0 && next_height_diff <= -PLAYER_JUMP_HEIGHT)
-							bPreventJump = true;
-					}
-					if (!bPreventJump)
-					{
-						// Check if we need to jump
-						if (height_diff > pLocal->m_flStepSize() && height_diff <= PLAYER_JUMP_HEIGHT)
-							bShouldJump = true;
-						// Also jump if we're stuck and it might help
-						else if (inactivity.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2) || bCurrentlyStuck)
-						{
-							auto pLocalNav = map->findClosestNavSquare(pLocal->GetAbsOrigin());
-							if (pLocalNav && !(pLocalNav->m_attributeFlags & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS)))
-								bShouldJump = true;
-						}
-					}
-					if (bShouldJump && tLastJump.Check(0.2f))
-					{
-						// Make it crouch until we land, but jump the first tick
-						pCmd->buttons |= bCrouch ? IN_DUCK : IN_JUMP;
+				// Track jump state
+				if (!bCrouch)
+				{
+					bCrouch = true;
+					iTicksSinceJump = 0;
+				}
+				iTicksSinceJump++;
 
-						// Only flip to crouch state, not to jump state
-						if (!bCrouch)
-						{
-							bCrouch = true;
-							iTicksSinceJump = 0;
-						}
-						iTicksSinceJump++;
-
-						// Update jump timer now since we are back on ground
-						if (bCrouch && pLocal->OnSolid() && iTicksSinceJump > 3)
-						{
-							// Reset
-							bCrouch = false;
-							tLastJump.Update();
-						}
-					}
+				// Reset when we hit the ground
+				if (bCrouch && pLocal->OnSolid() && iTicksSinceJump > 3)
+				{
+					bCrouch = false;
+					tLastJump.Update();
 				}
 			}
 		}
 	}
 
-	const auto vLocalEyePos = pLocal->GetEyePosition();
-
+	// Look handling
 	if (G::Attacking != 1)
 	{
-		// Look at path (nav spin) (smooth nav)
+		const auto vLocalEyePos = pLocal->GetEyePosition();
 		switch (Vars::NavEng::NavEngine::LookAtPath.Value)
 		{
 		case Vars::NavEng::NavEngine::LookAtPathEnum::Off:
@@ -1442,10 +1260,9 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 	if (bWasStuck && !tAvoidTimer.Check(0.5f))
 	{
-		Vector vMoveDirection = vAvoidDir;
-		
-		pCmd->forwardmove = vMoveDirection.x * 450.0f;
-		pCmd->sidemove = vMoveDirection.y * 450.0f;
+		// Move in random direction to get unstuck
+		pCmd->forwardmove = vAvoidDir.x * 450.0f;
+		pCmd->sidemove = vAvoidDir.y * 450.0f;
 		
 		if (pLocal->OnSolid() && tLastJump.Check(0.4f))
 		{

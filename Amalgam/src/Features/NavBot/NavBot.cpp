@@ -556,13 +556,10 @@ bool CNavBot::IsEngieMode(CTFPlayer* pLocal)
 bool CNavBot::BlacklistedFromBuilding(CNavArea* pArea)
 {
 	// FIXME: Better way of doing this ?
-	if (auto pBlackList = F::NavEngine.getFreeBlacklist())
+	for (auto tBlackListedArea : *F::NavEngine.getFreeBlacklist())
 	{
-		for (auto tBlackListedArea : *pBlackList)
-		{
-			if (tBlackListedArea.first == pArea && tBlackListedArea.second.value == BlacklistReason_enum::BR_BAD_BUILDING_SPOT)
-				return true;
-		}
+		if (tBlackListedArea.first == pArea && tBlackListedArea.second.value == BlacklistReason_enum::BAD_BUILDING_SPOT)
+			return true;
 	}
 	return false;
 }
@@ -731,11 +728,11 @@ void CNavBot::UpdateEnemyBlacklist(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, in
 		return;
 
 	if (!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::DormantThreats))
-		F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_DORMANT));
+		F::NavEngine.clearFreeBlacklist(BlacklistReason(ENEMY_DORMANT));
 
 	if (!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::NormalThreats))
 	{
-		F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_NORMAL));
+		F::NavEngine.clearFreeBlacklist(BlacklistReason(ENEMY_NORMAL));
 		return;
 	}
 
@@ -751,11 +748,11 @@ void CNavBot::UpdateEnemyBlacklist(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, in
 
 	// Clear blacklist for normal entities
 	if (bShouldRunNormal)
-		F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_NORMAL));
+		F::NavEngine.clearFreeBlacklist(BlacklistReason(ENEMY_NORMAL));
 
 	// Clear blacklist for dormant entities
 	if (bShouldRunDormant)
-		F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_DORMANT));
+		F::NavEngine.clearFreeBlacklist(BlacklistReason(ENEMY_DORMANT));
 
 	if (const auto& pGameRules = I::TFGameRules())
 	{
@@ -836,7 +833,7 @@ void CNavBot::UpdateEnemyBlacklist(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, in
 					{
 						(*mToMark)[pArea]++;
 						if ((*mToMark)[pArea] >= Vars::NavEng::NavBot::BlacklistSlightDangerLimit.Value)
-							(*F::NavEngine.getFreeBlacklist())[pArea] = bDormant ? BlacklistReason_enum::BR_ENEMY_DORMANT : BlacklistReason_enum::BR_ENEMY_NORMAL;
+							(*F::NavEngine.getFreeBlacklist())[pArea] = bDormant ? BlacklistReason_enum::ENEMY_DORMANT : BlacklistReason_enum::ENEMY_NORMAL;
 						// pointers scare me..
 					}
 				}
@@ -878,7 +875,7 @@ void CNavBot::UpdateEnemyBlacklist(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, in
 					if ((*mToMark)[&tArea] < Vars::NavEng::NavBot::BlacklistSlightDangerLimit.Value)
 						continue;
 				}
-				(*F::NavEngine.getFreeBlacklist())[&tArea] = bDormant ? BlacklistReason_enum::BR_ENEMY_DORMANT : BlacklistReason_enum::BR_ENEMY_NORMAL;
+				(*F::NavEngine.getFreeBlacklist())[&tArea] = bDormant ? BlacklistReason_enum::ENEMY_DORMANT : BlacklistReason_enum::ENEMY_NORMAL;
 			}
 		}
 		vCheckedPlayerOrigins.emplace_back(pPlayer, *vOrigin);
@@ -1539,7 +1536,7 @@ bool CNavBot::BuildBuilding(CUserCmd* pCmd, CTFPlayer* pLocal, ClosestEnemy_t tC
 	// Blacklist this spot and refresh the building spots
 	if (m_iBuildAttempts >= 15)
 	{
-		(*F::NavEngine.getFreeBlacklist())[F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin())] = BlacklistReason_enum::BR_BAD_BUILDING_SPOT;
+		(*F::NavEngine.getFreeBlacklist())[F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin())] = BlacklistReason_enum::BAD_BUILDING_SPOT;
 		RefreshBuildingSpots(pLocal, pMeleeWeapon, tClosestEnemy, true);
 		vCurrentBuildingSpot = std::nullopt;
 		m_iBuildAttempts = 0;
@@ -2056,7 +2053,7 @@ bool CNavBot::CaptureObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 
 	if (const auto& pGameRules = I::TFGameRules())
 	{
-		if (!((pGameRules->m_iRoundState() == GR_STATE_RND_RUNNING || pGameRules->m_iRoundState() == GR_STATE_STALEMATE) && !pGameRules->m_bInWaitingForPlayers())
+		if (!((pGameRules->m_iRoundState() == GR_STATE_TEAM_WIN) && !pGameRules->m_bInWaitingForPlayers())
 			|| pGameRules->m_iRoundState() == GR_STATE_TEAM_WIN
 			|| pGameRules->m_bPlayingSpecialDeliveryMode())
 			return false;
@@ -2358,13 +2355,13 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 	BlacklistReason_enum eReason = (*pBlacklist)[pLocalNav].value;
 	
 	// Check building spot - don't run away from that
-	if (eReason == BR_BAD_BUILDING_SPOT)
+	if (eReason == BAD_BUILDING_SPOT)
 		return false;
 		
 	// Categorize danger levels
-	bool bInHighDanger = (eReason == BR_SENTRY || eReason == BR_STICKY || eReason == BR_ENEMY_INVULN);
-	bool bInMediumDanger = (eReason == BR_SENTRY_MEDIUM || eReason == BR_ENEMY_NORMAL);
-	bool bInLowDanger = (eReason == BR_SENTRY_LOW || eReason == BR_ENEMY_DORMANT);
+	bool bInHighDanger = (eReason == SENTRY || eReason == STICKY || eReason == ENEMY_INVULN);
+	bool bInMediumDanger = (eReason == SENTRY_MEDIUM || eReason == ENEMY_NORMAL);
+	bool bInLowDanger = (eReason == SENTRY_LOW || eReason == ENEMY_DORMANT);
 	
 	// Only escape from high danger by default
 	// Also escape from medium danger if health is low
@@ -2418,11 +2415,11 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 			BlacklistReason_enum danger = it->second.value;
 			
 			// Skip high danger areas
-			if (danger == BR_SENTRY || danger == BR_STICKY || danger == BR_ENEMY_INVULN)
+			if (danger == SENTRY || danger == STICKY || danger == ENEMY_INVULN)
 				continue;
 				
 			// Skip medium danger areas if we have low health
-			if ((danger == BR_SENTRY_MEDIUM || danger == BR_ENEMY_NORMAL) && 
+			if ((danger == SENTRY_MEDIUM || danger == ENEMY_NORMAL) && 
 			    pLocal->m_iHealth() < pLocal->GetMaxHealth() * 0.5f)
 				continue;
 		}
