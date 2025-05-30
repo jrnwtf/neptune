@@ -1675,6 +1675,7 @@ void CMenu::MenuMisc(int iTab)
 					PopTransparent();
 					FToggle(Vars::Misc::Automation::NoiseSpam, FToggleEnum::Left);
 					FToggle(Vars::Misc::Automation::AutoReport, FToggleEnum::Right);
+					FToggle(Vars::Misc::Automation::VoiceF2PMode, FToggleEnum::Left);
 					FDropdown(Vars::Misc::Automation::VoiceCommandSpam);
 				} EndSection();
 				if (Section("Mann vs. Machine", 8))

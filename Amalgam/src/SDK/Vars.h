@@ -1110,6 +1110,7 @@ namespace Vars
 			CVarEnum(VoiceCommandSpam, "Voice command spam", 0, NONE, nullptr,
 				VA_LIST("Off", "Random", "Medic", "Thanks", "Nice Shot", "Cheers", "Jeers", "Go Go Go", "Move Up", "Go Left", "Go Right", "Yes", "No", "Incoming", "Spy", "Sentry Ahead", "Need Teleporter", "Pootis", "Need Sentry", "Activate Charge", "Help", "Battle Cry"),
 				Off, Random, Medic, Thanks, NiceShot, Cheers, Jeers, GoGoGo, MoveUp, GoLeft, GoRight, Yes, No, Incoming, Spy, Sentry, NeedTeleporter, Pootis, NeedSentry, ActivateCharge, Help, BattleCry);
+			CVar(VoiceF2PMode, "F2P voicespam bucket", false);
 			
 			SUBNAMESPACE_BEGIN(ChatSpam)
 				CVar(Enable, "Chat spam", false);

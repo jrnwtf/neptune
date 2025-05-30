@@ -296,92 +296,59 @@ bool CAutoHeal::RunVaccinator(CTFPlayer* pLocal, CWeaponMedigun* pWeapon, CUserC
 	
 	return false;
 }
+void CAutoHeal::Event(IGameEvent* pEvent, uint32_t uHash, CTFPlayer* pLocal)
+{
+    if (!pEvent || !pLocal || !I::EngineClient || !I::GlobalVars)
+        return;
 
-// void CAutoHeal::Event(IGameEvent* pEvent, uint32_t uHash, CTFPlayer* pLocal)
-// {
-// 	// Phase 1: Absolutely critical pointers.
-// 	if (!pEvent || !pLocal || !I::EngineClient || !I::GlobalVars)
-// 		return;
+    if (!pLocal->IsAlive() || pLocal->m_iClass() != TF_CLASS_MEDIC)
+        return;
 
-// 	// Ensure pLocal is alive before doing anything else.
-// 	if (!pLocal->IsAlive())
-// 		return;
+    if (strcmp(pEvent->GetName(), "player_hurt") != 0)
+        return;
 
-// 	// Phase 2: Validate event name as a canary call and for correctness.
-// 	const char* eventName = pEvent->GetName();
-// 	if (!eventName || strcmp(eventName, "player_hurt") != 0)
-// 	{
-// 		// If GetName() failed, or it's not the event we're interested in (redundant with uHash but safer probe).
-// 		// The uHash check (uHash == FNV1A::Hash32Const("player_hurt")) could also be used here,
-// 		// but GetName() tests pEvent's basic validity more directly.
-// 		return;
-// 	}
+    if (!Vars::Aimbot::Healing::AutoVaccinator.Value || !Vars::Aimbot::Healing::VaccinatorSmart.Value)
+        return;
 
-// 	// Phase 3: Feature flags.
-// 	if (!Vars::Aimbot::Healing::AutoVaccinator.Value ||
-// 		!Vars::Aimbot::Healing::VaccinatorSmart.Value)
-// 		return;
+    int userid_val = pEvent->GetInt("userid", 0);
+    if (userid_val <= 0)
+        return;
 
-// 	// Phase 4: Attempt to get data from the event. This is the critical section.
-// 	// Re-check I::EngineClient immediately before use, as a paranoid measure.
-// 	if (!I::EngineClient)
-// 		return; 
+    int iVictim = I::EngineClient->GetPlayerForUserID(userid_val);
+    if (iVictim <= 0 || iVictim != pLocal->entindex())
+        return;
 
-// 	int userid_val = pEvent->GetInt("userid", 0); // Potential CRASH POINT
-// 	if (userid_val <= 0)  // Invalid user ID from GetInt default or actual bad value
-// 		return;
+    int nDamage = pEvent->GetInt("damageamount", 0);
+    if (nDamage <= 0)
+        return;
 
-// 	int iVictim = I::EngineClient->GetPlayerForUserID(userid_val);
-// 	if (iVictim <= 0 || iVictim != pLocal->entindex())
-// 		return;
+    EVaccinatorResist eResistType = VACC_BULLET;
+    int iDamageType = pEvent->GetInt("damagetype", 0);
+    
+    if (iDamageType & DMG_BURN || iDamageType & DMG_IGNITE || iDamageType & DMG_PLASMA)
+        eResistType = VACC_FIRE;
+    else if (iDamageType & DMG_BLAST || iDamageType & DMG_BLAST_SURFACE || iDamageType & DMG_SONIC)
+        eResistType = VACC_BLAST;
 
-// 	// Get damage amount safely
-// 	int nDamage = pEvent->GetInt("damageamount", 0);
-// 	if (nDamage <= 0)
-// 		return;
+    int nWeaponID = pEvent->GetInt("weaponid", 0);
+    
+    if (nWeaponID == TF_WEAPON_ROCKETLAUNCHER || 
+        nWeaponID == TF_WEAPON_GRENADELAUNCHER || 
+        nWeaponID == TF_WEAPON_PIPEBOMBLAUNCHER)
+        eResistType = VACC_BLAST;
+    else if (nWeaponID == TF_WEAPON_FLAMETHROWER || 
+             nWeaponID == TF_WEAPON_FLAREGUN)
+        eResistType = VACC_FIRE;
 
-// 	// Set default resistance to bullet
-// 	EVaccinatorResist eResistType = VACC_BULLET;
-	
-// 	// We'll use GetInt with defaults to avoid crashes from missing keys
-// 	int iDamageType = pEvent->GetInt("damagetype", 0);
-	
-// 	// Determine resistance type based on damage type
-// 	if (iDamageType & DMG_BURN || iDamageType & DMG_IGNITE || iDamageType & DMG_PLASMA)
-// 	{
-// 		eResistType = VACC_FIRE;
-// 	}
-// 	else if (iDamageType & DMG_BLAST || iDamageType & DMG_BLAST_SURFACE || iDamageType & DMG_SONIC)
-// 	{
-// 		eResistType = VACC_BLAST;
-// 	}
-
-// 	// Get weapon ID safely
-// 	int nWeaponID = pEvent->GetInt("weaponid", 0);
-	
-// 	// Check for specific weapons that should override the damage type resistance
-// 	if (nWeaponID == TF_WEAPON_ROCKETLAUNCHER || 
-// 	    nWeaponID == TF_WEAPON_GRENADELAUNCHER || 
-// 	    nWeaponID == TF_WEAPON_PIPEBOMBLAUNCHER)
-// 	{
-// 		eResistType = VACC_BLAST;
-// 	}
-// 	else if (nWeaponID == TF_WEAPON_FLAMETHROWER || 
-// 	         nWeaponID == TF_WEAPON_FLAREGUN)
-// 	{
-// 		eResistType = VACC_FIRE;
-// 	}
-
-// 	// Record the damage for resistance type selection
-// 	if (I::GlobalVars && I::GlobalVars->curtime > 0.0f)
-// 	{
-// 		DamageRecord_t record;
-// 		record.Type = eResistType;
-// 		record.Amount = static_cast<float>(nDamage);
-// 		record.Time = I::GlobalVars->curtime;
-// 		m_DamageRecords.push_back(record);
-// 	}
-// }
+    if (I::GlobalVars->curtime > 0.0f)
+    {
+        DamageRecord_t record;
+        record.Type = eResistType;
+        record.Amount = static_cast<float>(nDamage);
+        record.Time = I::GlobalVars->curtime;
+        m_DamageRecords.push_back(record);
+    }
+}
 
 bool CAutoHeal::ShouldPopOnHealth(CTFPlayer* pLocal, CWeaponMedigun* pWeapon)
 {

@@ -39,6 +39,9 @@ class CMisc
 	std::vector<std::string> m_vKillSayLines;
 	std::vector<std::string> m_vAutoReplyLines;
 	Timer m_tChatSpamTimer;
+	Timer m_tVoiceCommandTimer;
+	int m_iTokenBucket = 5;
+	float m_flLastTokenTime = 0.0f;
 	int m_iCurrentChatSpamIndex = 0;
 	int m_iLastKilledPlayer = 0;
 	std::string m_sLastKilledPlayerName;
