@@ -264,7 +264,22 @@ void CFollowBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
         return;
     
     if (!F::NavEngine.map)
+    {
+        if (m_bIsFollowing)
+        {
+            Reset();
+        }
         return;
+    }
+    
+    static std::string last_map = "";
+    std::string current_map = I::EngineClient->GetLevelName() ? I::EngineClient->GetLevelName() : "";
+    if (current_map != last_map)
+    {
+        last_map = current_map;
+        Reset();
+        return;
+    }
     
     if (!F::NavEngine.isReady(true))
         return;
