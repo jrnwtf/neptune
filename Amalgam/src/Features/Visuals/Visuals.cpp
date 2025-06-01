@@ -463,6 +463,8 @@ void CVisuals::DrawDebugInfo(CTFPlayer* pLocal)
 			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("CanSecondaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanSecondaryAttack, flSecondaryAttack, flAttack, flTime).c_str());
 			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Attack: {:.3f}, {:.3f}; {:.3f}", flTime - flPrimaryAttack, flTime - flSecondaryAttack, flTime - flAttack).c_str());
 			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Reload: {} ({} || {} != 0)", G::Reloading, pWeapon->m_bInReload(), pWeapon->m_iReloadMode()).c_str());
+			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, SDK::WeaponDoesNotUseAmmo(pWeapon) ? "Ammo: not used" : std::format("Ammo: {} ({} {})", pWeapon->HasAmmo(), pWeapon->m_iClip1(), pWeapon->GetWeaponInfo() ? pWeapon->GetWeaponInfo()->iMaxClip1 : -1).c_str());
+			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Res ammo: {} ({})", pLocal->GetAmmoCount(pWeapon->m_iPrimaryAmmoType()),SDK::GetWeaponMaxReserveAmmo(pWeapon->GetWeaponID(), pWeapon->m_iItemDefinitionIndex())).c_str());
 			//auto pViewModel = pLocal->m_hViewModel( ).Get( )->As<CBaseAnimating>( );
 			//if ( pViewModel )
 			//{
