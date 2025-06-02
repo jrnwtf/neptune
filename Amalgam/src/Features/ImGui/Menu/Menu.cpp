@@ -4409,6 +4409,7 @@ void CMenu::MenuNavEng(int iTab)
 							FSlider(Vars::NavEng::NavBot::RechargeDTDelay, FSliderEnum::None);
 							PopTransparent();
 							FDropdown(Vars::NavEng::NavBot::Preferences);
+							FToggle(Vars::NavEng::NavBot::NoRandomizeCPSpot);
 							FDropdown(Vars::NavEng::NavBot::Blacklist);
 							PushTransparent(Transparent || !(FGet(Vars::NavEng::NavBot::Blacklist) & Vars::NavEng::NavBot::BlacklistEnum::NormalThreats));
 							{

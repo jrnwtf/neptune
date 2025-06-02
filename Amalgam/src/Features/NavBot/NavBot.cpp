@@ -1761,18 +1761,18 @@ std::optional<Vector> CNavBot::GetControlPointGoal(const Vector vLocalOrigin, in
 		{
 			vPreviousPosition = *vPosition;
 
-			// Create spread out formation based on player index and class
-			constexpr float flBaseRadius = 120.0f;
+			if (!Vars::NavEng::NavBot::NoRandomizeCPSpot.Value)
+			{
+				constexpr float flBaseRadius = 120.0f;
 
-			// Add ourselves to the total amount
-			iTeammatesOnPoint++;
+				iTeammatesOnPoint++;
 
-			// Add some randomization but keep formation
-			float flAngle = PI * 2 * (float)(I::EngineClient->GetLocalPlayer() % iTeammatesOnPoint) / iTeammatesOnPoint;
-			float flRadius = flBaseRadius + SDK::RandomFloat(-10.0f, 10.0f);
-			Vector vOffset(cos(flAngle) * flRadius, sin(flAngle) * flRadius, 0.0f);
+				float flAngle = PI * 2 * (float)(I::EngineClient->GetLocalPlayer() % iTeammatesOnPoint) / iTeammatesOnPoint;
+				float flRadius = flBaseRadius + SDK::RandomFloat(-10.0f, 10.0f);
+				Vector vOffset(cos(flAngle) * flRadius, sin(flAngle) * flRadius, 0.0f);
 
-			vAdjustedPos += vOffset;
+				vAdjustedPos += vOffset;
+			}
 		}
 	}
 	// If close enough, don't move
