@@ -5,6 +5,9 @@
 
 class CAimbotHitscan
 {
+private:
+	float m_flLastShotTime = 0.0f;
+
 	std::vector<Target_t> GetTargets(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
 	std::vector<Target_t> SortTargets(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
 

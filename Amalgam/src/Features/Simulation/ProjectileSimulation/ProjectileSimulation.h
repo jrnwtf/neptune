@@ -1,5 +1,6 @@
 #pragma once
 #include "../../../SDK/SDK.h"
+#include "../MovementSimulation/MovementSimulation.h"
 
 Enum(ProjSim,
 	None = 0,

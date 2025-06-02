@@ -2,6 +2,20 @@
 #include "../../../SDK/SDK.h"
 #include <functional>
 
+inline bool IsTextModeEnabled()
+{
+#ifdef TEXTMODE
+	return true;
+#else
+	if (I::CVar)
+	{
+		const char* textmode = I::CVar->GetCommandLineValue("-textmode");
+		return textmode != nullptr;
+	}
+	return false;
+#endif
+}
+
 struct PlayerData
 {
 	Vec3 m_vecOrigin = {};

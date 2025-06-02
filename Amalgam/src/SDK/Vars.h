@@ -320,12 +320,17 @@ namespace Vars
 			CVar(PointScale, "Point scale", 0.f, SLIDER_CLAMP | SLIDER_PRECISION, 0.f, 100.f, 5.f, "%g%%");
 			CVar(TapFireDist, "Tapfire distance", 1000.f, SLIDER_MIN | SLIDER_PRECISION, 250.f, 1000.f, 50.f);
 			CVar(TargetEveryone, "Target everyone directly", false);
+			
+			CVar(ShootingDelayEnabled, "Shooting delay enabled", false);
+			CVar(ShootingDelay, "Shooting delay", 1.0f, SLIDER_MIN | SLIDER_PRECISION, 0.1f, 5.0f, 0.1f, "%g seconds");
 
 			CVar(BoneSizeSubtract, "Bone size subtract", 1.f, NOSAVE | DEBUGVAR | SLIDER_MIN, 0.f, 4.f, 0.25f);
 			CVar(BoneSizeMinimumScale, "Bone size minimum scale", 1.f, NOSAVE | DEBUGVAR | SLIDER_CLAMP, 0.f, 1.f, 0.1f);
+			CVar(LowFPSThreshold, "Low FPS threshold", 20.f, SLIDER_MIN | SLIDER_PRECISION, 5.f, 60.f, 5.f, "%g FPS");
 			CVarEnum(LowFPSOptimizations, "Low FPS optimizations", 0b00111, DROPDOWN_MULTI, nullptr,
-				VA_LIST("Target everyone directly", "Reduce hitboxes", "Simplify hitbox scans", "Skip backtracking records", "Use faster visibility checks"),
-				TargetAll = 1 << 0, ReduceHitboxes = 1 << 1, SimplifyScans = 1 << 2, SkipBacktracking = 1 << 3, FastVisChecks = 1 << 4);
+				VA_LIST("Target everyone directly", "Reduce hitboxes", "Simplify hitbox scans", "Skip backtracking records", "Use faster visibility checks", "Limit shooting rate", "Only target closest enemy", "Disable bullet tracers", "Reduce view model effects", "Skip non-essential calculations", "Disable extra visual processing", "Reduce animation processing", "Adaptive tick processing", "Skip sound processing", "Simplified collision checks", "Dynamic prediction quality", "Reduce memory usage", "FOV-based culling", "Process targets less frequently"),
+				TargetAll = 1 << 0, ReduceHitboxes = 1 << 1, SimplifyScans = 1 << 2, SkipBacktracking = 1 << 3, FastVisChecks = 1 << 4, LimitShootingRate = 1 << 5, OnlyTargetClosest = 1 << 6, DisableBulletTracers = 1 << 7, ReduceViewModelEffects = 1 << 8, SkipNonEssentialCalculations = 1 << 9, DisableExtraVisualProcessing = 1 << 10, ReduceAnimationProcessing = 1 << 11, AdaptiveTickProcessing = 1 << 12, SkipSoundProcessing = 1 << 13, SimplifiedCollision = 1 << 14, DynamicPredictionQuality = 1 << 15, ReduceMemoryUsage = 1 << 16, FOVBasedCulling = 1 << 17, ReduceTargetProcessing = 1 << 18);
+			CVar(LowFPSShootingDelay, "Low FPS shooting delay", 0.5f, SLIDER_MIN | SLIDER_PRECISION, 0.2f, 2.0f, 0.1f, "%g seconds");
 		SUBNAMESPACE_END(Hitscan);
 
 		SUBNAMESPACE_BEGIN(Projectile)

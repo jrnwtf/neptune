@@ -148,7 +148,7 @@ public:
 
 		explicit Map(const char* mapname) : navfile(mapname), mapname(mapname) { state = navfile.m_isOK ? NavState::Active : NavState::Unavailable; }
 
-		float LeastCostEstimate(void* start, void* end) override { return reinterpret_cast<CNavArea*>(start)->m_center.DistTo(reinterpret_cast<CNavArea*>(end)->m_center); }
+		float LeastCostEstimate(void* start, void* end) override { return reinterpret_cast<CNavArea*>(start)->m_center.DistToSqr(reinterpret_cast<CNavArea*>(end)->m_center); }
 
 		void AdjacentCost(void* main, std::vector<micropather::StateCost>* adjacent) override;
 
@@ -185,13 +185,8 @@ public:
 			pather.Reset();
 		}
 
-		// Unnecessary interface method for micropather::Graph that is sadly neccesary
-		void PrintStateInfo(void* state) 
-		{
-			if (!state)
-				return;
-			// The actual implementation isn't needed but the function signature must match the interface
-		}
+		// Unnecessary thing that is sadly necessary
+		void PrintStateInfo(void*) {}
 	};
 };
 
@@ -211,9 +206,7 @@ public:
 
 	// Is the Nav engine ready to run?
 	bool isReady(bool bRoundCheck = false);
-
-	// Check if the nav mesh is properly loaded
-	bool IsNavMeshLoaded() { return map && map->state == CNavParser::NavState::Active && !map->navfile.m_areas.empty(); }
+	bool IsNavMeshLoaded() { return map->state == CNavParser::NavState::Active; }
 
 	// Are we currently pathing?
 	bool isPathing() { return !crumbs.empty(); }
@@ -261,7 +254,6 @@ public:
 	void vischeckPath();
 	void checkBlacklist();
 	void updateStuckTime();
-	void smoothPath();
 	void Run(CUserCmd* pCmd);
 	void Reset(bool bForced = false);
 	void Render();

@@ -112,6 +112,9 @@ void CMovementSimulation::Reset(PlayerStorage& tStorage)
 
 void CMovementSimulation::Store()
 {
+	if (IsTextModeEnabled())
+		return;
+
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ALL))
 	{
 		auto pPlayer = pEntity->As<CTFPlayer>();
@@ -204,10 +207,14 @@ void CMovementSimulation::Store()
 	}
 }
 
-
-
 bool CMovementSimulation::Initialize(CBaseEntity* pEntity, PlayerStorage& tStorage, bool bHitchance, bool bStrafe)
 {
+	if (IsTextModeEnabled())
+	{
+		tStorage.m_bInitFailed = tStorage.m_bFailed = true;
+		return false;
+	}
+
 	if (!pEntity || !pEntity->IsPlayer() || !pEntity->As<CTFPlayer>()->IsAlive())
 	{
 		tStorage.m_bInitFailed = tStorage.m_bFailed = true;
@@ -633,7 +640,7 @@ void CMovementSimulation::RestoreBounds(CTFPlayer* pPlayer)
 
 void CMovementSimulation::RunTick(PlayerStorage& tStorage, bool bPath, std::function<void(CMoveData&)>* pCallback)
 {
-	if (tStorage.m_bFailed || !tStorage.m_pPlayer || !tStorage.m_pPlayer->IsPlayer())
+	if (IsTextModeEnabled() || tStorage.m_bFailed || !tStorage.m_pPlayer || !tStorage.m_pPlayer->IsPlayer())
 		return;
 
 	if (bPath)

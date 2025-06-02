@@ -889,7 +889,7 @@ bool SDK::WeaponDoesNotUseAmmo(CTFWeaponBase* pWeapon, bool bIncludeInfiniteAmmo
 		return false;
 
 	if (pWeapon->GetSlot() == SLOT_MELEE)
-		return false;
+		return true;
 
 	switch (pWeapon->m_iItemDefinitionIndex())
 	{
@@ -924,6 +924,7 @@ bool SDK::WeaponDoesNotUseAmmo(CTFWeaponBase* pWeapon, bool bIncludeInfiniteAmmo
 		case TF_WEAPON_PDA_SPY:
 		case TF_WEAPON_PDA_SPY_BUILD:
 		case TF_WEAPON_BUILDER:
+		case TF_WEAPON_INVIS:
 		case TF_WEAPON_LUNCHBOX:
 		case TF_WEAPON_THROWABLE:
 		case TF_WEAPON_JAR:
@@ -972,6 +973,7 @@ bool SDK::WeaponDoesNotUseAmmo(int WeaponID, int DefIdx, bool bIncludeInfiniteAm
 		case TF_WEAPON_PDA_SPY:
 		case TF_WEAPON_PDA_SPY_BUILD:
 		case TF_WEAPON_BUILDER:
+		case TF_WEAPON_INVIS:
 		case TF_WEAPON_LUNCHBOX:
 		case TF_WEAPON_THROWABLE:
 		case TF_WEAPON_JAR:

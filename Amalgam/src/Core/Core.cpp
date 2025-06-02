@@ -208,6 +208,46 @@ void CCore::Load()
 #ifdef TEXTMODE
 	I::EngineClient->ClientCmd_Unrestricted(std::format("fps_max 24").c_str());
 	I::EngineClient->ClientCmd_Unrestricted(std::format("exec autoexec").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("sv_cheats 1").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("fps_max 24").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("exec autoexec").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("mat_queue_mode 2").c_str()); 
+	I::EngineClient->ClientCmd_Unrestricted(std::format("r_shadows 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("r_drawparticles 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("r_drawtracers 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_ragdoll_fade_time 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_ragdoll_physics_enable 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("mat_reducefillrate 1").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("mat_disable_bloom 1").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("r_3dsky 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("mem_compact").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("r_occlusion 1").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_phys_props_enable 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_phys_props_max 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("rate 20000").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_cmdrate 30").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_updaterate 30").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("net_maxcleartime 4").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("sv_cheats 1").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("fps_max 24").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("exec autoexec").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("mat_queue_mode 2").c_str()); 
+	I::EngineClient->ClientCmd_Unrestricted(std::format("r_shadows 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("r_drawparticles 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("r_drawtracers 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_ragdoll_fade_time 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_ragdoll_physics_enable 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("mat_reducefillrate 1").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("mat_disable_bloom 1").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("r_3dsky 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("mem_compact").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("r_occlusion 1").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_phys_props_enable 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_phys_props_max 0").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("rate 20000").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_cmdrate 30").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_updaterate 30").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("net_maxcleartime 4").c_str());
 #endif
 	SDK::Output("Amalgam", "Loaded", { 175, 150, 255 }, true, true, true);
 }
@@ -218,7 +258,7 @@ void CCore::Loop()
 	{
 #ifdef TEXTMODE
 		if (m_bUnload)
-			break;
+			break;		
 #else
 		bool bShouldUnload = U::KeyHandler.Down(VK_F11) && SDK::IsGameWindowInFocus() || m_bUnload;
 		if (bShouldUnload)

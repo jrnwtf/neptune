@@ -29,25 +29,81 @@ void CAimbotGlobal::SortPriority(std::vector<Target_t>& vTargets)
 // this won't prevent shooting bones outside of fov
 bool CAimbotGlobal::PlayerBoneInFOV(CTFPlayer* pTarget, Vec3 vLocalPos, Vec3 vLocalAngles, float& flFOVTo, Vec3& vPos, Vec3& vAngleTo, int iHitboxes)
 {
+	bool bLowFPS = G::GetFPS() < Vars::Aimbot::Hitscan::LowFPSThreshold.Value;
+	int iLowFPSFlags = bLowFPS ? Vars::Aimbot::Hitscan::LowFPSOptimizations.Value : 0;
+	bool bReduceAnimationProcessing = bLowFPS && (iLowFPSFlags & Vars::Aimbot::Hitscan::LowFPSOptimizationsEnum::ReduceAnimationProcessing);
+	bool bReduceMemoryUsage = bLowFPS && (iLowFPSFlags & Vars::Aimbot::Hitscan::LowFPSOptimizationsEnum::ReduceMemoryUsage);
+
 	matrix3x4 aBones[MAXSTUDIOBONES];
-	if (!pTarget->SetupBones(aBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, I::GlobalVars->curtime))
-		return false;
+	
+	// Optimize setupBones for low FPS
+	if (bReduceAnimationProcessing)
+	{
+		// Only process bones needed for hitboxes
+		if (!pTarget->SetupBones(aBones, MAXSTUDIOBONES, BONE_USED_BY_HITBOX, I::GlobalVars->curtime))
+			return false;
+	}
+	else
+	{
+		// Process all bones normally
+		if (!pTarget->SetupBones(aBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, I::GlobalVars->curtime))
+			return false;
+	}
 
 	float flMinFOV = 180.f;
-	for (int nHitbox = 0; nHitbox < pTarget->GetNumOfHitboxes(); nHitbox++)
+	
+	// When using memory reduction, we'll check fewer hitboxes
+	int nStartHitbox = 0;
+	int nEndHitbox = pTarget->GetNumOfHitboxes();
+	
+	// With reduced memory usage, only check key hitboxes
+	if (bReduceMemoryUsage)
 	{
-		if (!IsHitboxValid(H::Entities.GetModel(pTarget->entindex()), nHitbox, iHitboxes))
-			continue;
-
-		Vec3 vCurPos = pTarget->GetHitboxCenter(aBones, nHitbox);
-		Vec3 vCurAngleTo = Math::CalcAngle(vLocalPos, vCurPos);
-		float flCurFOVTo = Math::CalcFov(vLocalAngles, vCurAngleTo);
-
-		if (flCurFOVTo < flMinFOV)
+		int keyHitboxes[] = {
+			HITBOX_HEAD,
+			HITBOX_BODY,
+			HITBOX_CHEST,
+			HITBOX_UPPER_CHEST,
+			HITBOX_PELVIS
+		};
+		
+		for (int i = 0; i < sizeof(keyHitboxes)/sizeof(int); i++)
 		{
-			vPos = vCurPos;
-			vAngleTo = vCurAngleTo;
-			flFOVTo = flMinFOV = flCurFOVTo;
+			int nHitbox = keyHitboxes[i];
+			
+			if (!IsHitboxValid(H::Entities.GetModel(pTarget->entindex()), nHitbox, iHitboxes))
+				continue;
+
+			Vec3 vCurPos = pTarget->GetHitboxCenter(aBones, nHitbox);
+			Vec3 vCurAngleTo = Math::CalcAngle(vLocalPos, vCurPos);
+			float flCurFOVTo = Math::CalcFov(vLocalAngles, vCurAngleTo);
+
+			if (flCurFOVTo < flMinFOV)
+			{
+				vPos = vCurPos;
+				vAngleTo = vCurAngleTo;
+				flFOVTo = flMinFOV = flCurFOVTo;
+			}
+		}
+	}
+	else
+	{
+		// Normal full hitbox check
+		for (int nHitbox = 0; nHitbox < pTarget->GetNumOfHitboxes(); nHitbox++)
+		{
+			if (!IsHitboxValid(H::Entities.GetModel(pTarget->entindex()), nHitbox, iHitboxes))
+				continue;
+
+			Vec3 vCurPos = pTarget->GetHitboxCenter(aBones, nHitbox);
+			Vec3 vCurAngleTo = Math::CalcAngle(vLocalPos, vCurPos);
+			float flCurFOVTo = Math::CalcFov(vLocalAngles, vCurAngleTo);
+
+			if (flCurFOVTo < flMinFOV)
+			{
+				vPos = vCurPos;
+				vAngleTo = vCurAngleTo;
+				flFOVTo = flMinFOV = flCurFOVTo;
+			}
 		}
 	}
 
@@ -272,14 +328,36 @@ int CAimbotGlobal::GetPriority(int targetIdx)
 
 bool CAimbotGlobal::ShouldAim()
 {
-	switch (Vars::Aimbot::General::AimType.Value)
+	// Check if we need to skip sound processing in low FPS situations
+	bool bLowFPS = G::GetFPS() < Vars::Aimbot::Hitscan::LowFPSThreshold.Value;
+	int iLowFPSFlags = bLowFPS ? Vars::Aimbot::Hitscan::LowFPSOptimizations.Value : 0;
+	bool bSkipSoundProcessing = bLowFPS && (iLowFPSFlags & Vars::Aimbot::Hitscan::LowFPSOptimizationsEnum::SkipSoundProcessing);
+	
+	// If we're skipping sound processing, avoid certain checks that might trigger sounds
+	if (bSkipSoundProcessing)
 	{
-	case Vars::Aimbot::General::AimTypeEnum::Plain:
-	case Vars::Aimbot::General::AimTypeEnum::Silent:
-		// for performance reasons, the F::Ticks.m_bDoubletap condition is not a great fix here
-		// and actually properly predicting when shots will be fired should likely be done over this, but it's fine for now
-		if (!G::CanPrimaryAttack && !G::Reloading && !F::Ticks.m_bDoubletap && !F::Ticks.m_bSpeedhack)
-			return false;
+		// We still need to check basic conditions
+		switch (Vars::Aimbot::General::AimType.Value)
+		{
+		case Vars::Aimbot::General::AimTypeEnum::Plain:
+		case Vars::Aimbot::General::AimTypeEnum::Silent:
+			if (!G::CanPrimaryAttack && !G::Reloading)
+				return false;
+		}
+		return true;
+	}
+	else
+	{
+		// Regular full check with all sound processing
+		switch (Vars::Aimbot::General::AimType.Value)
+		{
+		case Vars::Aimbot::General::AimTypeEnum::Plain:
+		case Vars::Aimbot::General::AimTypeEnum::Silent:
+			// for performance reasons, the F::Ticks.m_bDoubletap condition is not a great fix here
+			// and actually properly predicting when shots will be fired should likely be done over this, but it's fine for now
+			if (!G::CanPrimaryAttack && !G::Reloading && !F::Ticks.m_bDoubletap && !F::Ticks.m_bSpeedhack)
+				return false;
+		}
 	}
 
 	return true;

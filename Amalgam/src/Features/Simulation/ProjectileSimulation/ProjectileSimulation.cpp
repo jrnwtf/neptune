@@ -304,6 +304,9 @@ TraceType_t CTraceFilterWorldPropsObjects::GetTraceType() const
 
 bool CProjectileSimulation::GetInfo(CTFPlayer* pPlayer, CTFWeaponBase* pWeapon, Vec3 vAngles, ProjectileInfo& tProjInfo, int iFlags, float flAutoCharge)
 {
+	if (IsTextModeEnabled())
+		return false;
+
 	bool InitCheck = iFlags & ProjSimEnum::InitCheck;
 	bool bQuick = iFlags & ProjSimEnum::Quick;
 
@@ -328,6 +331,9 @@ bool CProjectileSimulation::GetInfo(CTFPlayer* pPlayer, CTFWeaponBase* pWeapon, 
 
 bool CProjectileSimulation::Initialize(ProjectileInfo& tProjInfo, bool bSimulate, bool bVelocities)
 {
+	if (IsTextModeEnabled())
+		return false;
+
 	if (!env)
 		env = I::Physics->CreateEnvironment();
 
@@ -586,7 +592,7 @@ bool CProjectileSimulation::Initialize(ProjectileInfo& tProjInfo, bool bSimulate
 
 void CProjectileSimulation::RunTick(ProjectileInfo& tProjInfo, bool bPath) // bug: per frame projectile trace can cause inconsistencies?
 {
-	if (!env)
+	if (IsTextModeEnabled() || !env)
 		return;
 
 	if (bPath)

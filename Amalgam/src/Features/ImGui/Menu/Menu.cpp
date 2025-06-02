@@ -328,6 +328,10 @@ void CMenu::MenuAimbot(int iTab)
 					FSlider(Vars::Aimbot::Hitscan::PointScale);
 					FToggle(Vars::Aimbot::Hitscan::TargetEveryone, FToggleEnum::Left);
 					FDropdown(Vars::Aimbot::Hitscan::LowFPSOptimizations, FDropdownEnum::Right);
+					FSlider(Vars::Aimbot::Hitscan::LowFPSThreshold, FSliderEnum::Left);
+					FSlider(Vars::Aimbot::Hitscan::LowFPSShootingDelay, FSliderEnum::Right);
+					FToggle(Vars::Aimbot::Hitscan::ShootingDelayEnabled, FToggleEnum::Left);
+					FSlider(Vars::Aimbot::Hitscan::ShootingDelay, FSliderEnum::Right);
 					PushTransparent(!(FGet(Vars::Aimbot::Hitscan::Modifiers) & Vars::Aimbot::Hitscan::ModifiersEnum::Tapfire));
 					{
 						FSlider(Vars::Aimbot::Hitscan::TapFireDist);
