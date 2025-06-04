@@ -1158,6 +1158,7 @@ namespace Vars
 			);
 			CVar(FreezeQueue, "Freeze queue", false);
 			CVar(AutoCasualQueue, "Auto casual queue", false);
+			CVar(AutoCasualJoin, "Auto casual join", false);
 			CVar(QueueDelay, "Queue delay", 5, SLIDER_MIN, 0, 10, 1, "%im");
 			CVar(RQif, "Requeue if...", false); // Dropdown?
 			CVar(RQplt, "Players LT", 12, SLIDER_MIN, 0, 100, 1, "%i");

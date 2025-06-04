@@ -1174,6 +1174,7 @@
     <ClCompile Include="src\Hooks\CSniperDot_GetRenderingPositions.cpp" />
     <ClCompile Include="src\Hooks\CTFGCClientSystem_BHasCompetitiveAccess.cpp" />
     <ClCompile Include="src\Hooks\CTFGCClientSystem_BLocalPlayerInventoryHasMvmTicket.cpp" />
+    <ClCompile Include="src\Hooks\CTFGCClientSystem_SOCreated.cpp" />
     <ClCompile Include="src\Hooks\CTFInput_ApplyMouse.cpp" />
     <ClCompile Include="src\Hooks\CTFParty_BAnyMemberWithoutCompetitiveAccess.cpp" />
     <ClCompile Include="src\Hooks\CTFParty_BAnyMemberWithoutTicket.cpp" />

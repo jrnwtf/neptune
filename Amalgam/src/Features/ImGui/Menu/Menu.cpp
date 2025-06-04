@@ -1579,6 +1579,7 @@ void CMenu::MenuMisc(int iTab)
 					FDropdown(Vars::Misc::Queueing::ForceRegions);
 					FToggle(Vars::Misc::Queueing::FreezeQueue, FToggleEnum::Left);
 					FToggle(Vars::Misc::Queueing::AutoCasualQueue, FToggleEnum::Right);
+					FToggle(Vars::Misc::Queueing::AutoCasualJoin, FToggleEnum::Left);
 					FSlider(Vars::Misc::Queueing::QueueDelay, FSliderEnum::None);
 					FToggle(Vars::Misc::Queueing::RQif, FToggleEnum::Left);
 					PushTransparent(!FGet(Vars::Misc::Queueing::RQif));

@@ -256,6 +256,7 @@
     <ClCompile Include="src\Hooks\IVModelRender_DrawModelExecute.cpp" />
     <ClCompile Include="src\Hooks\CViewRender_RenderView.cpp" />
     <ClCompile Include="src\Features\Misc\AutoItem\AutoItem.cpp" />
+    <ClCompile Include="src\Hooks\CTFGCClientSystem_SOCreated.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Utils\UtlVector\UtlVector.h" />
