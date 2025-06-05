@@ -689,6 +689,7 @@ void CNavEngine::vischeckPath()
 			// Mark as invalid for a while
 			map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, -1 };
 			abandonPath();
+			break;
 		}
 		// Else we can update the cache (if not marked bad before this)
 		else if (!map->vischeck_cache.count(key) || map->vischeck_cache[key].vischeck_state != -1)
