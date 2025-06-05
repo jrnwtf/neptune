@@ -9,6 +9,8 @@
 
 #pragma warning (disable : 6385)
 
+MAKE_SIGNATURE(CAttributeManager_AttribHookFloat, "client.dll", "4C 8B DC 49 89 5B ? 49 89 6B ? 56 57 41 54 41 56 41 57 48 83 EC ? 48 8B 3D ? ? ? ? 4C 8D 35", 0x0);
+
 static BOOL CALLBACK TeamFortressWindow(HWND hWindow, LPARAM lParam)
 {
 	char windowTitle[1024];
@@ -138,41 +140,37 @@ double SDK::PlatFloatTime()
 	return Plat_FloatTime();
 }
 
-int SDK::StdRandomInt(int min, int max)
+int SDK::StdRandomInt(int iMin, int iMax)
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> distr(min, max);
+	std::uniform_int_distribution<> distr(iMin, iMax);
 	return distr(gen);
 }
 
-float SDK::StdRandomFloat(float min, float max)
+float SDK::StdRandomFloat(float flMin, float flMax)
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_real_distribution<float> distr(min, max);
+	std::uniform_real_distribution<float> distr(flMin, flMax);
 	return distr(gen);
 }
 
-int SDK::SeedFileLineHash(int seedvalue, const char* sharedname, int additionalSeed)
+int SDK::SeedFileLineHash(int iSeed, const char* sName, int iAdditionalSeed)
 {
-	CRC32_t retval;
-
-	CRC32_Init(&retval);
-
-	CRC32_ProcessBuffer(&retval, &seedvalue, sizeof(int));
-	CRC32_ProcessBuffer(&retval, &additionalSeed, sizeof(int));
-	CRC32_ProcessBuffer(&retval, sharedname, int(strlen(sharedname)));
-
-	CRC32_Final(&retval);
-
-	return static_cast<int>(retval);
+	CRC32_t iReturn;
+	CRC32_Init(&iReturn);
+	CRC32_ProcessBuffer(&iReturn, &iSeed, sizeof(int));
+	CRC32_ProcessBuffer(&iReturn, &iAdditionalSeed, sizeof(int));
+	CRC32_ProcessBuffer(&iReturn, sName, int(strlen(sName)));
+	CRC32_Final(&iReturn);
+	return static_cast<int>(iReturn);
 }
 
-int SDK::SharedRandomInt(unsigned iseed, const char* sharedname, int iMinVal, int iMaxVal, int additionalSeed)
+int SDK::SharedRandomInt(unsigned iSeed, const char* sName, int iMinVal, int iMaxVal, int iAdditionalSeed)
 {
-	const int seed = SeedFileLineHash(iseed, sharedname, additionalSeed);
-	I::UniformRandomStream->SetSeed(seed);
+	int iSeed2 = SeedFileLineHash(iSeed, sName, iAdditionalSeed);
+	I::UniformRandomStream->SetSeed(iSeed2);
 	return I::UniformRandomStream->RandomInt(iMinVal, iMaxVal);
 }
 
@@ -192,11 +190,6 @@ float SDK::RandomFloat(float flMinVal, float flMaxVal)
 {
 	static auto RandomFloat = U::Memory.GetModuleExport<float(*)(float, float)>("vstdlib.dll", "RandomFloat");
 	return RandomFloat(flMinVal, flMaxVal);
-}
-
-int SDK::HandleToIDX(unsigned int pHandle)
-{
-	return pHandle & 0xFFF;
 }
 
 bool SDK::W2S(const Vec3& vOrigin, Vec3& vScreen, bool bAlways)
@@ -483,12 +476,21 @@ int SDK::IsAttacking(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const CUserCmd* 
 		case TF_WEAPON_BAT_WOOD:
 		case TF_WEAPON_BAT_GIFTWRAP:
 		{
-			static int iThrowTick = 0;
-			if (G::CanSecondaryAttack && pWeapon->HasPrimaryAmmoForShot() && pCmd->buttons & IN_ATTACK2 && iThrowTick + 5 < iTickBase)
-				iThrowTick = iTickBase + 11;
-			if (iThrowTick >= iTickBase)
-				G::CanPrimaryAttack = G::CanSecondaryAttack = G::Throwing = true;
-			if (iThrowTick == iTickBase)
+			static int iThrowTick = -5;
+			{
+				static int iLastTickBase = iTickBase;
+				if (iTickBase != iLastTickBase)
+					iThrowTick = std::max(iThrowTick - 1, -5);
+				iLastTickBase = iTickBase;
+			}
+
+			if (G::CanPrimaryAttack && pWeapon->HasPrimaryAmmoForShot() && pCmd->buttons & IN_ATTACK2 && iThrowTick == -5)
+				iThrowTick = 12;
+			if (iThrowTick > -5)
+				G::Throwing = G::CanSecondaryAttack = true;
+			if (iThrowTick > 1)
+				G::Throwing = 2;
+			if (iThrowTick == 1)
 				return true;
 		}
 		}
@@ -496,8 +498,7 @@ int SDK::IsAttacking(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const CUserCmd* 
 		return TIME_TO_TICKS(pWeapon->m_flSmackTime()) == iTickBase - 1;
 	}
 
-	const int iWeaponID = pWeapon->GetWeaponID();
-	switch (iWeaponID)
+	switch (pWeapon->GetWeaponID())
 	{
 	case TF_WEAPON_COMPOUND_BOW:
 		return !(pCmd->buttons & IN_ATTACK) && pWeapon->As<CTFPipebombLauncher>()->m_flChargeBeginTime() > 0.f;
@@ -533,31 +534,30 @@ int SDK::IsAttacking(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const CUserCmd* 
 		break;
 	}
 	case TF_WEAPON_CLEAVER: // we can randomly use attack2 to fire
-	{
-		static int iThrowTick = 0;
-		if (G::CanPrimaryAttack && pWeapon->HasPrimaryAmmoForShot() && pCmd->buttons & (IN_ATTACK | IN_ATTACK2) && iThrowTick < iTickBase)
-			iThrowTick = iTickBase + 11;
-		if (iThrowTick >= iTickBase)
-			G::CanPrimaryAttack = G::Throwing = true;
-		return iThrowTick == iTickBase;
-	}
 	case TF_WEAPON_JAR:
 	case TF_WEAPON_JAR_MILK:
 	case TF_WEAPON_JAR_GAS:
 	{
-		static int iThrowTick = 0;
-		if (G::CanPrimaryAttack && pWeapon->HasPrimaryAmmoForShot() && pCmd->buttons & IN_ATTACK && iThrowTick < iTickBase)
-			iThrowTick = iTickBase + 11;
-		if (iThrowTick >= iTickBase)
-			G::CanPrimaryAttack = G::Throwing = true;
-		return iThrowTick == iTickBase;
+		static int iThrowTick = -5;
+		{
+			static int iLastTickBase = iTickBase;
+			if (iTickBase != iLastTickBase)
+				iThrowTick = std::max(iThrowTick - 1, -5);
+			iLastTickBase = iTickBase;
+		}
+
+		const int iAttack = pWeapon->GetWeaponID() == TF_WEAPON_CLEAVER ? IN_ATTACK | IN_ATTACK2 : IN_ATTACK;
+		if (G::CanPrimaryAttack && pWeapon->HasPrimaryAmmoForShot() && pCmd->buttons & iAttack && iThrowTick == -5)
+			iThrowTick = 12;
+		if (iThrowTick > -5)
+			G::Throwing = G::CanPrimaryAttack = true;
+		if (iThrowTick > 1)
+			G::Throwing = 2;
+		return iThrowTick == 1;
 	}
 	case TF_WEAPON_GRAPPLINGHOOK:
 	{
-		if (G::LastUserCmd->buttons & IN_ATTACK || !(pCmd->buttons & IN_ATTACK))
-			return false;
-
-		if (pLocal->InCond(TF_COND_GRAPPLINGHOOK))
+		if (!G::CanPrimaryAttack || !(pCmd->buttons & IN_ATTACK) || pWeapon->As<CTFGrapplingHook>()->m_hProjectile())
 			return false;
 
 		Vec3 vPos, vAngle; GetProjectileFireSetup(pLocal, pCmd->viewangles, { 23.5f, -8.f, -3.f }, vPos, vAngle, false);
@@ -591,7 +591,9 @@ int SDK::IsAttacking(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const CUserCmd* 
 		break;
 	}
 
-	if (pWeapon->m_iItemDefinitionIndex() == Soldier_m_TheBeggarsBazooka)
+	switch (pWeapon->m_iItemDefinitionIndex())
+	{
+	case Soldier_m_TheBeggarsBazooka:
 	{
 		static bool bLoading = false, bFiring = false;
 
@@ -611,13 +613,14 @@ int SDK::IsAttacking(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const CUserCmd* 
 
 		return false;
 	}
+	}
 
 	return G::CanPrimaryAttack && pCmd->buttons & IN_ATTACK ? 1 : G::Reloading && pCmd->buttons & IN_ATTACK ? 2 : 0;
 }
 
 float SDK::MaxSpeed(CTFPlayer* pPlayer, bool bIncludeCrouch, bool bIgnoreSpecialAbility)
 {
-	float flSpeed = pPlayer->TeamFortress_CalculateMaxSpeed(bIgnoreSpecialAbility);
+	float flSpeed = pPlayer->CalculateMaxSpeed(bIgnoreSpecialAbility);
 
 	if (pPlayer->InCond(TF_COND_SPEED_BOOST) || pPlayer->InCond(TF_COND_HALLOWEEN_SPEED_BOOST))
 		flSpeed *= 1.35f;
@@ -625,6 +628,11 @@ float SDK::MaxSpeed(CTFPlayer* pPlayer, bool bIncludeCrouch, bool bIgnoreSpecial
 		flSpeed /= 3;
 
 	return flSpeed;
+}
+
+float SDK::AttribHookValue(float value, const char* name, void* econent, void* buffer, bool isGlobalConstString)
+{
+	return S::CAttributeManager_AttribHookFloat.Call<float>(value, name, econent, buffer, isGlobalConstString);
 }
 
 void SDK::FixMovement(CUserCmd* pCmd, const Vec3& vCurAngle, const Vec3& vTargetAngle)

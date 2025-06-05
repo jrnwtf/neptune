@@ -6,8 +6,5 @@ MAKE_SIGNATURE( CBaseTrigger_PointIsWithin, "server.dll", "48 81 EC ? ? ? ? F3 0
 class CBaseTrigger : public CBaseToggle
 {
 public:
-	inline bool PointIsWithin( Vector vPoint )
-	{
-		return S::CBaseTrigger_PointIsWithin.Call<bool( * )( CBaseTrigger*, const Vector& )>( this, vPoint );
-	}
+	SIGNATURE_ARGS(PointIsWithin, bool, CBaseTrigger, (const Vector& vPoint), this, std::ref(vPoint));
 };

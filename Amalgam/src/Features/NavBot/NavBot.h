@@ -140,4 +140,4 @@ public:
 	void Draw(CTFPlayer* pLocal);
 };
 
-ADD_FEATURE(CNavBot, NavBot)
+ADD_FEATURE(CNavBot, NavBot);

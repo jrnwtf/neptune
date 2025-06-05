@@ -525,13 +525,13 @@ namespace ImGui
 			PopStyleVar();
 	}
 
-	inline bool FInputText(const char* sLabel, std::string& sText, int iFlags = ImGuiInputTextFlags_None, float flWidth = H::Draw.Scale(150))
+	inline bool FInputText(const char* sLabel, std::string& sText, float flWidth = H::Draw.Scale(150), int iFlags = ImGuiInputTextFlags_None, ImGuiInputTextCallback fCallback = nullptr)
 	{
 		PushStyleVar(ImGuiStyleVar_FramePadding, { H::Draw.Scale(8), H::Draw.Scale(8) });
 		PushItemWidth(flWidth);
 		ImVec2 vDrawPos = GetCursorPos() + GetDrawPos();
 
-		bool bReturn = InputText(std::format("##{}", sLabel).c_str(), &sText, iFlags | ImGuiInputTextFlags_NoKeyboardNavigate);
+		bool bReturn = InputText(std::format("##{}", sLabel).c_str(), &sText, iFlags | ImGuiInputTextFlags_NoKeyboardNavigate, fCallback);
 		ImVec2 vSize = GetItemRectSize();
 		float flInset = H::Draw.Scale(0.5f) - 0.5f;
 		GetWindowDrawList()->AddRect({ vDrawPos.x + flInset, vDrawPos.y + flInset }, { vDrawPos.x - flInset + vSize.x, vDrawPos.y - flInset + vSize.y }, F::Render.Background2, H::Draw.Scale(4), ImDrawFlags_None, H::Draw.Scale());
@@ -2739,7 +2739,7 @@ namespace ImGui
 		{
 		case BindEnum::Key: tBind.m_iInfo = std::clamp(tBind.m_iInfo, 0, 2); FDropdown("Behavior", &tBind.m_iInfo, { "Hold", "Toggle", "Double click" }, {}, FDropdownEnum::Right, 0, "None", &bHovered); break;
 		case BindEnum::Class: tBind.m_iInfo = std::clamp(tBind.m_iInfo, 0, 8); FDropdown("Class", &tBind.m_iInfo, { "Scout", "Soldier", "Pyro", "Demoman", "Heavy", "Engineer", "Medic", "Sniper", "Spy" }, {}, FDropdownEnum::Right, 0, "None", &bHovered); break;
-		case BindEnum::WeaponType: tBind.m_iInfo = std::clamp(tBind.m_iInfo, 0, 2); FDropdown("Weapon type", &tBind.m_iInfo, { "Hitscan", "Projectile", "Melee" }, {}, FDropdownEnum::Right, 0, "None", &bHovered); break;
+		case BindEnum::WeaponType: tBind.m_iInfo = std::clamp(tBind.m_iInfo, 0, 3); FDropdown("Weapon type", &tBind.m_iInfo, { "Hitscan", "Projectile", "Melee", "Throwable" }, {}, FDropdownEnum::Right, 0, "None", &bHovered); break;
 		case BindEnum::ItemSlot: tBind.m_iInfo = std::max(tBind.m_iInfo, 0); FDropdown("Item slot", &tBind.m_iInfo, { "1", "2", "3", "4", "5", "6", "7", "8", "9" }, {}, FDropdownEnum::Right, 0, "None", &bHovered); break;
 		}
 		bLastHovered = bLastHovered || bHovered;

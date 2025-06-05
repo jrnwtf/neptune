@@ -14,7 +14,7 @@ MAKE_HOOK(CTFGCClientSystem_SOCreated, S::CTFGCClientSystem_SOCreated(), void,
 {
 	if (pObject)
 	{
-		auto uType = reinterpret_cast<unsigned int(*)(void*)>(U::Memory.GetVFunc(pObject, 1))(pObject);
+		auto uType = reinterpret_cast<unsigned int(*)(void*)>(U::Memory.GetVirtual(pObject, 1))(pObject);
 		SDK::Output("CTFGCClientSystem_SOCreated", std::format("SO created: {}", uType).c_str(), Color_t(255, 255, 255, 255), true, true);
 
 #ifndef TEXTMODE

@@ -6,7 +6,7 @@ namespace BindEnum
 {
 	Enum(Key, Hold, Toggle, DoubleClick)
 	Enum(Class, Scout, Soldier, Pyro, Demoman, Heavy, Engineer, Medic, Sniper, Spy)
-	Enum(WeaponType, Hitscan, Projectile, Melee)
+	Enum(WeaponType, Hitscan, Projectile, Melee, Throwable)
 	//Enum(ItemType, First, Second, Third, Fourth, Fifth, Sixth, Seventh, Eighth, Ninth)
 }
 Enum(BindVisibility, Always, WhileActive, Hidden)
@@ -45,4 +45,4 @@ public:
 	std::vector<Bind_t> m_vBinds = {};
 };
 
-ADD_FEATURE(CBinds, Binds)
+ADD_FEATURE(CBinds, Binds);

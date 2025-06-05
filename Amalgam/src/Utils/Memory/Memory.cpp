@@ -1,4 +1,5 @@
 #include "Memory.h"
+
 #include <format>
 #include <Psapi.h>
 
@@ -48,14 +49,14 @@ uintptr_t CMemory::FindSignature(const char* szModule, const char* szPattern)
 		// Get module information to search in the given module
 		MODULEINFO lpModuleInfo;
 		if (!GetModuleInformation(GetCurrentProcess(), hMod, &lpModuleInfo, sizeof(MODULEINFO)))
-			return {};
+			return 0x0;
 
 		// The region where we will search for the byte sequence
 		const auto dwImageSize = lpModuleInfo.SizeOfImage;
 
 		// Check if the image is faulty
 		if (!dwImageSize)
-			return {};
+			return 0x0;
 
 		// Convert IDA-Style signature to a byte sequence
 		const auto vPattern = PatternToInt(szPattern);
@@ -103,4 +104,18 @@ PVOID CMemory::FindInterface(const char* szModule, const char* szObject)
 		return nullptr;
 
 	return fnCreateInterface(szObject, nullptr);
+}
+
+std::string CMemory::GetModuleOffset(uintptr_t uAddress)
+{
+	HMODULE hModule;
+	if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, LPCSTR(uAddress), &hModule))
+		return std::format("{:#x}", uAddress);
+
+	uintptr_t uBase = uintptr_t(hModule);
+	char buffer[MAX_PATH];
+	if (!GetModuleBaseName(GetCurrentProcess(), hModule, buffer, sizeof(buffer) / sizeof(char)))
+		return std::format("{:#x}+{:#x}", uBase, uAddress - uBase);
+
+	return std::format("{}+{:#x}", buffer, uAddress - uBase);
 }

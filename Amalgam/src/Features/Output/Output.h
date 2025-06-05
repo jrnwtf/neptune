@@ -3,8 +3,6 @@
 
 class COutput
 {
-	void OutputInfo(int flags, std::string sName, std::string sOutput, std::string sChat);
-
 	bool m_bInfoOnJoin = false;
 
 public:
@@ -23,4 +21,4 @@ public:
 	void AliasOnJoin(std::string sName, uint32_t uFriendsID);
 };
 
-ADD_FEATURE(COutput, Output)
+ADD_FEATURE(COutput, Output);

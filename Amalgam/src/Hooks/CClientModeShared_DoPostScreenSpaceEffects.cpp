@@ -8,7 +8,7 @@
 #include "../Features/Visuals/Materials/Materials.h"
 #include "../Features/Navbot/NavEngine/NavEngine.h"
 
-MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::ClientModeShared, 39), bool,
+MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVirtual(I::ClientModeShared, 39), bool,
 	void* rcx, const CViewSetup* pSetup)
 {
 #ifdef DEBUG_HOOKS
@@ -32,10 +32,7 @@ MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::Clie
 		return CALL_ORIGINAL(rcx, pSetup);
 
 	F::NavEngine.Render();
-	F::Visuals.DrawBoxes();
-	F::Visuals.DrawPaths();
-	F::Visuals.DrawLines();
-	F::Visuals.DrawSightlines();
+	F::Visuals.DrawEffects();
 	F::Chams.m_mEntities.clear();
 	if (!I::EngineVGui->IsGameUIVisible() && pLocal && F::Materials.m_bLoaded)
 	{

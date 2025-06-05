@@ -29,11 +29,11 @@ public:
 	bool IsHitboxValid(uint32_t uHash, int nHitbox, int iHitboxes = Vars::Aimbot::Hitscan::HitboxesEnum::Head | Vars::Aimbot::Hitscan::HitboxesEnum::Body | Vars::Aimbot::Hitscan::HitboxesEnum::Pelvis | Vars::Aimbot::Hitscan::HitboxesEnum::Arms | Vars::Aimbot::Hitscan::HitboxesEnum::Legs);
 
 	bool ShouldIgnore(CBaseEntity* pTarget, CTFPlayer* pLocal, CTFWeaponBase* pWeapon, bool bIgnoreDormant = true);
-	int GetPriority(int targetIdx);
+	int GetPriority(int iIndex);
 
 	bool ShouldAim();
 	bool ShouldHoldAttack(CTFWeaponBase* pWeapon);
 	bool ValidBomb(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CBaseEntity* pBomb);
 };
 
-ADD_FEATURE(CAimbotGlobal, AimbotGlobal)
+ADD_FEATURE(CAimbotGlobal, AimbotGlobal);

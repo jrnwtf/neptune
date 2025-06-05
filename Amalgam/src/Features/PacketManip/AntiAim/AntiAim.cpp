@@ -45,10 +45,17 @@ bool CAntiAim::ShouldRun(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 
 
 
-void CAntiAim::FakeShotAngles(CTFPlayer* pLocal, CUserCmd* pCmd)
+void CAntiAim::FakeShotAngles(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
 	if (!Vars::AntiAim::InvalidShootPitch.Value || G::Attacking != 1 || G::PrimaryWeaponType != EWeaponType::HITSCAN || !pLocal || pLocal->m_MoveType() != MOVETYPE_WALK)
 		return;
+
+	switch (pWeapon ? pWeapon->GetWeaponID() : 0)
+	{
+	case TF_WEAPON_MEDIGUN:
+	case TF_WEAPON_LASER_POINTER:
+		return;
+	}
 
 	G::SilentAngles = true;
 	pCmd->viewangles.x += 360 * (vFakeAngles.x < 0 ? -1 : 1);
@@ -76,7 +83,7 @@ float CAntiAim::EdgeDistance(CTFPlayer* pEntity, float flEdgeRayYaw, float flOff
 
 int CAntiAim::GetEdge(CTFPlayer* pEntity, const float flEdgeOrigYaw)
 {
-	float flSize = pEntity->m_vecMaxs().y - pEntity->m_vecMins().y;
+	float flSize = pEntity->GetSize().y;
 	float flEdgeLeftDist = EdgeDistance(pEntity, flEdgeOrigYaw, -flSize);
 	float flEdgeRightDist = EdgeDistance(pEntity, flEdgeOrigYaw, flSize);
 
@@ -218,7 +225,7 @@ void CAntiAim::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd, bo
 
 	int iAntiBackstab = F::Misc.AntiBackstab(pLocal, pCmd, bSendPacket);
 	if (!iAntiBackstab)
-		FakeShotAngles(pLocal, pCmd);
+		FakeShotAngles(pLocal, pWeapon, pCmd);
 
 	if (!G::AntiAim)
 	{

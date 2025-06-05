@@ -422,11 +422,13 @@ void CAimbotMelee::Aim(CUserCmd* pCmd, Vec3& vAngle)
 
 void CAimbotMelee::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
-	static int iAimType = 0;
-	if (pWeapon->m_flSmackTime() < 0.f)
-		iAimType = Vars::Aimbot::General::AimType.Value;
-	else if (iAimType)
-		Vars::Aimbot::General::AimType.Value = iAimType;
+	static int iStaticAimType = Vars::Aimbot::General::AimType.Value;
+	const int iLastAimType = iStaticAimType;
+	const int iRealAimType = Vars::Aimbot::General::AimType.Value;
+
+	if (pWeapon->m_flSmackTime() > 0.f && !iRealAimType && iLastAimType)
+		Vars::Aimbot::General::AimType.Value = iLastAimType;
+	iStaticAimType = Vars::Aimbot::General::AimType.Value;
 
 	if (F::AimbotGlobal.ShouldHoldAttack(pWeapon))
 		pCmd->buttons |= IN_ATTACK;
@@ -596,7 +598,7 @@ bool CAimbotMelee::RunSapper(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::BUILDINGS_ENEMIES))
 	{
 		auto pBuilding = pEntity->As<CBaseObject>();
-		if (pBuilding->m_bHasSapper() || pBuilding->m_iTeamNum() != TF_TEAM_BLUE && pBuilding->m_iTeamNum() != TF_TEAM_RED)
+		if (pBuilding->m_bHasSapper() || !pBuilding->IsInValidTeam())
 			continue;
 
 		Vec3 vPoint;

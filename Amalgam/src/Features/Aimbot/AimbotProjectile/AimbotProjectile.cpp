@@ -159,7 +159,9 @@ std::vector<Target_t> CAimbotProjectile::SortTargets(CTFPlayer* pLocal, CTFWeapo
 	return vTargets;
 }
 
-static inline float GetSplashRadius(CTFWeaponBase* pWeapon, CTFPlayer* pLocal = nullptr)
+
+
+float CAimbotProjectile::GetSplashRadius(CTFWeaponBase* pWeapon, CTFPlayer* pPlayer)
 {
 	float flRadius = 0.f;
 	switch (pWeapon->GetWeaponID())
@@ -184,7 +186,7 @@ static inline float GetSplashRadius(CTFWeaponBase* pWeapon, CTFPlayer* pLocal = 
 	case TF_WEAPON_ROCKETLAUNCHER:
 	case TF_WEAPON_ROCKETLAUNCHER_DIRECTHIT:
 	case TF_WEAPON_PARTICLE_CANNON:
-		if (pLocal->InCond(TF_COND_BLASTJUMPING) && SDK::AttribHookValue(1.f, "rocketjump_attackrate_bonus", pWeapon) != 1.f)
+		if (pPlayer->InCond(TF_COND_BLASTJUMPING) && SDK::AttribHookValue(1.f, "rocketjump_attackrate_bonus", pWeapon) != 1.f)
 			flRadius *= 0.8f;
 	}
 	return flRadius * Vars::Aimbot::Projectile::SplashRadius.Value / 100;
@@ -908,9 +910,14 @@ static inline void SolveProjectileSpeed(CTFWeaponBase* pWeapon, const Vec3& vLoc
 		case Demoman_s_TheQuickiebombLauncher:
 		case Demoman_s_TheScottishResistance: flDrag = Math::RemapVal(flVelocity, 922.f, k_flMaxVelocity, 0.085f, 0.190f); break; // 0.085 low, 0.190 capped, 0.230 v2400
 		case Scout_s_TheFlyingGuillotine:
-		case Scout_s_TheFlyingGuillotineG: flDrag = 0.31f; break;
+		case Scout_s_TheFlyingGuillotineG: flDrag = 0.310f; break;
 		case Scout_t_TheSandman: flDrag = 0.180f; break;
 		case Scout_t_TheWrapAssassin: flDrag = 0.285f; break;
+		case Scout_s_MadMilk:
+		case Scout_s_MutatedMilk:
+		case Sniper_s_Jarate:
+		case Sniper_s_FestiveJarate:
+		case Sniper_s_TheSelfAwareBeautyMark: flDrag = 0.057f; break;
 		}
 	}
 
@@ -1359,7 +1366,7 @@ int CAimbotProjectile::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBas
 	ProjectileInfo tProjInfo = {};
 
 	int iMaxTime, iSplash; Info_t tInfo = { pLocal, pWeapon };
-	const float flSize = tTarget.m_pEntity->m_vecMins().DistTo(tTarget.m_pEntity->m_vecMaxs());
+	const float flSize = tTarget.m_pEntity->GetSize().Length();
 	{
 		int iFlags = ProjSimEnum::NoRandomAngles | ProjSimEnum::PredictCmdNum;
 		if (!F::ProjSim.GetInfo(pLocal, pWeapon, {}, tProjInfo, iFlags) || !F::ProjSim.Initialize(tProjInfo, false))
@@ -1722,22 +1729,21 @@ bool CAimbotProjectile::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 
 	static int iStaticAimType = Vars::Aimbot::General::AimType.Value;
 	const int iLastAimType = iStaticAimType;
-	const int iRealAimType = iStaticAimType = Vars::Aimbot::General::AimType.Value;
+	const int iRealAimType = Vars::Aimbot::General::AimType.Value;
 
 	switch (nWeaponID)
 	{
 	case TF_WEAPON_COMPOUND_BOW:
 	case TF_WEAPON_PIPEBOMBLAUNCHER:
 	case TF_WEAPON_CANNON:
-		if (!Vars::Aimbot::General::AutoShoot.Value && !iRealAimType && iLastAimType && G::Attacking)
+		if (!Vars::Aimbot::General::AutoShoot.Value && G::Attacking && !iRealAimType && iLastAimType)
+			Vars::Aimbot::General::AimType.Value = iLastAimType;
+		break;
+	default:
+		if (G::Throwing && !iRealAimType && iLastAimType)
 			Vars::Aimbot::General::AimType.Value = iLastAimType;
 	}
-
-	static int iAimType = 0;
-	if (!G::Throwing)
-		iAimType = Vars::Aimbot::General::AimType.Value;
-	else if (iAimType)
-		Vars::Aimbot::General::AimType.Value = iAimType;
+	iStaticAimType = Vars::Aimbot::General::AimType.Value;
 
 	if (F::AimbotGlobal.ShouldHoldAttack(pWeapon))
 		pCmd->buttons |= IN_ATTACK;
@@ -1822,41 +1828,41 @@ bool CAimbotProjectile::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 
 		if (Vars::Aimbot::General::AutoShoot.Value)
 		{
-			pCmd->buttons |= IN_ATTACK;
-
-			if (pWeapon->m_iItemDefinitionIndex() == Soldier_m_TheBeggarsBazooka)
+			switch (nWeaponID)
 			{
-				if (pWeapon->m_iClip1() > 0)
+			case TF_WEAPON_COMPOUND_BOW:
+			case TF_WEAPON_PIPEBOMBLAUNCHER:
+				pCmd->buttons |= IN_ATTACK;
+				if (pWeapon->As<CTFPipebombLauncher>()->m_flChargeBeginTime() > 0.f)
 					pCmd->buttons &= ~IN_ATTACK;
-			}
-			else
-			{
-				switch (nWeaponID)
+				break;
+			case TF_WEAPON_CANNON:
+				pCmd->buttons |= IN_ATTACK;
+				if (pWeapon->As<CTFGrenadeLauncher>()->m_flDetonateTime() > 0.f)
 				{
-				case TF_WEAPON_COMPOUND_BOW:
-				case TF_WEAPON_PIPEBOMBLAUNCHER:
-					if (pWeapon->As<CTFPipebombLauncher>()->m_flChargeBeginTime() > 0.f)
-						pCmd->buttons &= ~IN_ATTACK;
-					break;
-				case TF_WEAPON_CANNON:
-					if (pWeapon->As<CTFGrenadeLauncher>()->m_flDetonateTime() > 0.f)
+					if (m_iLastTickCancel)
+						pCmd->weaponselect = m_iLastTickCancel = 0;
+					if (Vars::Aimbot::Projectile::Modifiers.Value & Vars::Aimbot::Projectile::ModifiersEnum::ChargeWeapon)
 					{
-						if (m_iLastTickCancel)
-							pCmd->weaponselect = m_iLastTickCancel = 0;
-						if (Vars::Aimbot::Projectile::Modifiers.Value & Vars::Aimbot::Projectile::ModifiersEnum::ChargeWeapon)
-						{
-							float flCharge = pWeapon->As<CTFGrenadeLauncher>()->m_flDetonateTime() - I::GlobalVars->curtime;
-							if (std::clamp(flCharge, 0.f, 1.f) < flTimeTo)
-								pCmd->buttons &= ~IN_ATTACK;
-						}
-						else
+						float flCharge = pWeapon->As<CTFGrenadeLauncher>()->m_flDetonateTime() - I::GlobalVars->curtime;
+						if (std::clamp(flCharge, 0.f, 1.f) < flTimeTo)
 							pCmd->buttons &= ~IN_ATTACK;
 					}
-					break;
-				case TF_WEAPON_BAT_WOOD:
-				case TF_WEAPON_BAT_GIFTWRAP:
-				case TF_WEAPON_LUNCHBOX:
-					pCmd->buttons &= ~IN_ATTACK, pCmd->buttons |= IN_ATTACK2;
+					else
+						pCmd->buttons &= ~IN_ATTACK;
+				}
+				break;
+			case TF_WEAPON_BAT_WOOD:
+			case TF_WEAPON_BAT_GIFTWRAP:
+			case TF_WEAPON_LUNCHBOX:
+				pCmd->buttons &= ~IN_ATTACK, pCmd->buttons |= IN_ATTACK2;
+				break;
+			default:
+				pCmd->buttons |= IN_ATTACK;
+				if (pWeapon->m_iItemDefinitionIndex() == Soldier_m_TheBeggarsBazooka)
+				{
+					if (pWeapon->m_iClip1() > 0)
+						pCmd->buttons &= ~IN_ATTACK;
 				}
 			}
 		}

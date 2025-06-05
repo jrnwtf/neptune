@@ -1,6 +1,7 @@
 #include "Events.h"
 
 #include "../../Core/Core.h"
+#include "../../Features/Aimbot/AutoHeal/AutoHeal.h"
 #include "../../Features/Backtrack/Backtrack.h"
 #include "../../Features/CheaterDetection/CheaterDetection.h"
 #include "../../Features/CritHack/CritHack.h"
@@ -49,6 +50,7 @@ void CEventListener::FireGameEvent(IGameEvent* pEvent)
 		return;
 
 	F::CritHack.Event(pEvent, uHash, pLocal);
+	F::AutoHeal.Event(pEvent, uHash);
 	F::Misc.Event(pEvent, uHash);
 #ifndef TEXTMODE
 	F::Visuals.Event(pEvent, uHash);
@@ -56,7 +58,7 @@ void CEventListener::FireGameEvent(IGameEvent* pEvent)
 	switch (uHash)
 	{
 	case FNV1A::Hash32Const("player_hurt"):
-		F::Resolver.OnPlayerHurt(pEvent);
+		F::Resolver.PlayerHurt(pEvent);
 		F::CheaterDetection.ReportDamage(pEvent);
 		break;
 	case FNV1A::Hash32Const("player_spawn"):

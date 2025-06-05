@@ -14,8 +14,9 @@
 #include "../Features/Visuals/CameraWindow/CameraWindow.h"
 #include "../Features/Visuals/Notifications/Notifications.h"
 #include "../Features/NavBot/NavBot.h"
+#include "../Features/Aimbot/AutoHeal/AutoHeal.h"
 
-MAKE_HOOK(IEngineVGui_Paint, U::Memory.GetVFunc(I::EngineVGui, 14), void,
+MAKE_HOOK(IEngineVGui_Paint, U::Memory.GetVirtual(I::EngineVGui, 14), void,
 	void* rcx, int iMode)
 {
 #ifndef TEXTMODE
@@ -44,6 +45,9 @@ MAKE_HOOK(IEngineVGui_Paint, U::Memory.GetVFunc(I::EngineVGui, 14), void,
 			F::Aimbot.Draw(pLocal);
 			F::Radar.Run(pLocal);
 
+#ifdef DEBUG_VACCINATOR
+			F::AutoHeal.Draw(pLocal);
+#endif
 			F::NoSpreadHitscan.Draw(pLocal);
 			F::PlayerConditions.Draw(pLocal);
 			F::Backtrack.Draw(pLocal);

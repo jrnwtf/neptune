@@ -137,4 +137,4 @@ public:
 	};
 };
 
-ADD_FEATURE(CPlayerlistUtils, PlayerUtils)
+ADD_FEATURE(CPlayerlistUtils, PlayerUtils);

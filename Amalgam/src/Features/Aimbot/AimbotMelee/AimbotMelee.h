@@ -33,4 +33,4 @@ public:
 	void Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd);
 };
 
-ADD_FEATURE(CAimbotMelee, AimbotMelee)
+ADD_FEATURE(CAimbotMelee, AimbotMelee);

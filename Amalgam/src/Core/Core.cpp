@@ -163,11 +163,11 @@ void CCore::Load()
 		return;
 	}
 
-	float flStart = GetModuleHandleA("tier0.dll") ? SDK::PlatFloatTime() : 0.0f;
+	float flTime = 0.f;
 	while (!ModulesLoaded())
 	{
-		Sleep(500);
-		if (m_bUnload = m_bFailed = SDK::PlatFloatTime() - flStart > 60.f)
+		Sleep(500), flTime += 0.5f;
+		if (m_bUnload = m_bFailed = flTime >= 60.f)
 		{
 			AppendFailText("Failed to load");
 			return;

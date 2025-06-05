@@ -52,4 +52,4 @@ public:
 	Timer m_tRandomVotekickTimer;
 };
 
-ADD_FEATURE(CMisc, Misc)
+ADD_FEATURE(CMisc, Misc);

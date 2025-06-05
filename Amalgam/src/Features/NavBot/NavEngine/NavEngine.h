@@ -190,7 +190,7 @@ public:
 	};
 };
 
-ADD_FEATURE(CNavParser, NavParser)
+ADD_FEATURE(CNavParser, NavParser);
 
 class CNavEngine
 {
@@ -257,4 +257,4 @@ public:
 	void Render();
 };
 
-ADD_FEATURE(CNavEngine, NavEngine)
+ADD_FEATURE(CNavEngine, NavEngine);

@@ -118,7 +118,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	case ETFClassID::CTFProjectile_GrapplingHook:
 	case ETFClassID::CTFProjectile_HealingBolt:
 	case ETFClassID::CTFProjectile_Rocket:
-		//case ETFClassID::CTFProjectile_BallOfFire: // lifetime too short
+	//case ETFClassID::CTFProjectile_BallOfFire: // lifetime too short
 	case ETFClassID::CTFProjectile_MechanicalArmOrb:
 	case ETFClassID::CTFProjectile_SentryRocket:
 	case ETFClassID::CTFProjectile_SpellFireball:
@@ -137,7 +137,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	}
 	case ETFClassID::CTFBaseProjectile:
 	case ETFClassID::CTFProjectile_EnergyRing: // not drawn, shoulddraw check, small anyways
-		//case ETFClassID::CTFProjectile_Syringe: // not drawn
+	//case ETFClassID::CTFProjectile_Syringe: // not drawn
 	{
 		auto pWeapon = pEntity->As<CTFBaseProjectile>()->m_hLauncher().Get();
 		auto pOwner = pWeapon ? pWeapon->As<CTFWeaponBase>()->m_hOwner().Get() : pEntity;
@@ -184,7 +184,7 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
 		flDistance = vDelta.Length2D();
 
-		if (pEntity->m_iTeamNum() == TF_TEAM_BLUE || pEntity->m_iTeamNum() == TF_TEAM_RED)
+		if (pEntity->IsInValidTeam())
 		{
 			if (auto pOwner = pEntity->m_hOwnerEntity().Get())
 				return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::World::NPCs.Value, Vars::Glow::World::NPCs.Value, flDistance);
@@ -402,7 +402,7 @@ void CGlow::SetupEnd(Glow_t glow, IMatRenderContext* pRenderContext, IMaterial* 
 	I::ModelRender->ForcedMaterialOverride(nullptr);
 }
 
-void CGlow::DrawModel(CBaseEntity* pEntity, bool bModel)
+void CGlow::DrawModel(CBaseEntity* pEntity)
 {
 	m_bRendering = true;
 
@@ -496,7 +496,7 @@ void CGlow::RenderMain()
 		for (auto& tInfo : vInfo)
 		{
 			m_bExtra = tInfo.m_bExtra;
-			DrawModel(tInfo.m_pEntity, true);
+			DrawModel(tInfo.m_pEntity);
 			m_bExtra = false;
 		}
 
@@ -506,7 +506,7 @@ void CGlow::RenderMain()
 			I::RenderView->SetColorModulation(tInfo.m_cColor.r / 255.f, tInfo.m_cColor.g / 255.f, tInfo.m_cColor.b / 255.f);
 			I::RenderView->SetBlend(tInfo.m_cColor.a / 255.f);
 			m_bExtra = tInfo.m_bExtra;
-			DrawModel(tInfo.m_pEntity, false);
+			DrawModel(tInfo.m_pEntity);
 			m_bExtra = false;
 		}
 

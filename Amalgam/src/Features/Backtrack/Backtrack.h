@@ -97,4 +97,4 @@ public:
 	TickRecord m_tRecord = {}; // for temporary use
 };
 
-ADD_FEATURE(CBacktrack, Backtrack)
+ADD_FEATURE(CBacktrack, Backtrack);

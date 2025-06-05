@@ -28,7 +28,14 @@ bool CInterfaces::Initialize()
 			continue;
 
 		if (Interface->m_bSearchDLL)
+		{
 			Interface->m_pszDLLName = U::Core.SearchForDLL(Interface->m_pszDLLName);
+			if (!Interface->m_pszDLLName)
+			{
+				m_bFailed = true;
+				continue;
+			}
+		}
 
 		if (Interface->m_nOffset == -1)
 			*Interface->m_pPtr = U::Memory.FindInterface(Interface->m_pszDLLName, Interface->m_pszVersion);

@@ -50,4 +50,4 @@ public:
 	void Update();
 };
 
-ADD_FEATURE(CCPController, CPController)
+ADD_FEATURE(CCPController, CPController);

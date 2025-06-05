@@ -160,8 +160,7 @@ void CSpectatorList::Draw(CTFPlayer* pLocal)
 			H::Draw.FillRoundRect(x + H::Draw.Scale(12), y - H::Draw.Scale(2), boxWidth - H::Draw.Scale(24), nTall, H::Draw.Scale(2), tHighlightColor);
 		}
 
-		H::Draw.String(fFont, x + H::Draw.Scale(16), y, tColor, ALIGN_TOPLEFT, "%s - %s (%ds)", 
-			Spectator.m_sName.c_str(), Spectator.m_sMode.c_str(), static_cast<int>(Spectator.m_flRespawnIn));
+		H::Draw.String(fFont, x + H::Draw.Scale(16), y, tColor, ALIGN_TOPLEFT, std::format("{} - {} ({}s)", Spectator.m_sName.c_str(), Spectator.m_sMode.c_str(), static_cast<int>(Spectator.m_flRespawnIn)).c_str());
 		y += nTall;
 	}
 }

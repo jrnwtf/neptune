@@ -1181,6 +1181,7 @@
     <ClCompile Include="src\Hooks\CTFParty_GetMemberActivity.cpp" />
     <ClCompile Include="src\Hooks\CTFPlayer_BuildTransformations.cpp" />
     <ClCompile Include="src\Hooks\CTFPlayer_DoAnimationEvent.cpp" />
+    <ClCompile Include="src\Hooks\CTFPlayer_FireBullet.cpp" />
     <ClCompile Include="src\Hooks\CTFPlayer_UpdateStepSound.cpp" />
     <ClCompile Include="src\Hooks\CTFPlayer_ShouldDraw.cpp" />
     <ClCompile Include="src\Hooks\ClientModeTFNormal_BIsFriendOrPartyMember.cpp" />
@@ -1198,6 +1199,7 @@
     <ClCompile Include="src\Hooks\CPlayerResource_GetPlayerName.cpp" />
     <ClCompile Include="src\Hooks\CTFGCClientSystem_UpdateAssignedLobby.cpp" />
     <ClCompile Include="src\Hooks\CTFHudDeathNotice_AddAdditionalMsg.cpp" />
+    <ClCompile Include="src\Hooks\CTFRocketLauncher_CheckReloadMisfire.cpp" />
     <ClCompile Include="src\Hooks\CThirdPersonManager_Update.cpp" />
     <ClCompile Include="src\Hooks\CViewRender_PerformScreenOverlay.cpp" />
     <ClCompile Include="src\Hooks\FuckReportShit.cpp" />
@@ -1210,7 +1212,6 @@
     <ClCompile Include="src\Hooks\CBaseAnimating_MaintainSequenceTransitions.cpp" />
     <ClCompile Include="src\Hooks\CBaseAnimating_SetupBones.cpp" />
     <ClCompile Include="src\Hooks\CBaseAnimating_UpdateClientSideAnimation.cpp" />
-    <ClCompile Include="src\Hooks\CBaseEntity_FireBullets.cpp" />
     <ClCompile Include="src\Hooks\CBaseEntity_ResetLatched.cpp" />
     <ClCompile Include="src\Hooks\CBaseEntity_SetAbsVelocity.cpp" />
     <ClCompile Include="src\Hooks\CBaseHudChatLine_InsertAndColorizeText.cpp" />
@@ -1277,6 +1278,13 @@
     <ClCompile Include="src\Hooks\CViewRender_LevelInit.cpp" />
     <ClCompile Include="src\Hooks\CViewRender_LevelShutdown.cpp" />
     <ClCompile Include="src\Hooks\CViewRender_RenderView.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBaseAnimating.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBaseCombatCharacter.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBaseEntity.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBaseObject.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBasePlayer.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBaseProjectile.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CTFPlayer.cpp" />
     <ClCompile Include="src\SDK\Definitions\Main\CTFWeaponBase.cpp" />
     <ClCompile Include="src\SDK\Definitions\Main\INetMessage.cpp" />
     <ClCompile Include="src\SDK\Definitions\Main\KeyValues.cpp" />
@@ -1511,6 +1519,7 @@
     <ClInclude Include="src\SDK\Definitions\Main\CModel.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\IEngineTrace.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CParticleProperty.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\CPlayerResource.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CServerBaseEntity.h" />
     <ClInclude Include="src\SDK\Definitions\Main\CSniperDot.h" />
     <ClInclude Include="src\SDK\Definitions\Main\IAchievementMgr.h" />
