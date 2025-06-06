@@ -2970,6 +2970,9 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 
 	UpdateSlot(pLocal, pWeapon, tClosestEnemy);
 	UpdateEnemyBlacklist(pLocal, pWeapon, m_iCurrentSlot);
+	
+	// Fast cleanup of invalid blacklists
+	FastCleanupInvalidBlacklists(pLocal);
 
 	// Execute behaviors in priority order
 	if (EscapeSpawn(pLocal)
@@ -3370,8 +3373,8 @@ void CNavBot::Draw(CTFPlayer* pLocal)
 // bettah blacklist management methods
 void CNavBot::CleanupExpiredBlacklist()
 {
-	// run cleanup every 2 seconds
-	if (!m_tBlacklistCleanupTimer.Run(2.0f))
+	// run cleanup more frequently for better responsiveness
+	if (!m_tBlacklistCleanupTimer.Run(0.5f))
 		return;
 
 	auto pBlacklist = F::NavEngine.getFreeBlacklist();
@@ -3379,12 +3382,11 @@ void CNavBot::CleanupExpiredBlacklist()
 		return;
 
 	std::vector<CNavArea*> vToRemove;
-
-	// check for expired temporary blacklists using stored expiry time
 	float flCurrentTime = I::GlobalVars->curtime;
+
+	// First pass: check expired areas based on stored expiry times
 	for (auto it = m_mAreaBlacklistExpiry.begin(); it != m_mAreaBlacklistExpiry.end();)
 	{
-		// check if the stored expiry time has passed
 		if (flCurrentTime >= it->second)
 		{
 			vToRemove.push_back(it->first);
@@ -3396,13 +3398,76 @@ void CNavBot::CleanupExpiredBlacklist()
 		}
 	}
 
-	// delete expired blacklisted areas
+	// Second pass: check if threats that caused blacklisting are still present
+	auto pLocal = H::Entities.GetLocal();
+	if (pLocal && pLocal->IsAlive())
+	{
+		for (auto it = pBlacklist->begin(); it != pBlacklist->end();)
+		{
+			CNavArea* pArea = it->first;
+			BlacklistReason_enum reason = it->second.value;
+			
+			// Only check temporary player-based blacklists
+			if (reason == BR_ENEMY_NORMAL || reason == BR_ENEMY_DORMANT)
+			{
+				bool bThreatStillPresent = false;
+				Vector vAreaPos = pArea->m_center;
+				vAreaPos.z += PLAYER_JUMP_HEIGHT;
+				
+				for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
+				{
+					if (!pEntity->IsPlayer())
+						continue;
+
+					auto pPlayer = pEntity->As<CTFPlayer>();
+					if (!pPlayer->IsAlive())
+						continue;
+
+					auto vPlayerOrigin = F::NavParser.GetDormantOrigin(pPlayer->entindex());
+					if (!vPlayerOrigin)
+						continue;
+
+					vPlayerOrigin->z += PLAYER_JUMP_HEIGHT;
+					float flDist = vAreaPos.DistToSqr(*vPlayerOrigin);
+					
+					// Check if enemy is still in threat range
+					if (flDist < pow(m_tSelectedConfig.m_flMinSlightDanger, 2))
+					{
+						// Additional check for visibility for non-dormant enemies
+						if (!pPlayer->IsDormant())
+						{
+							if (F::NavParser.IsVectorVisibleNavigation(*vPlayerOrigin, vAreaPos, MASK_SHOT))
+							{
+								bThreatStillPresent = true;
+								break;
+							}
+						}
+						else if (reason == BR_ENEMY_DORMANT)
+						{
+							// For dormant enemies, keep blacklist shorter time
+							bThreatStillPresent = true;
+							break;
+						}
+					}
+				}
+				
+				// If no threat present, mark for removal
+				if (!bThreatStillPresent)
+				{
+					if (std::find(vToRemove.begin(), vToRemove.end(), pArea) == vToRemove.end())
+						vToRemove.push_back(pArea);
+				}
+			}
+			++it;
+		}
+	}
+
+	// Remove all marked areas
 	for (auto pArea : vToRemove)
 	{
 		auto it = pBlacklist->find(pArea);
 		if (it != pBlacklist->end())
 		{
-			// Only remove if it's a temporary player threat (not permanent sentries, etc.)
 			BlacklistReason_enum reason = it->second.value;
 			if (reason == BR_ENEMY_NORMAL || reason == BR_ENEMY_DORMANT)
 			{
@@ -3410,8 +3475,77 @@ void CNavBot::CleanupExpiredBlacklist()
 			}
 		}
 		
-		// Also remove from danger scores
+		// Also remove from danger scores and expiry tracking
 		m_mAreaDangerScore.erase(pArea);
+		m_mAreaBlacklistExpiry.erase(pArea);
+	}
+}
+
+void CNavBot::FastCleanupInvalidBlacklists(CTFPlayer* pLocal)
+{
+	static Timer tFastCleanupTimer{};
+	
+	if (!tFastCleanupTimer.Run(0.2f))
+		return;
+
+	auto pBlacklist = F::NavEngine.getFreeBlacklist();
+	if (!pBlacklist || !pLocal || !pLocal->IsAlive())
+		return;
+
+	std::vector<CNavArea*> vToRemove;
+	Vector vLocalPos = pLocal->GetAbsOrigin();
+
+	// Quick check for obviously invalid blacklists
+	for (auto it = pBlacklist->begin(); it != pBlacklist->end(); ++it)
+	{
+		CNavArea* pArea = it->first;
+		BlacklistReason_enum reason = it->second.value;
+		
+		// Only check temporary player-based blacklists
+		if (reason != BR_ENEMY_NORMAL && reason != BR_ENEMY_DORMANT)
+			continue;
+
+		Vector vAreaPos = pArea->m_center;
+		
+		// If we're very far from the blacklisted area, quickly check if threats are gone
+		if (vLocalPos.DistToSqr(vAreaPos) > pow(1000.0f, 2))
+		{
+			bool bAnyEnemyNear = false;
+			
+			for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
+			{
+				if (!pEntity->IsPlayer())
+					continue;
+
+				auto pPlayer = pEntity->As<CTFPlayer>();
+				if (!pPlayer->IsAlive())
+					continue;
+
+				auto vPlayerOrigin = F::NavParser.GetDormantOrigin(pPlayer->entindex());
+				if (!vPlayerOrigin)
+					continue;
+
+				if (vAreaPos.DistToSqr(*vPlayerOrigin) < pow(m_tSelectedConfig.m_flMinSlightDanger * 1.5f, 2))
+				{
+					bAnyEnemyNear = true;
+					break;
+				}
+			}
+			
+			if (!bAnyEnemyNear)
+				vToRemove.push_back(pArea);
+		}
+	}
+
+	for (auto pArea : vToRemove)
+	{
+		auto it = pBlacklist->find(pArea);
+		if (it != pBlacklist->end())
+		{
+			pBlacklist->erase(it);
+		}
+		m_mAreaDangerScore.erase(pArea);
+		m_mAreaBlacklistExpiry.erase(pArea);
 	}
 }
 
@@ -3497,7 +3631,7 @@ void CNavBot::UpdateAreaDangerScores(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, 
 
 	// Get local position for optimization
 	Vector vLocalPos = pLocal->GetAbsOrigin();
-	const float flMaxCheckDistance = 1000.0f; // Only check areas within reasonable distance
+	const float flMaxCheckDistance = 2500.0f; // Only check areas within reasonable distance
 
 	// Check areas around threats more intelligently
 	std::vector<Vector> vThreatPositions;
@@ -3550,7 +3684,7 @@ void CNavBot::UpdateAreaDangerScores(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, 
 			if (ShouldBlacklistArea(&tArea, flDangerScore))
 			{
 				BlacklistReason_enum reason = (flDangerScore >= 2.5f) ? BR_ENEMY_NORMAL : BR_ENEMY_DORMANT;
-				AddTemporaryBlacklist(&tArea, reason, flDangerScore >= 2.5f ? 8.0f : 12.0f);
+				AddTemporaryBlacklist(&tArea, reason, flDangerScore >= 2.5f ? 5.0f : 8.0f);
 			}
 		}
 	}

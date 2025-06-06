@@ -110,10 +110,11 @@ private:
 	void RefreshLocalBuildings(CTFPlayer* pLocal);
 	
 	void CleanupExpiredBlacklist();
+	void FastCleanupInvalidBlacklists(CTFPlayer* pLocal);
 	bool IsAreaInDanger(CNavArea* pArea, CTFPlayer* pLocal, float& flDangerScore);
 	void UpdateAreaDangerScores(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iSlot);
 	bool ShouldBlacklistArea(CNavArea* pArea, float flDangerScore, bool bIsTemporary = true);
-	void AddTemporaryBlacklist(CNavArea* pArea, BlacklistReason_enum reason, float flDuration = 15.0f);
+	void AddTemporaryBlacklist(CNavArea* pArea, BlacklistReason_enum reason, float flDuration = 8.0f);
 
 	bool IsAreaValidForStayNear(Vector vEntOrigin, CNavArea* pArea, bool bFixLocalZ = true);
 	bool IsAreaValidForSnipe(Vector vEntOrigin, Vector vAreaOrigin, bool bFixSentryZ = true);
