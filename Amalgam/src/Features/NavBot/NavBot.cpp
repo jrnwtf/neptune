@@ -1812,6 +1812,8 @@ bool CNavBot::CaptureObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
 	static Timer tCaptureTimer;
 	static Vector vPreviousTarget;
+	static int iPreviousStatus = -1;
+	static int iPreviousCarrier = -1;
 
 	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::CaptureObjectives))
 		return false;
@@ -1822,6 +1824,84 @@ bool CNavBot::CaptureObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 			|| pGameRules->m_iRoundState() == GR_STATE_TEAM_WIN
 			|| pGameRules->m_bPlayingSpecialDeliveryMode())
 			return false;
+	}
+
+	if (F::NavEngine.current_priority == capture)
+	{
+		bool bObjectiveStatusChanged = false;
+		int iOurTeam = pLocal->m_iTeamNum();
+		int iEnemyTeam = iOurTeam == TF_TEAM_BLUE ? TF_TEAM_RED : TF_TEAM_BLUE;
+
+		switch (F::GameObjectiveController.m_eGameMode)
+		{
+		case TF_GAMETYPE_CTF:
+		{
+			auto iCurrentStatus = F::FlagController.GetStatus(iEnemyTeam);
+			auto iCurrentCarrier = F::FlagController.GetCarrier(iEnemyTeam);
+			
+			// Check if flag status or carrier changed
+			if ((iPreviousStatus != -1 && iPreviousStatus != iCurrentStatus) ||
+				(iPreviousCarrier != -1 && iPreviousCarrier != iCurrentCarrier))
+			{
+				bObjectiveStatusChanged = true;
+			}
+			
+			// If we were carrying the flag and successfully captured it
+			if (iPreviousCarrier == pLocal->entindex() && iCurrentStatus != TF_FLAGINFO_STOLEN)
+			{
+				bObjectiveStatusChanged = true;
+			}
+			
+			iPreviousStatus = iCurrentStatus;
+			iPreviousCarrier = iCurrentCarrier;
+			break;
+		}
+		case TF_GAMETYPE_CP:
+		{
+			// Check if control point we were targeting got captured
+			auto vCurrentTarget = GetControlPointGoal(pLocal->GetAbsOrigin(), iOurTeam);
+			if (!vCurrentTarget || (vPreviousTarget != Vector(0,0,0) && vCurrentTarget->DistToSqr(vPreviousTarget) > pow(100.0f, 2)))
+			{
+				bObjectiveStatusChanged = true;
+			}
+			break;
+		}
+		case TF_GAMETYPE_ESCORT:
+		{
+			auto vCurrentTarget = GetPayloadGoal(pLocal->GetAbsOrigin(), iOurTeam);
+			if (!vCurrentTarget || (vPreviousTarget != Vector(0,0,0) && vCurrentTarget->DistToSqr(vPreviousTarget) > pow(200.0f, 2)))
+			{
+				bObjectiveStatusChanged = true;
+			}
+			break;
+		}
+		default:
+		{
+			if (F::GameObjectiveController.m_bDoomsday)
+			{
+				auto iCurrentStatus = F::FlagController.GetStatus(iOurTeam);
+				auto iCurrentCarrier = F::FlagController.GetCarrier(iOurTeam);
+				
+				if ((iPreviousStatus != -1 && iPreviousStatus != iCurrentStatus) ||
+					(iPreviousCarrier != -1 && iPreviousCarrier != iCurrentCarrier))
+				{
+					bObjectiveStatusChanged = true;
+				}
+				
+				iPreviousStatus = iCurrentStatus;
+				iPreviousCarrier = iCurrentCarrier;
+			}
+			break;
+		}
+		}
+
+		// If objective status changed, cancel current path and force immediate repath
+		if (bObjectiveStatusChanged)
+		{
+			F::NavEngine.cancelPath();
+			tCaptureTimer.Update();
+			vPreviousTarget = Vector(0, 0, 0);
+		}
 	}
 
 	if (!tCaptureTimer.Check(2.f))
