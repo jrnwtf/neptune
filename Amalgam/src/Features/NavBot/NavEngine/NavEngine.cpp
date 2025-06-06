@@ -2,6 +2,8 @@
 #include "../../Ticks/Ticks.h"
 #include "../../Misc/Misc.h"
 #include <direct.h>
+#include <queue>
+#include <unordered_set>
 
 std::optional<Vector> CNavParser::GetDormantOrigin(int iIndex)
 {
@@ -1169,6 +1171,84 @@ void CNavEngine::Render()
 				{
 					H::Draw.RenderBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, false);
 					H::Draw.RenderWireframeBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, false);
+				}
+			}
+		}
+	}
+
+	if (Vars::NavEng::NavEngine::Draw.Value & Vars::NavEng::NavEngine::DrawEnum::Cool)
+	{
+		Vector vLocalOrigin = pLocal->GetAbsOrigin();
+		auto pLocalArea = map->findClosestNavSquare(vLocalOrigin);
+		
+		if (pLocalArea)
+		{
+			const float flMaxDistance = static_cast<float>(Vars::NavEng::NavEngine::CoolRange.Value);
+			const float flMaxDistanceSqr = flMaxDistance * flMaxDistance;
+			
+			std::vector<CNavArea*> areasToRender;
+			std::unordered_set<CNavArea*> checkedAreas;
+			std::queue<CNavArea*> areaQueue;
+			
+			areaQueue.push(pLocalArea);
+			checkedAreas.insert(pLocalArea);
+			
+			while (!areaQueue.empty())
+			{
+				CNavArea* pCurrentArea = areaQueue.front();
+				areaQueue.pop();
+				
+				float flDistanceSqr = pCurrentArea->m_center.DistToSqr(vLocalOrigin);
+				if (flDistanceSqr <= flMaxDistanceSqr)
+				{
+					areasToRender.push_back(pCurrentArea);
+					
+					for (NavConnect& tConnection : pCurrentArea->m_connections)
+					{
+						if (!tConnection.area || checkedAreas.count(tConnection.area))
+							continue;
+						
+						areaQueue.push(tConnection.area);
+						checkedAreas.insert(tConnection.area);
+					}
+				}
+			}
+			
+			// Create a set for fast lookup of areas to render
+			std::unordered_set<CNavArea*> renderSet(areasToRender.begin(), areasToRender.end());
+			
+			const Color_t baseColor = Vars::Colors::NavbotCool.Value;
+			
+			for (auto pArea : areasToRender)
+			{
+				float flDistance = (pArea->m_center - vLocalOrigin).Length();
+				int alpha = std::max(55, 255 - static_cast<int>((flDistance / flMaxDistance) * 200));
+				
+				Color_t areaColor = Color_t(baseColor.r, baseColor.g, baseColor.b, alpha);
+				
+				H::Draw.RenderBox(pArea->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), 
+					Vector(), areaColor, false);
+				H::Draw.RenderWireframeBox(pArea->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), 
+					Vector(), areaColor, false);
+				
+				// Draw area boundaries
+				H::Draw.RenderLine(pArea->m_nwCorner, pArea->getNeCorner(), areaColor, true);
+				H::Draw.RenderLine(pArea->m_nwCorner, pArea->getSwCorner(), areaColor, true);
+				H::Draw.RenderLine(pArea->getNeCorner(), pArea->m_seCorner, areaColor, true);
+				H::Draw.RenderLine(pArea->getSwCorner(), pArea->m_seCorner, areaColor, true);
+				
+				// Draw connections to other areas in render set
+				for (NavConnect& tConnection : pArea->m_connections)
+				{
+					if (!tConnection.area || !renderSet.count(tConnection.area))
+						continue;
+					
+					Color_t connectionColor = Color_t(
+						std::min(255, baseColor.r + 50),
+						std::min(255, baseColor.g + 50),
+						std::min(255, baseColor.b + 50),
+						std::max(30, alpha - 50));
+					H::Draw.RenderLine(pArea->m_center, tConnection.area->m_center, connectionColor, false);
 				}
 			}
 		}
