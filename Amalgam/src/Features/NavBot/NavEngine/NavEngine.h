@@ -3,7 +3,7 @@
 #include "MicroPather/micropather.h"
 #include <boost/container_hash/hash.hpp>
 
-#define PLAYER_WIDTH		49.0f
+#define PLAYER_WIDTH		54.0f
 #define HALF_PLAYER_WIDTH	PLAYER_WIDTH / 2.0f
 #define PLAYER_HEIGHT		83.0f
 #define PLAYER_JUMP_HEIGHT	72.0f
