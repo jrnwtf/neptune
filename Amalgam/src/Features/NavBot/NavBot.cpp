@@ -13,7 +13,7 @@
 #include "../CritHack/CritHack.h"
 #include <unordered_set>
 
-bool CNavBot::ShouldSearchHealth(CTFPlayer* pLocal, bool bLowPrio)
+bool CNavBot::ShouldSearchHealth(CTFPlayer* pLocal, bool bLowPrio) const
 {
 	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::SearchHealth))
 		return false;
@@ -26,12 +26,14 @@ bool CNavBot::ShouldSearchHealth(CTFPlayer* pLocal, bool bLowPrio)
 	if (pLocal->m_nPlayerCond() & (1 << 21)/*TFCond_Healing*/)
 		return false;
 
-	float flHealthPercent = static_cast<float>(pLocal->m_iHealth()) / pLocal->GetMaxHealth();
-	// Get health when below 65%, or below 80% and just patrolling
-	return flHealthPercent < 0.64f || bLowPrio && (F::NavEngine.current_priority <= patrol || F::NavEngine.current_priority == lowprio_health) && flHealthPercent <= 0.80f;
+	const float flHealthPercent = static_cast<float>(pLocal->m_iHealth()) / pLocal->GetMaxHealth();
+	// Get health when below threshold, or below higher threshold when low priority
+	return flHealthPercent < HEALTH_SEARCH_THRESHOLD_LOW || 
+		   (bLowPrio && (F::NavEngine.current_priority <= patrol || F::NavEngine.current_priority == lowprio_health) && 
+		    flHealthPercent <= HEALTH_SEARCH_THRESHOLD_HIGH);
 }
 
-bool CNavBot::ShouldSearchAmmo(CTFPlayer* pLocal)
+bool CNavBot::ShouldSearchAmmo(CTFPlayer* pLocal) const
 {
 	if (!(Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::SearchAmmo))
 		return false;
@@ -46,10 +48,11 @@ bool CNavBot::ShouldSearchAmmo(CTFPlayer* pLocal)
 		if (!pWeapon || SDK::WeaponDoesNotUseAmmo(pWeapon))
 			continue;
 
-		int iWepID = pWeapon->GetWeaponID();
-		int iMaxClip = pWeapon->GetWeaponInfo() ? pWeapon->GetWeaponInfo()->iMaxClip1 : 0;
-		int iCurClip = pWeapon->m_iClip1();
+		const int iWepID = pWeapon->GetWeaponID();
+		const int iMaxClip = pWeapon->GetWeaponInfo() ? pWeapon->GetWeaponInfo()->iMaxClip1 : 0;
+		const int iCurClip = pWeapon->m_iClip1();
 		
+		// Special case for sniper rifles - very low ammo threshold
 		if ((iWepID == TF_WEAPON_SNIPERRIFLE ||
 			iWepID == TF_WEAPON_SNIPERRIFLE_CLASSIC ||
 			iWepID == TF_WEAPON_SNIPERRIFLE_DECAP) &&
@@ -59,30 +62,29 @@ bool CNavBot::ShouldSearchAmmo(CTFPlayer* pLocal)
 		if (!pWeapon->HasAmmo())
 			return true;
 
-		int iMaxAmmo = SDK::GetWeaponMaxReserveAmmo(iWepID, pWeapon->m_iItemDefinitionIndex());
+		const int iMaxAmmo = SDK::GetWeaponMaxReserveAmmo(iWepID, pWeapon->m_iItemDefinitionIndex());
 		if (!iMaxAmmo)
 			continue;
 
-		// Reserve ammo
-		int iResAmmo = pLocal->GetAmmoCount(pWeapon->m_iPrimaryAmmoType());
+		const int iResAmmo = pLocal->GetAmmoCount(pWeapon->m_iPrimaryAmmoType());
 		
 		// If clip and reserve are both very low, definitely get ammo
 		if (iMaxClip > 0 && iCurClip <= iMaxClip * 0.25f && iResAmmo <= iMaxAmmo * 0.25f)
 			return true;
 			
-		// Don't search for ammo if we have more than 60% of max reserve
-		if (iResAmmo >= iMaxAmmo * 0.6f)
+		// Don't search for ammo if we have more than threshold of max reserve
+		if (iResAmmo >= iMaxAmmo * AMMO_SEARCH_THRESHOLD)
 			continue;
 			
-		// Search for ammo if we're below 33% of capacity
-		if (iResAmmo <= iMaxAmmo / 3)
+		// Search for ammo if we're below critical threshold
+		if (iResAmmo <= iMaxAmmo * AMMO_CRITICAL_THRESHOLD)
 			return true;
 	}
 
 	return false;
 }
 
-int CNavBot::ShouldTarget(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iPlayerIdx)
+int CNavBot::ShouldTarget(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iPlayerIdx) const
 {
 	auto pEntity = I::ClientEntityList->GetClientEntity(iPlayerIdx);
 	if (!pEntity || !pEntity->IsPlayer())
@@ -133,7 +135,7 @@ int CNavBot::ShouldTarget(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iPlayer
 	return 1;
 }
 
-int CNavBot::ShouldTargetBuilding(CTFPlayer* pLocal, int iEntIdx)
+int CNavBot::ShouldTargetBuilding(CTFPlayer* pLocal, int iEntIdx) const
 {
 	auto pEntity = I::ClientEntityList->GetClientEntity(iEntIdx);
 	if (!pEntity || !pEntity->IsBuilding())
@@ -162,7 +164,7 @@ int CNavBot::ShouldTargetBuilding(CTFPlayer* pLocal, int iEntIdx)
 	return 1;
 }
 
-bool CNavBot::ShouldAssist(CTFPlayer* pLocal, int iTargetIdx)
+bool CNavBot::ShouldAssist(CTFPlayer* pLocal, int iTargetIdx) const
 {
 	auto pEntity = I::ClientEntityList->GetClientEntity(iTargetIdx);
 	if (!pEntity || pEntity->As<CBaseEntity>()->m_iTeamNum() != pLocal->m_iTeamNum())
@@ -179,7 +181,7 @@ bool CNavBot::ShouldAssist(CTFPlayer* pLocal, int iTargetIdx)
 	return false;
 }
 
-std::vector<CObjectDispenser*> CNavBot::GetDispensers(CTFPlayer* pLocal)
+std::vector<CObjectDispenser*> CNavBot::GetDispensers(CTFPlayer* pLocal) const
 {
 	std::vector<CObjectDispenser*> vDispensers;
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::BUILDINGS_TEAMMATES))
@@ -216,7 +218,7 @@ std::vector<CObjectDispenser*> CNavBot::GetDispensers(CTFPlayer* pLocal)
 	return vDispensers;
 }
 
-std::vector<CBaseEntity*> CNavBot::GetEntities(CTFPlayer* pLocal, bool bHealth)
+std::vector<CBaseEntity*> CNavBot::GetEntities(CTFPlayer* pLocal, bool bHealth) const
 {
 	EGroupType eGroupType = bHealth ? EGroupType::PICKUPS_HEALTH : EGroupType::PICKUPS_AMMO;
 
@@ -433,7 +435,7 @@ void CNavBot::RefreshSniperSpots()
 		m_vSniperSpots = vExposedSpots;
 }
 
-ClosestEnemy_t CNavBot::GetNearestPlayerDistance(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
+ClosestEnemy_t CNavBot::GetNearestPlayerDistance(CTFPlayer* pLocal, CTFWeaponBase* pWeapon) const
 {
 	float flMinDist = FLT_MAX;
 	int iBest = -1;
@@ -643,159 +645,11 @@ void CNavBot::UpdateEnemyBlacklist(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, in
 	if (!pLocal || !pLocal->IsAlive() || !pWeapon || !(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Players))
 		return;
 
-	if (!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::DormantThreats))
-		F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_DORMANT));
+	// Clean up expired blacklists periodically
+	CleanupExpiredBlacklist();
 
-	if (!(Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::NormalThreats))
-	{
-		F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_NORMAL));
-		return;
-	}
-
-	static Timer tBlacklistUpdateTimer{};
-	static Timer tDormantUpdateTimer{};
-	static int iLastSlotBlacklist = primary;
-
-	bool bShouldRunNormal = tBlacklistUpdateTimer.Run(Vars::NavEng::NavBot::BlacklistDelay.Value) || iLastSlotBlacklist != iSlot;
-	bool bShouldRunDormant = Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::DormantThreats && (tDormantUpdateTimer.Run(Vars::NavEng::NavBot::BlacklistDormantDelay.Value) || iLastSlotBlacklist != iSlot);
-	// Don't run since we do not care here
-	if (!bShouldRunNormal && !bShouldRunDormant)
-		return;
-
-	// Clear blacklist for normal entities
-	if (bShouldRunNormal)
-		F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_NORMAL));
-
-	// Clear blacklist for dormant entities
-	if (bShouldRunDormant)
-		F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_DORMANT));
-
-	if (const auto& pGameRules = I::TFGameRules())
-	{
-		if (pGameRules->m_iRoundState() == GR_STATE_TEAM_WIN)
-			return;
-	}
-
-	// #NoFear
-	if (iSlot == melee)
-		return;
-
-	// Store the danger of the individual nav areas
-	std::unordered_map<CNavArea*, int> mDormantSlightDanger;
-	std::unordered_map<CNavArea*, int> mNormalSlightDanger;
-
-	// This is used to cache Dangerous areas between ents
-	std::unordered_map<CTFPlayer*, std::vector<CNavArea*>> mEntMarkedDormantSlightDanger;
-	std::unordered_map<CTFPlayer*, std::vector<CNavArea*>> mEntMarkedNormalSlightDanger;
-
-	std::vector<std::pair<CTFPlayer*, Vector>> vCheckedPlayerOrigins;
-	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
-	{
-		// Entity is generally invalid, ignore
-		auto pPlayer = pEntity->As<CTFPlayer>();
-		if (!pPlayer->IsAlive())
-			continue;
-
-		bool bDormant = pPlayer->IsDormant();
-		if (!bDormant)
-		{
-			// Should not run on normal entity and entity is not dormant, ignore
-			if (!bShouldRunNormal)
-				continue;
-		}
-		// Should not run on dormant and entity is dormant, ignore.
-		else if (!bShouldRunDormant)
-			continue;
-
-		// Avoid excessive calls by ignoring new checks if people are too close to each other
-		auto vOrigin = F::NavParser.GetDormantOrigin(pPlayer->entindex());
-		if (!vOrigin)
-			continue;
-
-		vOrigin->z += PLAYER_JUMP_HEIGHT;
-
-		bool bShouldCheck = true;
-
-		// Find already dangerous marked areas by other entities
-		auto mToLoop = bDormant ? &mEntMarkedDormantSlightDanger : &mEntMarkedNormalSlightDanger;
-
-		// Add new danger entries
-		auto mToMark = bDormant ? &mDormantSlightDanger : &mNormalSlightDanger;
-
-		for (auto [pCheckedPlayer, vCheckedOrigin] : vCheckedPlayerOrigins)
-		{
-			// If this origin is closer than a quarter of the min HU (or less than 100 HU) to a cached one, don't go through
-			// all nav areas again DistToSqr is much faster than DistTo which is why we use it here
-			float flDist = m_tSelectedConfig.m_flMinSlightDanger;
-
-			flDist *= 0.25f;
-			flDist = std::max(100.0f, flDist);
-
-			// Square the distance
-			flDist *= flDist;
-
-			if (vOrigin->DistToSqr(vCheckedOrigin) < flDist)
-			{
-				bShouldCheck = false;
-
-				bool is_absolute_danger = flDist < pow(m_tSelectedConfig.m_flMinFullDanger, 2);
-				if (!is_absolute_danger && (false/*slight danger when capping*/ || F::NavEngine.current_priority != capture))
-				{
-					// The area is not visible by the player
-					if (!F::NavParser.IsVectorVisibleNavigation(*vOrigin, vCheckedOrigin, MASK_SHOT))
-						continue;
-
-					for (auto& pArea : (*mToLoop)[pCheckedPlayer])
-					{
-						(*mToMark)[pArea]++;
-						if ((*mToMark)[pArea] >= Vars::NavEng::NavBot::BlacklistSlightDangerLimit.Value)
-							(*F::NavEngine.getFreeBlacklist())[pArea] = bDormant ? BlacklistReason_enum::BR_ENEMY_DORMANT : BlacklistReason_enum::BR_ENEMY_NORMAL;
-						// pointers scare me..
-					}
-				}
-				break;
-			}
-		}
-		if (!bShouldCheck)
-			continue;
-
-		// Now check which areas they are close to
-		for (auto& tArea : F::NavEngine.getNavFile()->m_areas)
-		{
-			float flDist = tArea.m_center.DistToSqr(*vOrigin);
-			float flSlightDangerDist = m_tSelectedConfig.m_flMinSlightDanger;
-			float flFullDangerDist = m_tSelectedConfig.m_flMinFullDanger;
-
-			// Not dangerous, Still don't bump
-			if (!ShouldTarget(pLocal, pWeapon, pPlayer->entindex()))
-			{
-				flSlightDangerDist = PLAYER_WIDTH * 1.2f;
-				flFullDangerDist = PLAYER_WIDTH * 1.2f;
-			}
-
-			if (flDist < pow(flSlightDangerDist, 2))
-			{
-				Vector vNavAreaPos = tArea.m_center;
-				vNavAreaPos.z += PLAYER_JUMP_HEIGHT;
-				// The area is not visible by the player
-				if (!F::NavParser.IsVectorVisibleNavigation(*vOrigin, vNavAreaPos, MASK_SHOT))
-					continue;
-
-				// Add as marked area
-				(*mToLoop)[pPlayer].push_back(&tArea);
-
-				// Just slightly dangerous, only mark as such if it's clear
-				if (flDist >= pow(flFullDangerDist, 2) && (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::SafeCapping || F::NavEngine.current_priority != capture))
-				{
-					(*mToMark)[&tArea]++;
-					if ((*mToMark)[&tArea] < Vars::NavEng::NavBot::BlacklistSlightDangerLimit.Value)
-						continue;
-				}
-				(*F::NavEngine.getFreeBlacklist())[&tArea] = bDormant ? BlacklistReason_enum::BR_ENEMY_DORMANT : BlacklistReason_enum::BR_ENEMY_NORMAL;
-			}
-		}
-		vCheckedPlayerOrigins.emplace_back(pPlayer, *vOrigin);
-	}
+	// Update area danger scores more frequently and intelligently
+	UpdateAreaDangerScores(pLocal, pWeapon, iSlot);
 }
 
 bool CNavBot::IsAreaValidForStayNear(Vector vEntOrigin, CNavArea* pArea, bool bFixLocalZ)
@@ -861,17 +715,18 @@ bool CNavBot::StayNearTarget(int iEntIndex)
 		std::sort(vGoodAreas.begin(), vGoodAreas.end(), [](std::pair<CNavArea*, float> a, std::pair<CNavArea*, float> b) { return a.second < b.second; });
 
 	// Try to path to all the good areas, based on distance
-	if (std::ranges::any_of(vGoodAreas, [&](std::pair<CNavArea*, float> pair) -> bool
-		{
-			return F::NavEngine.navTo(pair.first->m_center, staynear, true, !F::NavEngine.isPathing());
-		})
-		)
+	for (const auto& pair : vGoodAreas)
 	{
-		m_iStayNearTargetIdx = pEntity->entindex();
-		if (auto pPlayerResource = H::Entities.GetPR())
-			m_sFollowTargetName = SDK::ConvertUtf8ToWide(pPlayerResource->m_pszPlayerName(pEntity->entindex()));
-		return true;
+		if (F::NavEngine.navTo(pair.first->m_center, staynear, true, !F::NavEngine.isPathing()))
+		{
+			m_iStayNearTargetIdx = pEntity->entindex();
+			if (auto pPlayerResource = H::Entities.GetPR())
+				m_sFollowTargetName = SDK::ConvertUtf8ToWide(pPlayerResource->m_pszPlayerName(pEntity->entindex()));
+			return true;
+		}
 	}
+	
+
 
 	return false;
 }
@@ -2364,21 +2219,30 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 			break;
 		}
 		
-		// Only escape from high danger by default
-		// Also escape from medium danger if health is low
-		bool bShouldEscape = bInHighDanger || 
-		                    (bInMediumDanger && pLocal->m_iHealth() < pLocal->GetMaxHealth() * 0.5f);
+		// More intelligent escape logic
+		float flHealthRatio = (float)pLocal->m_iHealth() / (float)pLocal->GetMaxHealth();
 		
-		// If we're not in high danger and on an important task, we might not need to escape
-		bool bImportantTask = (F::NavEngine.current_priority == capture || 
-		                      F::NavEngine.current_priority == health ||
-		                      F::NavEngine.current_priority == engineer);
+		// Calculate escape priority based on danger level and context
+		bool bShouldEscape = false;
 		
-		if (!bShouldEscape && bImportantTask)
-			return false;
+		if (bInHighDanger)
+		{
+			bShouldEscape = true; // Always escape high danger
+		}
+		else if (bInMediumDanger)
+		{
+			// Escape medium danger if health is low or we're not on a critical mission
+			bShouldEscape = (flHealthRatio < 0.6f) || 
+			               (F::NavEngine.current_priority != capture && F::NavEngine.current_priority != engineer);
+		}
+		else if (bInLowDanger)
+		{
+			// Only escape low danger if health is very low and we're not on an important mission
+			bShouldEscape = (flHealthRatio < 0.3f) && 
+			               (F::NavEngine.current_priority == patrol || F::NavEngine.current_priority == 0);
+		}
 		
-		// If we're in low danger only and on any task, don't escape
-		if (bInLowDanger && !bInMediumDanger && !bInHighDanger && F::NavEngine.current_priority != 0)
+		if (!bShouldEscape)
 			return false;
 
 		static CNavArea* pTargetArea = nullptr;
@@ -2933,9 +2797,66 @@ bool IsWeaponValidForDT(CTFWeaponBase* pWeapon)
 	return SDK::WeaponDoesNotUseAmmo(pWeapon, false);
 }
 
-void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
+void CNavBot::UpdateClassConfig(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
+{
+	switch (pLocal->m_iClass())
+	{
+	case TF_CLASS_SCOUT:
+	case TF_CLASS_HEAVY:
+		m_tSelectedConfig = CONFIG_SHORT_RANGE;
+		break;
+	case TF_CLASS_ENGINEER:
+		m_tSelectedConfig = IsEngieMode(pLocal) ? 
+			(pWeapon->m_iItemDefinitionIndex() == Engi_t_TheGunslinger ? CONFIG_GUNSLINGER_ENGINEER : CONFIG_ENGINEER) : 
+			CONFIG_SHORT_RANGE;
+		break;
+	case TF_CLASS_SNIPER:
+		m_tSelectedConfig = pWeapon->GetWeaponID() == TF_WEAPON_COMPOUND_BOW ? CONFIG_MID_RANGE : CONFIG_LONG_RANGE;
+		break;
+	default:
+		m_tSelectedConfig = CONFIG_MID_RANGE;
+	}
+}
+
+void CNavBot::HandleMinigunSpinup(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd, const ClosestEnemy_t& tClosestEnemy)
+{
+	if (pWeapon->GetWeaponID() != TF_WEAPON_MINIGUN)
+		return;
+
+	static Timer tSpinupTimer{};
+	auto pEntity = I::ClientEntityList->GetClientEntity(tClosestEnemy.m_iEntIdx);
+	if (pEntity && pEntity->As<CTFPlayer>()->IsAlive() && !pEntity->As<CTFPlayer>()->IsInvulnerable() && pWeapon->HasAmmo())
+	{
+		if ((G::AimTarget.m_iEntIndex && G::AimTarget.m_iDuration) || tClosestEnemy.m_flDist <= pow(800.f, 2))
+			tSpinupTimer.Update();
+		if (!tSpinupTimer.Check(3.f)) // 3 seconds until unrev
+			pCmd->buttons |= IN_ATTACK2;
+	}
+}
+
+void CNavBot::HandleDoubletapRecharge(CTFWeaponBase* pWeapon)
 {
 	static Timer tDoubletapRecharge{};
+	
+	if (!Vars::NavEng::NavBot::RechargeDT.Value || !IsWeaponValidForDT(pWeapon))
+		return;
+
+	if (!F::Ticks.m_bRechargeQueue &&
+		(Vars::NavEng::NavBot::RechargeDT.Value != Vars::NavEng::NavBot::RechargeDTEnum::WaitForFL || !Vars::Fakelag::Fakelag.Value || !F::FakeLag.m_iGoal) &&
+		G::Attacking != 1 &&
+		(F::Ticks.m_iShiftedTicks < F::Ticks.m_iShiftedGoal) && 
+		tDoubletapRecharge.Check(Vars::NavEng::NavBot::RechargeDTDelay.Value))
+	{
+		F::Ticks.m_bRechargeQueue = true;
+	}
+	else if (F::Ticks.m_iShiftedTicks >= F::Ticks.m_iShiftedGoal)
+	{
+		tDoubletapRecharge.Update();
+	}
+}
+
+void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
+{
 	if (!Vars::NavEng::NavBot::Enabled.Value || !Vars::NavEng::NavEngine::Enabled.Value || !F::NavEngine.isReady())
 	{
 		m_iStayNearTargetIdx = -1;
@@ -2956,74 +2877,27 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 		return;
 
 	AutoScope(pLocal, pWeapon, pCmd);
-
 	UpdateLocalBotPositions(pLocal);
-	//Recharge doubletap every n seconds
-	if (Vars::NavEng::NavBot::RechargeDT.Value && IsWeaponValidForDT(pWeapon))
-	{
-		if (!F::Ticks.m_bRechargeQueue &&
-			(Vars::NavEng::NavBot::RechargeDT.Value != Vars::NavEng::NavBot::RechargeDTEnum::WaitForFL || !Vars::Fakelag::Fakelag.Value || !F::FakeLag.m_iGoal) &&
-			G::Attacking != 1 &&
-			(F::Ticks.m_iShiftedTicks < F::Ticks.m_iShiftedGoal) && tDoubletapRecharge.Check(Vars::NavEng::NavBot::RechargeDTDelay.Value))
-			F::Ticks.m_bRechargeQueue = true;
-		else if (F::Ticks.m_iShiftedTicks >= F::Ticks.m_iShiftedGoal)
-			tDoubletapRecharge.Update();
-	}
+	HandleDoubletapRecharge(pWeapon);
 
 	RefreshSniperSpots();
 	RefreshLocalBuildings(pLocal);
-	auto tClosestEnemy = GetNearestPlayerDistance(pLocal, pWeapon);
+	const auto tClosestEnemy = GetNearestPlayerDistance(pLocal, pWeapon);
 	RefreshBuildingSpots(pLocal, pLocal->GetWeaponFromSlot(SLOT_MELEE), tClosestEnemy);
 
-	// Update the distance config
-	switch (pLocal->m_iClass())
-	{
-	case TF_CLASS_SCOUT:
-	case TF_CLASS_HEAVY:
-		m_tSelectedConfig = CONFIG_SHORT_RANGE;
-		break;
-	case TF_CLASS_ENGINEER:
-		m_tSelectedConfig = IsEngieMode(pLocal) ? pWeapon->m_iItemDefinitionIndex() == Engi_t_TheGunslinger ? CONFIG_GUNSLINGER_ENGINEER : CONFIG_ENGINEER : CONFIG_SHORT_RANGE;
-		break;
-	case TF_CLASS_SNIPER:
-		m_tSelectedConfig = pWeapon->GetWeaponID() == TF_WEAPON_COMPOUND_BOW ? CONFIG_MID_RANGE : CONFIG_LONG_RANGE;
-		break;
-	default:
-		m_tSelectedConfig = CONFIG_MID_RANGE;
-	}
-
-	// Spin up the minigun if there are enemies nearby or if we had an active aimbot target 
-	if (pWeapon->GetWeaponID() == TF_WEAPON_MINIGUN)
-	{
-		static Timer tSpinupTimer{};
-		auto pEntity = I::ClientEntityList->GetClientEntity(tClosestEnemy.m_iEntIdx);
-		if (pEntity && pEntity->As<CTFPlayer>()->IsAlive() && !pEntity->As<CTFPlayer>()->IsInvulnerable() && pWeapon->HasAmmo())
-		{
-			if (G::AimTarget.m_iEntIndex && G::AimTarget.m_iDuration || tClosestEnemy.m_flDist <= pow(800.f, 2))
-				tSpinupTimer.Update();
-			if (!tSpinupTimer.Check(3.f)) // 3 seconds until unrev
-				pCmd->buttons |= IN_ATTACK2;
-		}
-	}
+	UpdateClassConfig(pLocal, pWeapon);
+	HandleMinigunSpinup(pLocal, pWeapon, pCmd, tClosestEnemy);
 
 	UpdateSlot(pLocal, pWeapon, tClosestEnemy);
 	UpdateEnemyBlacklist(pLocal, pWeapon, m_iCurrentSlot);
 
-	// TODO:
-	// Add engie logic and target sentries logic. (Done)
-	// Also maybe add some spy sapper logic? (No.)
-	// Fix defend and help capture logic
-	// Fix reload stuff because its really janky
-	// Finish auto wewapon stuff
-	// Make a better closest enemy lorgic
-
+	// Execute behaviors in priority order
 	if (EscapeSpawn(pLocal)
 		|| EscapeProjectiles(pLocal)
 		|| MeleeAttack(pCmd, pLocal, m_iCurrentSlot, tClosestEnemy)
 		|| EscapeDanger(pLocal)
 		|| GetHealth(pCmd, pLocal)
 		|| GetAmmo(pCmd, pLocal)
-		//|| RunReload( pLocal, pWeapon )
 		|| RunSafeReload(pLocal, pWeapon)
 		|| MoveInFormation(pLocal, pWeapon)
 		|| CaptureObjectives(pLocal, pWeapon)
@@ -3066,6 +2940,10 @@ void CNavBot::Reset( )
 	m_iMyDispenserIdx = -1;
 	m_vSniperSpots.clear( );
 	m_mAutoScopeCache.clear();
+	
+	// Clear new blacklist management data
+	m_mAreaDangerScore.clear();
+	m_mAreaBlacklistExpiry.clear();
 }
 
 void CNavBot::UpdateLocalBotPositions(CTFPlayer* pLocal)
@@ -3407,4 +3285,235 @@ void CNavBot::Draw(CTFPlayer* pLocal)
 		H::Draw.StringOutlined(fFont, x, y += nTall, cReadyColor, Vars::Menu::Theme::Background.Value, align, std::format("In spawn: {}", std::to_string(iInSpawn)).c_str());
 		H::Draw.StringOutlined(fFont, x, y += nTall, cReadyColor, Vars::Menu::Theme::Background.Value, align, std::format("Area flags: {}", std::to_string(local_area ? local_area->m_TFattributeFlags : -1)).c_str());
 	}
+}
+
+// bettah blacklist management methods
+void CNavBot::CleanupExpiredBlacklist()
+{
+	// run cleanup every 2 seconds
+	if (!m_tBlacklistCleanupTimer.Run(2.0f))
+		return;
+
+	auto pBlacklist = F::NavEngine.getFreeBlacklist();
+	if (!pBlacklist)
+		return;
+
+	std::vector<CNavArea*> vToRemove;
+
+	// check for expired temporary blacklists using stored expiry time
+	float flCurrentTime = I::GlobalVars->curtime;
+	for (auto it = m_mAreaBlacklistExpiry.begin(); it != m_mAreaBlacklistExpiry.end();)
+	{
+		// check if the stored expiry time has passed
+		if (flCurrentTime >= it->second)
+		{
+			vToRemove.push_back(it->first);
+			it = m_mAreaBlacklistExpiry.erase(it);
+		}
+		else
+		{
+			++it;
+		}
+	}
+
+	// delete expired blacklisted areas
+	for (auto pArea : vToRemove)
+	{
+		auto it = pBlacklist->find(pArea);
+		if (it != pBlacklist->end())
+		{
+			// Only remove if it's a temporary player threat (not permanent sentries, etc.)
+			BlacklistReason_enum reason = it->second.value;
+			if (reason == BR_ENEMY_NORMAL || reason == BR_ENEMY_DORMANT)
+			{
+				pBlacklist->erase(it);
+			}
+		}
+		
+		// Also remove from danger scores
+		m_mAreaDangerScore.erase(pArea);
+	}
+}
+
+bool CNavBot::IsAreaInDanger(CNavArea* pArea, CTFPlayer* pLocal, float& flDangerScore)
+{
+	if (!pArea || !pLocal)
+		return false;
+
+	flDangerScore = 0.0f;
+	Vector vAreaPos = pArea->m_center;
+	vAreaPos.z += PLAYER_JUMP_HEIGHT;
+
+	// Check threats from enemy players
+	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
+	{
+		if (!pEntity->IsPlayer())
+			continue;
+
+		auto pPlayer = pEntity->As<CTFPlayer>();
+		if (!pPlayer->IsAlive() || !ShouldTarget(pLocal, pLocal->m_hActiveWeapon().Get()->As<CTFWeaponBase>(), pPlayer->entindex()))
+			continue;
+
+		auto vPlayerOrigin = F::NavParser.GetDormantOrigin(pPlayer->entindex());
+		if (!vPlayerOrigin)
+			continue;
+
+		vPlayerOrigin->z += PLAYER_JUMP_HEIGHT;
+		float flDist = vAreaPos.DistToSqr(*vPlayerOrigin);
+		
+		// Calculate danger based on distance and visibility
+		float flThreatRange = m_tSelectedConfig.m_flMinSlightDanger;
+		float flHighThreatRange = m_tSelectedConfig.m_flMinFullDanger;
+		
+		if (flDist < pow(flThreatRange, 2))
+		{
+			// Check visibility
+			if (F::NavParser.IsVectorVisibleNavigation(*vPlayerOrigin, vAreaPos, MASK_SHOT))
+			{
+				float flThreatLevel = 1.0f;
+				
+				// Higher threat for closer enemies
+				if (flDist < pow(flHighThreatRange, 2))
+					flThreatLevel = 3.0f;
+				else if (flDist < pow(flHighThreatRange * 1.5f, 2))
+					flThreatLevel = 2.0f;
+				
+				// Modify threat based on player state
+				if (pPlayer->IsDormant())
+					flThreatLevel *= 0.5f; // Dormant threats are less dangerous
+				
+				if (pPlayer->IsInvulnerable())
+					flThreatLevel *= 1.5f; // Uber players are more dangerous
+				
+				flDangerScore += flThreatLevel;
+			}
+		}
+	}
+
+	return flDangerScore > 0.5f; // Threshold for considering an area dangerous
+}
+
+void CNavBot::UpdateAreaDangerScores(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, int iSlot)
+{
+	if (!pLocal || !pLocal->IsAlive() || !pWeapon)
+		return;
+
+	static Timer tUpdateTimer{};
+	static int iLastSlot = primary;
+
+	// Update more frequently but be smarter about it
+	bool bShouldUpdate = tUpdateTimer.Run(1.0f) || iLastSlot != iSlot;
+	if (!bShouldUpdate)
+		return;
+
+	iLastSlot = iSlot;
+
+	// Don't be scared in melee mode
+	if (iSlot == melee)
+		return;
+
+	// Clear old danger scores
+	m_mAreaDangerScore.clear();
+
+	// Get local position for optimization
+	Vector vLocalPos = pLocal->GetAbsOrigin();
+	const float flMaxCheckDistance = 2000.0f; // Only check areas within reasonable distance
+
+	// Check areas around threats more intelligently
+	std::vector<Vector> vThreatPositions;
+	
+	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
+	{
+		if (!pEntity->IsPlayer())
+			continue;
+
+		auto pPlayer = pEntity->As<CTFPlayer>();
+		if (!pPlayer->IsAlive() || !ShouldTarget(pLocal, pWeapon, pPlayer->entindex()))
+			continue;
+
+		auto vPlayerOrigin = F::NavParser.GetDormantOrigin(pPlayer->entindex());
+		if (!vPlayerOrigin)
+			continue;
+
+		// Skip if too far away
+		if (vLocalPos.DistToSqr(*vPlayerOrigin) > pow(flMaxCheckDistance, 2))
+			continue;
+
+		vThreatPositions.push_back(*vPlayerOrigin);
+	}
+
+	// Now check nav areas around these threats
+	for (auto& tArea : F::NavEngine.getNavFile()->m_areas)
+	{
+		// Skip areas too far from local player
+		if (vLocalPos.DistToSqr(tArea.m_center) > pow(flMaxCheckDistance, 2))
+			continue;
+
+		float flDangerScore = 0.0f;
+		
+		// Check if area is near any threats
+		bool bNearThreat = false;
+		for (const auto& vThreatPos : vThreatPositions)
+		{
+			if (tArea.m_center.DistToSqr(vThreatPos) < pow(m_tSelectedConfig.m_flMinSlightDanger, 2))
+			{
+				bNearThreat = true;
+				break;
+			}
+		}
+
+		if (bNearThreat && IsAreaInDanger(&tArea, pLocal, flDangerScore))
+		{
+			m_mAreaDangerScore[&tArea] = flDangerScore;
+			
+			// Only blacklist if danger score is high enough
+			if (ShouldBlacklistArea(&tArea, flDangerScore))
+			{
+				BlacklistReason_enum reason = (flDangerScore >= 2.5f) ? BR_ENEMY_NORMAL : BR_ENEMY_DORMANT;
+				AddTemporaryBlacklist(&tArea, reason, flDangerScore >= 2.5f ? 8.0f : 12.0f);
+			}
+		}
+	}
+}
+
+bool CNavBot::ShouldBlacklistArea(CNavArea* pArea, float flDangerScore, bool bIsTemporary)
+{
+	if (!pArea)
+		return false;
+
+	const float flBlacklistThreshold = 1.5f;
+	
+	// Don't blacklist if danger score is too low
+	if (flDangerScore < flBlacklistThreshold)
+		return false;
+
+	// Don't blacklist if we're on an important mission and danger is not too high
+	if (F::NavEngine.current_priority == capture || F::NavEngine.current_priority == health)
+	{
+		if (flDangerScore < 2.5f) // Only blacklist high danger areas when on important missions
+			return false;
+	}
+
+	// Don't over-blacklist - limit the number of blacklisted areas
+	auto pBlacklist = F::NavEngine.getFreeBlacklist();
+	if (pBlacklist && pBlacklist->size() > 100) // Reasonable limit
+	{
+		// Only blacklist very high danger areas if we're at the limit xd
+		return flDangerScore >= 3.0f;
+	}
+
+	return true;
+}
+
+void CNavBot::AddTemporaryBlacklist(CNavArea* pArea, BlacklistReason_enum reason, float flDuration)
+{
+	if (!pArea)
+		return;
+
+	auto pBlacklist = F::NavEngine.getFreeBlacklist();
+	if (!pBlacklist)
+		return;
+
+	(*pBlacklist)[pArea] = BlacklistReason(reason);
+	m_mAreaBlacklistExpiry[pArea] = I::GlobalVars->curtime + flDuration;
 }
