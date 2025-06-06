@@ -3417,7 +3417,7 @@ void CNavBot::UpdateAreaDangerScores(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, 
 
 	// Get local position for optimization
 	Vector vLocalPos = pLocal->GetAbsOrigin();
-	const float flMaxCheckDistance = 2000.0f; // Only check areas within reasonable distance
+	const float flMaxCheckDistance = 1000.0f; // Only check areas within reasonable distance
 
 	// Check areas around threats more intelligently
 	std::vector<Vector> vThreatPositions;
