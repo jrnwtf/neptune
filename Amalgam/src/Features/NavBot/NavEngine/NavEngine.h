@@ -152,6 +152,9 @@ public:
 
 		void AdjacentCost(void* main, std::vector<micropather::StateCost>* adjacent) override;
 
+		// center path preference (0.0 = edge, 1.0 = center)
+		float CalculateCentralityBonus(CNavArea* area);
+
 		// Function for getting the closest area to the player, aka "LocalNav"
 		CNavArea* findClosestNavSquare(const Vector& vec);
 

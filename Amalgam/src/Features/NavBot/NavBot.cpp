@@ -1501,42 +1501,14 @@ std::optional<Vector> CNavBot::GetPayloadGoal(const Vector vLocalOrigin, int iOu
 	if (!vPosition)
 		return std::nullopt;
 
-	// Get number of teammates near cart to coordinate positioning
-	int iTeammatesNearCart = 0;
-	constexpr float flCartRadius = 150.0f; // Approx cart capture radius
-
-	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_TEAMMATES))
-	{
-		if (pEntity->IsDormant() || pEntity->entindex() == I::EngineClient->GetLocalPlayer())
-			continue;
-
-		auto pTeammate = pEntity->As<CTFPlayer>();
-		if (!pTeammate->IsAlive())
-			continue;
-
-		if (pTeammate->GetAbsOrigin().DistToSqr(*vPosition) <= pow(flCartRadius, 2))
-			iTeammatesNearCart++;
-	}
-
-	// Adjust position based on number of teammates to avoid crowding
 	Vector vAdjusted_pos = *vPosition;
-	if (iTeammatesNearCart > 0)
-	{
-		// Add ourselves to the total amount
-		iTeammatesNearCart++;
-
-		// Create a ring formation around cart
-		float flAngle = PI * 2 * (float)(I::EngineClient->GetLocalPlayer() % iTeammatesNearCart) / iTeammatesNearCart;
-		Vector vOffset(cos(flAngle) * 75.0f, sin(flAngle) * 75.0f, 0.0f);
-		vAdjusted_pos += vOffset;
-	}
 
 	// Adjust position, so it's not floating high up, provided the local player is close.
-	if (vLocalOrigin.DistToSqr(vAdjusted_pos) <= pow(150.0f, 2))
+	if (vLocalOrigin.DistToSqr(vAdjusted_pos) <= pow(75.0f, 2))
 		vAdjusted_pos.z = vLocalOrigin.z;
 
 	// If close enough, don't move (mostly due to lifts)
-	if (vAdjusted_pos.DistToSqr(vLocalOrigin) <= pow(15.0f, 2))
+	if (vAdjusted_pos.DistToSqr(vLocalOrigin) <= pow(10.0f, 2))
 	{
 		m_bOverwriteCapture = true;
 		return std::nullopt;
@@ -1869,7 +1841,7 @@ bool CNavBot::CaptureObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		case TF_GAMETYPE_ESCORT:
 		{
 			auto vCurrentTarget = GetPayloadGoal(pLocal->GetAbsOrigin(), iOurTeam);
-			if (!vCurrentTarget || (vPreviousTarget != Vector(0,0,0) && vCurrentTarget->DistToSqr(vPreviousTarget) > pow(200.0f, 2)))
+			if (!vCurrentTarget || (vPreviousTarget != Vector(0,0,0) && vCurrentTarget->DistToSqr(vPreviousTarget) > pow(75.0f, 2)))
 			{
 				bObjectiveStatusChanged = true;
 			}
@@ -1904,7 +1876,8 @@ bool CNavBot::CaptureObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		}
 	}
 
-	if (!tCaptureTimer.Check(2.f))
+	float flUpdateInterval = (F::GameObjectiveController.m_eGameMode == TF_GAMETYPE_ESCORT) ? 0.5f : 2.f;
+	if (!tCaptureTimer.Check(flUpdateInterval))
 		return F::NavEngine.current_priority == capture;
 
 	// Priority too high, don't try

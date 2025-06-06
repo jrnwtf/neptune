@@ -128,7 +128,19 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 		{
 			if (this->vischeck_cache[key].vischeck_state)
 			{
-				const float cost = tConnection.area->m_center.DistToSqr(tArea.m_center);
+				float cost = tConnection.area->m_center.DistToSqr(tArea.m_center);
+				
+				if (Vars::NavEng::NavBot::PreferNoJumpPaths.Value && height_diff > 36.0f)
+				{
+					cost *= 2.5f;
+				}
+				
+				if (Vars::NavEng::NavBot::PreferCenterPaths.Value)
+				{
+					float centrality_bonus = CalculateCentralityBonus(tConnection.area);
+					cost *= (1.0f - centrality_bonus * 0.3f);
+				}
+				
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
 			}
 		}
@@ -140,13 +152,80 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 			{
 				this->vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), 1 };
 
-				const float cost = points.next.DistToSqr(points.current);
+				float cost = points.next.DistToSqr(points.current);
+				
+				if (Vars::NavEng::NavBot::PreferNoJumpPaths.Value && height_diff > 36.0f)
+				{
+					cost *= 2.5f; 
+				}
+				
+				// Apply center preference - prefer nodes that are more central in corridors
+				if (Vars::NavEng::NavBot::PreferCenterPaths.Value)
+				{
+					float centrality_bonus = CalculateCentralityBonus(tConnection.area);
+					cost *= (1.0f - centrality_bonus * 0.3f); // Reduce cost by up to 30% for central nodes
+				}
+				
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
 			}
 			else
 				this->vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), -1 };
 		}
 	}
+}
+
+float CNavParser::Map::CalculateCentralityBonus(CNavArea* area)
+{
+	if (!area || area->m_connections.empty())
+		return 0.0f;
+
+	Vector center = area->m_center;
+	int north_connections = 0, south_connections = 0, east_connections = 0, west_connections = 0;
+	
+	for (const auto& connection : area->m_connections)
+	{
+		if (!connection.area)
+			continue;
+			
+		Vector diff = connection.area->m_center - center;
+		
+		if (std::abs(diff.x) > std::abs(diff.y))
+		{
+			if (diff.x > 0)
+				east_connections++;
+			else
+				west_connections++;
+		}
+		else
+		{
+			if (diff.y > 0)
+				north_connections++;
+			else
+				south_connections++;
+		}
+	}
+	
+	int directions_with_connections = 0;
+	if (north_connections > 0) directions_with_connections++;
+	if (south_connections > 0) directions_with_connections++;
+	if (east_connections > 0) directions_with_connections++;
+	if (west_connections > 0) directions_with_connections++;
+	
+	float direction_bonus = static_cast<float>(directions_with_connections) / 4.0f;
+	
+	float balance_bonus = 0.0f;
+	if (directions_with_connections >= 2)
+	{
+		bool has_opposite_ns = (north_connections > 0 && south_connections > 0);
+		bool has_opposite_ew = (east_connections > 0 && west_connections > 0);
+		
+		if (has_opposite_ns || has_opposite_ew)
+			balance_bonus = 0.3f;
+		if (has_opposite_ns && has_opposite_ew)
+			balance_bonus = 0.5f; 
+	}
+	
+	return std::min(1.0f, direction_bonus + balance_bonus);
 }
 
 CNavArea* CNavParser::Map::findClosestNavSquare(const Vector& vec)
@@ -1076,8 +1155,8 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 					}
 					if (!bPreventJump)
 					{
-						// Check if we need to jump
-						if (height_diff > pLocal->m_flStepSize() && height_diff <= PLAYER_JUMP_HEIGHT)
+						const float flJumpThreshold = 36.0f; 
+						if (height_diff > flJumpThreshold && height_diff <= PLAYER_JUMP_HEIGHT)
 							bShouldJump = true;
 						// Also jump if we're stuck and it might help
 						else if (inactivity.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2))

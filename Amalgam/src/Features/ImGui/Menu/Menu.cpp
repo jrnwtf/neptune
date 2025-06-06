@@ -4410,6 +4410,8 @@ void CMenu::MenuNavEng(int iTab)
 							PopTransparent();
 							FDropdown(Vars::NavEng::NavBot::Preferences);
 							FToggle(Vars::NavEng::NavBot::NoRandomizeCPSpot);
+							FToggle(Vars::NavEng::NavBot::PreferNoJumpPaths);
+							FToggle(Vars::NavEng::NavBot::PreferCenterPaths);
 							FDropdown(Vars::NavEng::NavBot::Blacklist);
 							PushTransparent(Transparent || !(FGet(Vars::NavEng::NavBot::Blacklist) & Vars::NavEng::NavBot::BlacklistEnum::NormalThreats));
 							{
