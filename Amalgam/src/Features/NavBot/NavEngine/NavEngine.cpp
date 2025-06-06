@@ -48,7 +48,9 @@ bool CNavParser::IsSetupTime()
 
 				if (pLocal->m_iTeamNum() == TF_TEAM_BLUE)
 				{
-					if (pGameRules->m_bInSetup() || (pGameRules->m_bInWaitingForPlayers() && (sLevelName.starts_with("pl_") || sLevelName.starts_with("cp_"))))
+					bool hasPayloadPrefix = sLevelName.size() >= 3 && sLevelName.substr(0, 3) == "pl_";
+					bool hasControlPointPrefix = sLevelName.size() >= 3 && sLevelName.substr(0, 3) == "cp_";
+					if (pGameRules->m_bInSetup() || (pGameRules->m_bInWaitingForPlayers() && (hasPayloadPrefix || hasControlPointPrefix)))
 						return bSetupTime = true;
 				}
 				bSetupTime = false;
@@ -97,7 +99,7 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 		auto connection_key = std::pair<CNavArea*, CNavArea*>(tConnection.area, tConnection.area);
 
 		// Entered and marked bad?
-		if (vischeck_cache.count(connection_key) && !vischeck_cache[connection_key].vischeck_state)
+		if (this->vischeck_cache.count(connection_key) && !this->vischeck_cache[connection_key].vischeck_state)
 			continue;
 
 		// If the extern blacklist is running, ensure we don't try to use a bad area
@@ -120,9 +122,9 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 		points.next.z += PLAYER_JUMP_HEIGHT;
 
 		const auto key = std::pair<CNavArea*, CNavArea*>(&tArea, tConnection.area);
-		if (vischeck_cache.count(key))
+		if (this->vischeck_cache.count(key))
 		{
-			if (vischeck_cache[key].vischeck_state)
+			if (this->vischeck_cache[key].vischeck_state)
 			{
 				const float cost = tConnection.area->m_center.DistToSqr(tArea.m_center);
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
@@ -134,13 +136,13 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 			if (F::NavParser.IsPlayerPassableNavigation(points.current, points.center) &&
 				F::NavParser.IsPlayerPassableNavigation(points.center, points.next))
 			{
-				vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), 1 };
+				this->vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), 1 };
 
 				const float cost = points.next.DistToSqr(points.current);
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
 			}
 			else
-				vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), -1 };
+				this->vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), -1 };
 		}
 	}
 }
@@ -211,6 +213,7 @@ void CNavParser::Map::updateIgnores()
 	// Clear the blacklist
 	F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_SENTRY));
 	F::NavEngine.clearFreeBlacklist(BlacklistReason(BR_ENEMY_INVULN));
+	
 	if (Vars::NavEng::NavBot::Blacklist.Value & Vars::NavEng::NavBot::BlacklistEnum::Players)
 	{
 		for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
@@ -386,9 +389,30 @@ void CNavParser::Map::updateIgnores()
 	bool erased = previous_blacklist_size != free_blacklist.size();
 	previous_blacklist_size = free_blacklist.size();
 
-	std::erase_if(free_blacklist, [](const auto& entry) { return entry.second.time && entry.second.time < I::GlobalVars->tickcount; });
-	std::erase_if(vischeck_cache, [](const auto& entry) { return entry.second.expire_tick < I::GlobalVars->tickcount; });
-	std::erase_if(connection_stuck_time, [](const auto& entry) { return entry.second.expire_tick < I::GlobalVars->tickcount; });
+	// Remove expired entries manually
+	for (auto it = free_blacklist.begin(); it != free_blacklist.end();)
+	{
+		if (it->second.time && it->second.time < I::GlobalVars->tickcount)
+			it = free_blacklist.erase(it);
+		else
+			++it;
+	}
+	
+	for (auto it = vischeck_cache.begin(); it != vischeck_cache.end();)
+	{
+		if (it->second.expire_tick < I::GlobalVars->tickcount)
+			it = vischeck_cache.erase(it);
+		else
+			++it;
+	}
+	
+	for (auto it = connection_stuck_time.begin(); it != connection_stuck_time.end();)
+	{
+		if (it->second.expire_tick < I::GlobalVars->tickcount)
+			it = connection_stuck_time.erase(it);
+		else
+			++it;
+	}
 
 	if (erased)
 		pather.Reset();
@@ -411,7 +435,7 @@ void CNavParser::Map::UpdateRespawnRooms()
 
 	if (vFoundEnts.empty())
 	{
-		SDK::Output("CNavParser::Map::UpdateRespawnRooms", std::format("Couldn't find any room entities").c_str(), { 255, 50, 50 }, Vars::Debug::Logging.Value);
+		SDK::Output("CNavParser::Map::UpdateRespawnRooms", "Couldn't find any room entities", { 255, 50, 50 }, Vars::Debug::Logging.Value);
 		return;
 	}
 
