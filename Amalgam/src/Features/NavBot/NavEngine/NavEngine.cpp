@@ -4,6 +4,8 @@
 #include <direct.h>
 #include <queue>
 #include <unordered_set>
+#include <algorithm>
+#include <cmath>
 
 std::optional<Vector> CNavParser::GetDormantOrigin(int iIndex)
 {
@@ -129,17 +131,17 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 			if (this->vischeck_cache[key].vischeck_state)
 			{
 				float cost = tConnection.area->m_center.DistToSqr(tArea.m_center);
-				
 				if (Vars::NavEng::NavBot::PreferNoJumpPaths.Value && height_diff > 36.0f)
-				{
-					cost *= 2.5f;
-				}
-				
-				if (Vars::NavEng::NavBot::PreferCenterPaths.Value)
-				{
-					float centrality_bonus = CalculateCentralityBonus(tConnection.area);
-					cost *= (1.0f - centrality_bonus * 0.3f);
-				}
+                {
+                    cost *= 2.5f;
+                }
+                
+                if (Vars::NavEng::NavBot::PreferCenterPaths.Value)
+                {
+                    float centrality_bonus = CalculateCentralityBonus(tConnection.area);
+                    cost *= (1.0f - centrality_bonus * 0.3f);
+                }
+				cost = ApplySimplicityPenalties(cost, &tArea, tConnection.area, height_diff, points);
 				
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
 			}
@@ -153,18 +155,18 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 				this->vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), 1 };
 
 				float cost = points.next.DistToSqr(points.current);
-				
 				if (Vars::NavEng::NavBot::PreferNoJumpPaths.Value && height_diff > 36.0f)
-				{
-					cost *= 2.5f; 
-				}
-				
-				// Apply center preference - prefer nodes that are more central in corridors
-				if (Vars::NavEng::NavBot::PreferCenterPaths.Value)
-				{
-					float centrality_bonus = CalculateCentralityBonus(tConnection.area);
-					cost *= (1.0f - centrality_bonus * 0.3f); // Reduce cost by up to 30% for central nodes
-				}
+                {
+                    cost *= 2.5f; 
+                }
+                
+                // Apply center preference - prefer nodes that are more central in corridors
+                if (Vars::NavEng::NavBot::PreferCenterPaths.Value)
+                {
+                    float centrality_bonus = CalculateCentralityBonus(tConnection.area);
+                    cost *= (1.0f - centrality_bonus * 0.3f); // Reduce cost by up to 30% for central nodes
+                }
+				cost = ApplySimplicityPenalties(cost, &tArea, tConnection.area, height_diff, points);
 				
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
 			}
@@ -226,6 +228,100 @@ float CNavParser::Map::CalculateCentralityBonus(CNavArea* area)
 	}
 	
 	return std::min(1.0f, direction_bonus + balance_bonus);
+}
+
+float CNavParser::Map::ApplySimplicityPenalties(float base_cost, CNavArea* current_area, CNavArea* next_area, float height_diff, const NavPoints& points)
+{
+	if (!current_area || !next_area)
+		return base_cost;
+		
+	float cost = base_cost;
+	
+	// Heavy penalty for any height changes - prioritize flat paths
+	if (std::abs(height_diff) > 1.0f)
+	{
+		if (height_diff > 36.0f) // Jump required
+		{
+			cost *= 8.0f; // Much higher penalty than before (was 2.5f)
+		}
+		else if (height_diff > 18.0f) // Small jump
+		{
+			cost *= 4.0f;
+		}
+		else if (height_diff < -18.0f) // Drop
+		{
+			cost *= 3.0f;
+		}
+		else // Minor height change
+		{
+			cost *= 1.5f;
+		}
+	}
+	
+	// Penalty for narrow areas (harder to navigate)
+	Vector current_size = current_area->m_seCorner - current_area->m_nwCorner;
+	Vector next_size = next_area->m_seCorner - next_area->m_nwCorner;
+	float min_width = std::min(current_size.x, current_size.y);
+	float next_min_width = std::min(next_size.x, next_size.y);
+	
+	if (min_width < 100.0f || next_min_width < 100.0f) // Narrow corridor
+	{
+		cost *= 2.0f;
+	}
+	
+	// Penalty for sharp direction changes (prefer straight paths)
+	if (current_area->m_connections.size() > 1)
+	{
+		Vector to_next = (next_area->m_center - current_area->m_center).Normalized();
+		
+		for (const auto& connection : current_area->m_connections)
+		{
+			if (connection.area == next_area)
+				continue;
+				
+			Vector to_other = (connection.area->m_center - current_area->m_center).Normalized();
+			float dot_product = to_next.Dot(to_other);
+			
+			// If we have connections in opposite directions, this might be a turn
+			if (dot_product < -0.5f) // Sharp turn (> 120 degrees)
+			{
+				cost *= 1.8f;
+				break;
+			}
+		}
+	}
+	
+	// Penalty for areas with many connections (complex intersections)
+	if (current_area->m_connections.size() > 3)
+	{
+		cost *= 1.5f;
+	}
+	if (next_area->m_connections.size() > 3)
+	{
+		cost *= 1.3f;
+	}
+	
+	// Bonus for wide, open areas (easier navigation)
+	if (min_width > 200.0f && next_min_width > 200.0f)
+	{
+		cost *= 0.8f;
+	}
+	
+	// Bonus for straight-line movement (minimal direction change)
+	Vector movement_dir = (points.next - points.current).Normalized();
+	Vector area_to_area = (next_area->m_center - current_area->m_center).Normalized();
+	float alignment = std::abs(movement_dir.Dot(area_to_area));
+	
+	if (alignment > 0.9f) // Very straight path
+	{
+		cost *= 0.7f;
+	}
+	else if (alignment < 0.3f) // Very indirect path
+	{
+		cost *= 2.0f;
+	}
+	
+	return cost;
 }
 
 CNavArea* CNavParser::Map::findClosestNavSquare(const Vector& vec)
@@ -1155,15 +1251,27 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 					}
 					if (!bPreventJump)
 					{
-						const float flJumpThreshold = 36.0f; 
-						if (height_diff > flJumpThreshold && height_diff <= PLAYER_JUMP_HEIGHT)
-							bShouldJump = true;
-						// Also jump if we're stuck and it might help
-						else if (inactivity.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2))
+						// Check if current area or destination area has no-jump flags
+						auto pLocalNav = map->findClosestNavSquare(pLocal->GetAbsOrigin());
+						auto pDestNav = crumbs.empty() ? nullptr : crumbs[0].navarea;
+						
+						bool bNoJumpArea = false;
+						if (pLocalNav && (pLocalNav->m_attributeFlags & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS)))
+							bNoJumpArea = true;
+						if (pDestNav && (pDestNav->m_attributeFlags & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS)))
+							bNoJumpArea = true;
+						
+						if (!bNoJumpArea)
 						{
-							auto pLocalNav = map->findClosestNavSquare(pLocal->GetAbsOrigin());
-							if (pLocalNav && !(pLocalNav->m_attributeFlags & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS)))
+							const float flJumpThreshold = 36.0f; 
+							if (height_diff > flJumpThreshold && height_diff <= PLAYER_JUMP_HEIGHT)
 								bShouldJump = true;
+							// Also jump if we're stuck and it might help
+							else if (inactivity.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2))
+							{
+								if (pLocalNav && !(pLocalNav->m_attributeFlags & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS)))
+									bShouldJump = true;
+							}
 						}
 					}
 					if (bShouldJump && tLastJump.Check(0.2f))

@@ -154,6 +154,7 @@ public:
 
 		// center path preference (0.0 = edge, 1.0 = center)
 		float CalculateCentralityBonus(CNavArea* area);
+		float ApplySimplicityPenalties(float base_cost, CNavArea* current_area, CNavArea* next_area, float height_diff, const NavPoints& points);
 
 		// Function for getting the closest area to the player, aka "LocalNav"
 		CNavArea* findClosestNavSquare(const Vector& vec);
