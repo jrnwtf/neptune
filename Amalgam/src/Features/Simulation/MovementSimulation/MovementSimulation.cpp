@@ -115,7 +115,7 @@ void CMovementSimulation::Store()
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ALL))
 	{
 		auto pPlayer = pEntity->As<CTFPlayer>();
-		auto& vRecords = mRecords[pPlayer->entindex()];
+		auto& vRecords = m_mRecords[pPlayer->entindex()];
 
 		if (pPlayer->IsDormant() || !pPlayer->IsAlive() || pPlayer->IsAGhost() || pPlayer->m_vecVelocity().IsZero())
 		{
@@ -186,7 +186,7 @@ void CMovementSimulation::Store()
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ALL))
 	{
 		auto pPlayer = pEntity->As<CTFPlayer>();
-		auto& vSimTimes = mSimTimes[pPlayer->entindex()];
+		auto& vSimTimes = m_mSimTimes[pPlayer->entindex()];
 
 		if (pEntity->entindex() == I::EngineClient->GetLocalPlayer() || pPlayer->IsDormant() || !pPlayer->IsAlive() || pPlayer->IsAGhost())
 		{
@@ -271,7 +271,7 @@ bool CMovementSimulation::Initialize(CBaseEntity* pEntity, PlayerStorage& tStora
 	// really hope this doesn't work like shit
 	if (bHitchance && bCalculated && !pPlayer->m_vecVelocity().IsZero() && Vars::Aimbot::Projectile::HitChance.Value)
 	{
-		const auto& vRecords = mRecords[pPlayer->entindex()];
+		const auto& vRecords = m_mRecords[pPlayer->entindex()];
 		const auto iSamples = vRecords.size();
 
 		float flCurrentChance = 1.f, flAverageYaw = 0.f;
@@ -319,8 +319,6 @@ bool CMovementSimulation::SetupMoveData(PlayerStorage& tStorage)
 	if (!tStorage.m_pPlayer)
 		return false;
 
-	const auto& vRecords = mRecords[tStorage.m_pPlayer->entindex()];
-
 	tStorage.m_MoveData.m_bFirstRunOfFunctions = false;
 	tStorage.m_MoveData.m_bGameCodeMovedPlayer = false;
 	tStorage.m_MoveData.m_nPlayerHandle = reinterpret_cast<IHandleEntity*>(tStorage.m_pPlayer)->GetRefEHandle();
@@ -337,7 +335,8 @@ bool CMovementSimulation::SetupMoveData(PlayerStorage& tStorage)
 			tStorage.m_MoveData.m_vecViewAngles = { 0.f, Math::VectorAngles(tStorage.m_MoveData.m_vecVelocity).y, 0.f };
 		else
 			tStorage.m_MoveData.m_vecViewAngles = iIndex == I::EngineClient->GetLocalPlayer() && G::CurrentUserCmd ? G::CurrentUserCmd->viewangles : H::Entities.GetEyeAngles(iIndex);
-
+		
+		const auto& vRecords = m_mRecords[tStorage.m_pPlayer->entindex()];
 		if (!vRecords.empty())
 		{
 			auto& tRecord = vRecords.front();
@@ -468,7 +467,7 @@ static bool GetYawDifference(MoveData& tRecord1, MoveData& tRecord2, bool bStart
 void CMovementSimulation::GetAverageYaw(PlayerStorage& tStorage, int iSamples)
 {
 	auto pPlayer = tStorage.m_pPlayer;
-	auto& vRecords = mRecords[pPlayer->entindex()];
+	auto& vRecords = m_mRecords[pPlayer->entindex()];
 	if (vRecords.empty())
 		return;
 
@@ -729,7 +728,7 @@ void CMovementSimulation::Restore(PlayerStorage& tStorage)
 
 float CMovementSimulation::GetPredictedDelta(CBaseEntity* pEntity)
 {
-	auto& vSimTimes = mSimTimes[pEntity->entindex()];
+	auto& vSimTimes = m_mSimTimes[pEntity->entindex()];
 	if (!vSimTimes.empty())
 	{
 		switch (Vars::Aimbot::Projectile::DeltaMode.Value)
