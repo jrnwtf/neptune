@@ -1,7 +1,11 @@
 #include "Aimbot.h"
 
+#include "AimbotSafety.h"
+#include "TextmodeConfig.h"
 #include "AimbotHitscan/AimbotHitscan.h"
+#ifndef TEXTMODE
 #include "AimbotProjectile/AimbotProjectile.h"
+#endif
 #include "AimbotMelee/AimbotMelee.h"
 #include "AutoDetonate/AutoDetonate.h"
 #include "AutoAirblast/AutoAirblast.h"
@@ -13,8 +17,10 @@
 
 bool CAimbot::ShouldRun(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
-	if (!pLocal || !pWeapon
-		|| !pLocal->IsAlive()
+	if (!AimbotSafety::IsValidPlayer(pLocal) || !pWeapon || !AimbotSafety::IsValidGameState())
+		return false;
+	
+	if (!pLocal->IsAlive()
 		|| pLocal->IsAGhost()
 		|| pLocal->IsTaunting()
 		|| pLocal->InCond(TF_COND_STUNNED) && pLocal->m_iStunFlags() & (TF_STUN_CONTROLS | TF_STUN_LOSER_STATE)
@@ -45,7 +51,9 @@ void CAimbot::RunAimbot(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 	switch (eWeaponType)
 	{
 	case EWeaponType::HITSCAN: F::AimbotHitscan.Run(pLocal, pWeapon, pCmd); break;
+#ifndef TEXTMODE
 	case EWeaponType::PROJECTILE: F::AimbotProjectile.Run(pLocal, pWeapon, pCmd); break;
+#endif
 	case EWeaponType::MELEE: F::AimbotMelee.Run(pLocal, pWeapon, pCmd); break;
 	}
 
@@ -55,11 +63,13 @@ void CAimbot::RunAimbot(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCm
 
 void CAimbot::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
+#ifndef TEXTMODE
 	if (F::AimbotProjectile.m_iLastTickCancel)
 	{
 		pCmd->weaponselect = F::AimbotProjectile.m_iLastTickCancel;
 		F::AimbotProjectile.m_iLastTickCancel = 0;
 	}
+#endif
 
 	m_bRan = false;
 	if (abs(G::AimTarget.m_iTickCount - I::GlobalVars->tickcount) > G::AimTarget.m_iDuration)
@@ -84,9 +94,18 @@ void CAimbot::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 
 void CAimbot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
-	RunMain(pLocal, pWeapon, pCmd);
-
-	G::Attacking = SDK::IsAttacking(pLocal, pWeapon, pCmd, true);
+	// Critical safety checks to prevent crashes during map loading/transitions
+	if (!pLocal || !pWeapon || !pCmd || !I::EngineClient || !I::EngineClient->IsInGame())
+		return;
+	
+	// Wrap main execution in try-catch for stability in textmode
+	try {
+		RunMain(pLocal, pWeapon, pCmd);
+		G::Attacking = SDK::IsAttacking(pLocal, pWeapon, pCmd, true);
+	} catch (...) {
+		// Silently handle exceptions to prevent crashes
+		G::Attacking = 0;
+	}
 }
 
 void CAimbot::Draw(CTFPlayer* pLocal)

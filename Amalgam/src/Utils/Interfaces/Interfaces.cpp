@@ -37,7 +37,11 @@ bool CInterfaces::Initialize()
 			auto dwDest = U::Memory.FindSignature(Interface->m_pszDLLName, Interface->m_pszVersion);
 			if (!dwDest)
 			{
-				U::Core.AppendFailText(std::format("CInterfaces::Initialize() failed to find signature:\n  {}\n  {}", Interface->m_pszDLLName, Interface->m_pszVersion).c_str());
+				std::string errorMsg = "CInterfaces::Initialize() failed to find signature:\n  ";
+				errorMsg += Interface->m_pszDLLName;
+				errorMsg += "\n  ";
+				errorMsg += Interface->m_pszVersion;
+				U::Core.AppendFailText(errorMsg.c_str());
 				m_bFailed = true;
 				continue;
 			}
@@ -47,14 +51,28 @@ bool CInterfaces::Initialize()
 
 			for (int n = 0; n < Interface->m_nDereferenceCount; n++)
 			{
-				if (Interface->m_pPtr)
+				if (Interface->m_pPtr && *Interface->m_pPtr)  // Check both pointer and value validity
 					*Interface->m_pPtr = *reinterpret_cast<void**>(*Interface->m_pPtr);
+				else
+				{
+					std::string errorMsg = "CInterfaces::Initialize() null pointer during dereferencing:\n  ";
+					errorMsg += Interface->m_pszDLLName;
+					errorMsg += "\n  ";
+					errorMsg += Interface->m_pszVersion;
+					U::Core.AppendFailText(errorMsg.c_str());
+					m_bFailed = true;
+					break;
+				}
 			}
 		}
 
-		if (!*Interface->m_pPtr)
+		if (!Interface->m_pPtr || !*Interface->m_pPtr)
 		{
-			U::Core.AppendFailText(std::format("CInterfaces::Initialize() failed to initialize:\n  {}\n  {}", Interface->m_pszDLLName, Interface->m_pszVersion).c_str());
+			std::string errorMsg = "CInterfaces::Initialize() failed to initialize:\n  ";
+			errorMsg += Interface->m_pszDLLName;
+			errorMsg += "\n  ";
+			errorMsg += Interface->m_pszVersion;
+			U::Core.AppendFailText(errorMsg.c_str());
 			m_bFailed = true;
 		}
 	}

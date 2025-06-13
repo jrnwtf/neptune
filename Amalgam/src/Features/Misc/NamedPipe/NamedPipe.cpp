@@ -344,7 +344,7 @@ namespace F::NamedPipe
         }
     }
 
-    void SendHealthUpdate(int health)
+    void SendHealthUpdate()
     {
         if (!I::EngineClient || !I::EngineClient->IsInGame())
             return;
@@ -353,7 +353,7 @@ namespace F::NamedPipe
         if (!pLocal)
             return;
         
-        health = pLocal->m_iHealth();
+        int health = pLocal->m_iHealth();
         QueueMessage("Health", std::to_string(health), false);
     }
 
@@ -435,8 +435,8 @@ namespace F::NamedPipe
         if (!I::EngineClient)
             return;
         
-        SendHealthUpdate(0); // Health param will be ignored in the updated function
-        SendPlayerClassUpdate(-1); // Will retrieve class directly
+        SendHealthUpdate();
+        SendPlayerClassUpdate(-1);
         SendMapUpdate();
         SendServerInfo();
     }
@@ -709,7 +709,12 @@ namespace F::NamedPipe
         
         // Time tracking for player updates
         DWORD lastPlayerUpdateTime = 0;
-        const DWORD PLAYER_UPDATE_INTERVAL_MS = 3000; // 3 seconds
+        const DWORD PLAYER_UPDATE_INTERVAL_MS = 5500; // 5.5 seconds
+        
+        // Time tracking for health updates (more frequent)
+        DWORD lastHealthUpdateTime = 0;
+        const DWORD HEALTH_UPDATE_INTERVAL_MS = 5000; // 5 second
+        int lastHealthSent = -1;
         
         while (shouldRun)
         {
@@ -783,6 +788,8 @@ namespace F::NamedPipe
                         // Reset time trackers on new connection
                         lastHeartbeatTime = currentTime;
                         lastPlayerUpdateTime = currentTime;
+                        lastHealthUpdateTime = currentTime;
+                        lastHealthSent = -1;
                     }
                     else
                     {
@@ -815,6 +822,22 @@ namespace F::NamedPipe
 
                 ProcessMessageQueue();
                 
+                // Send health updates more frequently (every 1 second)
+                if (I::EngineClient && I::EngineClient->IsInGame() && 
+                    currentTime - lastHealthUpdateTime >= HEALTH_UPDATE_INTERVAL_MS) 
+                {
+                    auto pLocal = H::Entities.GetLocal();
+                    if (pLocal) {
+                        int currentHealth = pLocal->m_iHealth();
+                        // Only send if health changed or it's been a while
+                        if (currentHealth != lastHealthSent || lastHealthSent == -1) {
+                            QueueMessage("Health", std::to_string(currentHealth), false);
+                            lastHealthSent = currentHealth;
+                        }
+                    }
+                    lastHealthUpdateTime = currentTime;
+                }
+                
                 // Send heartbeat only every 2-4 seconds
                 if (currentTime - lastHeartbeatTime >= currentHeartbeatInterval)
                 {
@@ -830,14 +853,14 @@ namespace F::NamedPipe
                 // Send player updates every PLAYER_UPDATE_INTERVAL_MS
                 if (currentTime - lastPlayerUpdateTime >= PLAYER_UPDATE_INTERVAL_MS) 
                 {
-                    QueueMessage("PlayerClass", std::to_string(GetCurrentPlayerClass()), false);
-                    QueueMessage("Map", GetCurrentLevelName(), false);
-                    QueueMessage("ServerInfo", "Player", false);
-                    ProcessMessageQueue();
-                    
                     if (I::EngineClient && I::EngineClient->IsInGame()) {
+                        SendHealthUpdate();
+                        QueueMessage("PlayerClass", std::to_string(GetCurrentPlayerClass()), false);
+                        QueueMessage("Map", GetCurrentLevelName(), false);
+                        QueueMessage("ServerInfo", "Player", false);
                         UpdateLocalBotIgnoreStatus();
                     }
+                    ProcessMessageQueue();
                     
                     lastPlayerUpdateTime = currentTime;
                 }

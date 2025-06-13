@@ -1101,9 +1101,9 @@ namespace Vars
 			CVar(KartControl, "Kart control", false);
 			CVar(BackpackExpander, "Backpack expander", true);
 			CVar(AcceptItemDrops, "Auto accept item drops", false);
-			CVar(AutoF2Ignored, "Auto F2 ignored", false);
-			CVar(AutoF1Priority, "Auto F1 priority", false);
+			CVar(AutoVote, "Auto vote", false);
 			CVar(RandomVotekick, "Random votekick", false);
+			CVar(CallVoteSpam, "Call vote spam", false);
 			CVar(AutoVoteMap, "Auto vote map", true);
 			CVar(AutoVoteMapOption, "", 2, SLIDER_CLAMP, 0, 2, 1, "%i");
 			CVar(ForceClass, "Autojoin class", 0);
@@ -1116,6 +1116,8 @@ namespace Vars
 				VA_LIST("Off", "Random", "Medic", "Thanks", "Nice Shot", "Cheers", "Jeers", "Go Go Go", "Move Up", "Go Left", "Go Right", "Yes", "No", "Incoming", "Spy", "Sentry Ahead", "Need Teleporter", "Pootis", "Need Sentry", "Activate Charge", "Help", "Battle Cry"),
 				Off, Random, Medic, Thanks, NiceShot, Cheers, Jeers, GoGoGo, MoveUp, GoLeft, GoRight, Yes, No, Incoming, Spy, Sentry, NeedTeleporter, Pootis, NeedSentry, ActivateCharge, Help, BattleCry);
 			CVar(VoiceF2PMode, "F2P voicespam bucket", false);
+			CVar(MicSpam, "Micspam", false);
+			CVar(AchievementSpam, "Achievement spam", false);
 			
 			SUBNAMESPACE_BEGIN(ChatSpam)
 				CVar(Enable, "Chat spam", false);

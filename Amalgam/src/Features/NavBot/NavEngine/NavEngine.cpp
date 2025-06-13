@@ -6,6 +6,8 @@
 #include <unordered_set>
 #include <algorithm>
 #include <cmath>
+#include <optional>
+#include <format>
 
 std::optional<Vector> CNavParser::GetDormantOrigin(int iIndex)
 {
@@ -131,16 +133,8 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 			if (this->vischeck_cache[key].vischeck_state)
 			{
 				float cost = tConnection.area->m_center.DistToSqr(tArea.m_center);
-				if (Vars::NavEng::NavBot::PreferNoJumpPaths.Value && height_diff > 36.0f)
-                {
-                    cost *= 2.5f;
-                }
-                
-                if (Vars::NavEng::NavBot::PreferCenterPaths.Value)
-                {
-                    float centrality_bonus = CalculateCentralityBonus(tConnection.area);
-                    cost *= (1.0f - centrality_bonus * 0.3f);
-                }
+				
+				// Apply simplicity-focused cost modifications
 				cost = ApplySimplicityPenalties(cost, &tArea, tConnection.area, height_diff, points);
 				
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
@@ -272,21 +266,28 @@ float CNavParser::Map::ApplySimplicityPenalties(float base_cost, CNavArea* curre
 	// Penalty for sharp direction changes (prefer straight paths)
 	if (current_area->m_connections.size() > 1)
 	{
-		Vector to_next = (next_area->m_center - current_area->m_center).Normalized();
-		
-		for (const auto& connection : current_area->m_connections)
+		Vector to_next = (next_area->m_center - current_area->m_center);
+		if (to_next.Length() > 0.1f) // Avoid division by zero
 		{
-			if (connection.area == next_area)
-				continue;
-				
-			Vector to_other = (connection.area->m_center - current_area->m_center).Normalized();
-			float dot_product = to_next.Dot(to_other);
+			to_next = to_next.Normalized();
 			
-			// If we have connections in opposite directions, this might be a turn
-			if (dot_product < -0.5f) // Sharp turn (> 120 degrees)
+			for (const auto& connection : current_area->m_connections)
 			{
-				cost *= 1.8f;
-				break;
+				if (!connection.area || connection.area == next_area)
+					continue;
+					
+				Vector to_other = (connection.area->m_center - current_area->m_center);
+				if (to_other.Length() > 0.1f) // Avoid division by zero
+				{
+					to_other = to_other.Normalized();
+					float dot_product = to_next.Dot(to_other);
+					
+					if (dot_product < -0.5f) // Sharp turn (> 120 degrees)
+					{
+						cost *= 1.8f;
+						break;
+					}
+				}
 			}
 		}
 	}
@@ -308,18 +309,27 @@ float CNavParser::Map::ApplySimplicityPenalties(float base_cost, CNavArea* curre
 	}
 	
 	// Bonus for straight-line movement (minimal direction change)
-	Vector movement_dir = (points.next - points.current).Normalized();
-	Vector area_to_area = (next_area->m_center - current_area->m_center).Normalized();
-	float alignment = std::abs(movement_dir.Dot(area_to_area));
+	Vector movement_dir = (points.next - points.current);
+	Vector area_to_area = (next_area->m_center - current_area->m_center);
 	
-	if (alignment > 0.9f) // Very straight path
+	if (movement_dir.Length() > 0.1f && area_to_area.Length() > 0.1f)
 	{
-		cost *= 0.7f;
+		movement_dir = movement_dir.Normalized();
+		area_to_area = area_to_area.Normalized();
+		float alignment = std::abs(movement_dir.Dot(area_to_area));
+		
+		if (alignment > 0.9f) 
+		{
+			cost *= 0.7f;
+		}
+		else if (alignment < 0.3f) 
+		{
+			cost *= 2.0f;
+		}
 	}
-	else if (alignment < 0.3f) // Very indirect path
-	{
-		cost *= 2.0f;
-	}
+	
+	cost = std::max(cost, base_cost * 0.1f); // Never less than 10% of base cost
+	cost = std::min(cost, base_cost * 50.0f); // Never more than 50x base cost
 	
 	return cost;
 }
@@ -345,7 +355,7 @@ CNavArea* CNavParser::Map::findClosestNavSquare(const Vector& vec)
 		if (pLocal->GetAbsOrigin() == vec)
 		{
 			auto key = std::pair<CNavArea*, CNavArea*>(&i, &i);
-			if (vischeck_cache.count(key) && vischeck_cache[key].vischeck_state == -1)
+			if (this->vischeck_cache.count(key) && this->vischeck_cache[key].vischeck_state == -1)
 				continue;
 		}
 
@@ -575,18 +585,18 @@ void CNavParser::Map::updateIgnores()
 			++it;
 	}
 	
-	for (auto it = vischeck_cache.begin(); it != vischeck_cache.end();)
+	for (auto it = this->vischeck_cache.begin(); it != this->vischeck_cache.end();)
 	{
 		if (it->second.expire_tick < I::GlobalVars->tickcount)
-			it = vischeck_cache.erase(it);
+			it = this->vischeck_cache.erase(it);
 		else
 			++it;
 	}
 	
-	for (auto it = connection_stuck_time.begin(); it != connection_stuck_time.end();)
+	for (auto it = this->connection_stuck_time.begin(); it != this->connection_stuck_time.end();)
 	{
 		if (it->second.expire_tick < I::GlobalVars->tickcount)
-			it = connection_stuck_time.erase(it);
+			it = this->connection_stuck_time.erase(it);
 		else
 			++it;
 	}
@@ -832,7 +842,7 @@ void CNavEngine::vischeckPath()
 {
 	static Timer vischeck_timer{};
 	// No crumbs to check, or vischeck timer should not run yet, bail.
-	if (crumbs.size() < 2 || !vischeck_timer.Run(Vars::NavEng::NavEngine::VischeckTime.Value))
+	if (!map || crumbs.size() < 2 || !vischeck_timer.Run(Vars::NavEng::NavEngine::VischeckTime.Value))
 		return;
 
 	const auto timestamp = TICKCOUNT_TIMESTAMP(Vars::NavEng::NavEngine::VischeckCacheTime.Value);
@@ -842,6 +852,10 @@ void CNavEngine::vischeckPath()
 	{
 		auto current_crumb = *it;
 		auto next_crumb = *next;
+		
+		if (!current_crumb.navarea || !next_crumb.navarea)
+			continue;
+			
 		auto key = std::pair<CNavArea*, CNavArea*>(current_crumb.navarea, next_crumb.navarea);
 
 		auto current_center = current_crumb.vec;
@@ -856,6 +870,7 @@ void CNavEngine::vischeckPath()
 			// Mark as invalid for a while
 			map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, -1 };
 			abandonPath();
+			return;
 		}
 		// Else we can update the cache (if not marked bad before this)
 		else if (!map->vischeck_cache.count(key) || map->vischeck_cache[key].vischeck_state != -1)
@@ -872,7 +887,7 @@ void CNavEngine::checkBlacklist()
 		return;
 
 	auto pLocal = H::Entities.GetLocal();
-	if (!pLocal || !pLocal->IsAlive())
+	if (!pLocal || !pLocal->IsAlive() || !map)
 		return;
 
 	// Local player is ubered and does not care about the blacklist
@@ -917,7 +932,7 @@ void CNavEngine::checkBlacklist()
 void CNavEngine::updateStuckTime()
 {
 	// No crumbs
-	if (crumbs.empty())
+	if (crumbs.empty() || !map)
 		return;
 
 	// We're stuck, add time to connection

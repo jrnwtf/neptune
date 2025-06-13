@@ -1611,9 +1611,8 @@ void CMenu::MenuMisc(int iTab)
 					FToggle(Vars::Misc::Automation::KartControl, FToggleEnum::Left);
 					FToggle(Vars::Misc::Automation::BackpackExpander, FToggleEnum::Right);
 					FToggle(Vars::Misc::Automation::AcceptItemDrops, FToggleEnum::Left);
-					FToggle(Vars::Misc::Automation::AutoF2Ignored, FToggleEnum::Right);
-					FToggle(Vars::Misc::Automation::AutoF1Priority, FToggleEnum::Left);
-					FToggle(Vars::Misc::Automation::RandomVotekick, FToggleEnum::Right);
+					FToggle(Vars::Misc::Automation::AutoVote, FToggleEnum::Right);
+					FToggle(Vars::Misc::Automation::RandomVotekick, FToggleEnum::Left);
 					FToggle(Vars::CheaterDetection::AutoIgnoreThai, FToggleEnum::Left);
 					FToggle(Vars::Misc::Automation::AutoVoteMap, FToggleEnum::Right);
 					PushTransparent(!FGet(Vars::Misc::Automation::AutoVoteMap));
@@ -1678,8 +1677,11 @@ void CMenu::MenuMisc(int iTab)
 					}
 					PopTransparent();
 					FToggle(Vars::Misc::Automation::NoiseSpam, FToggleEnum::Left);
+					FToggle(Vars::Misc::Automation::MicSpam, FToggleEnum::Right);
+					FToggle(Vars::Misc::Automation::AchievementSpam, FToggleEnum::Left);
 					FToggle(Vars::Misc::Automation::AutoReport, FToggleEnum::Right);
 					FToggle(Vars::Misc::Automation::VoiceF2PMode, FToggleEnum::Left);
+					FToggle(Vars::Misc::Automation::CallVoteSpam, FToggleEnum::Right);
 					FDropdown(Vars::Misc::Automation::VoiceCommandSpam);
 				} EndSection();
 				if (Section("Mann vs. Machine", 8))

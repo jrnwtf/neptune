@@ -10,7 +10,7 @@ namespace F::NamedPipe
     void Shutdown();
     void SendStatusUpdate(const std::string& status);
     void ExecuteCommand(const std::string& command);
-    void SendHealthUpdate(int health);
+    void SendHealthUpdate();
     void SendPlayerClassUpdate(int playerClass);
     int GetCurrentPlayerClass();
     std::string GetCurrentLevelName();

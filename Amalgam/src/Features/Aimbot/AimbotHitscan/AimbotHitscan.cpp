@@ -1,6 +1,8 @@
 #include "AimbotHitscan.h"
 
 #include "../Aimbot.h"
+#include "../AimbotSafety.h"
+#include "../TextmodeConfig.h"
 #include "../../Resolver/Resolver.h"
 #include "../../Ticks/Ticks.h"
 #include "../../Visuals/Visuals.h"
@@ -10,7 +12,12 @@
 
 std::vector<Target_t> CAimbotHitscan::GetTargets(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
+	if (!pLocal || !pWeapon || !I::EngineClient || !I::EngineClient->IsInGame())
+		return {};
+	
 	std::vector<Target_t> vTargets;
+	vTargets.reserve(32); // Pre-allocate to prevent frequent reallocations
+	
 	const auto iSort = Vars::Aimbot::General::TargetSelection.Value;
 
 	Vec3 vLocalPos = F::Ticks.GetShootPos();
@@ -32,6 +39,10 @@ std::vector<Target_t> CAimbotHitscan::GetTargets(CTFPlayer* pLocal, CTFWeaponBas
 
 		for (auto pEntity : H::Entities.GetGroup(eGroupType))
 		{
+			// Enhanced entity validation
+			if (!pEntity || pEntity->IsDormant() || pEntity->entindex() <= 0)
+				continue;
+			
 			bool bTeammate = pEntity->m_iTeamNum() == pLocal->m_iTeamNum();
 			if (F::AimbotGlobal.ShouldIgnore(pEntity, pLocal, pWeapon))
 				continue;
@@ -143,20 +154,22 @@ std::vector<Target_t> CAimbotHitscan::GetTargets(CTFPlayer* pLocal, CTFWeaponBas
 
 std::vector<Target_t> CAimbotHitscan::SortTargets(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
+	if (!pLocal || !pWeapon || !I::EngineClient || !I::EngineClient->IsInGame())
+		return {};
+	
 	auto vTargets = GetTargets(pLocal, pWeapon);
+	
+	AimbotSafety::SafeResize(vTargets, TextmodeConfig::MAX_TARGETS);
 
-	// Apply low FPS optimizations if needed
 	bool bLowFPS = G::GetFPS() < Vars::Aimbot::Hitscan::LowFPSThreshold.Value;
 	int iLowFPSFlags = bLowFPS ? Vars::Aimbot::Hitscan::LowFPSOptimizations.Value : 0;
 	
-	// Static variable for tracking when we last processed targets
 	static float flLastTargetProcessTime = 0.0f;
 	
-	// Skip target processing if ReduceTargetProcessing is enabled
 	if (bLowFPS && (iLowFPSFlags & Vars::Aimbot::Hitscan::LowFPSOptimizationsEnum::ReduceTargetProcessing))
 	{
 		float flCurrentTime = I::GlobalVars->curtime;
-		if (flCurrentTime - flLastTargetProcessTime < 0.1f) // Process targets only every 100ms
+		if (flCurrentTime - flLastTargetProcessTime < 0.1f)
 		{
 			static std::vector<Target_t> vCachedTargets;
 			return vCachedTargets;
@@ -164,10 +177,8 @@ std::vector<Target_t> CAimbotHitscan::SortTargets(CTFPlayer* pLocal, CTFWeaponBa
 		flLastTargetProcessTime = I::GlobalVars->curtime;
 	}
 	
-	// Apply FOV-based culling
 	if (bLowFPS && (iLowFPSFlags & Vars::Aimbot::Hitscan::LowFPSOptimizationsEnum::FOVBasedCulling))
 	{
-		// Use a smaller FOV for culling targets when FPS is low
 		float flReducedFOV = Vars::Aimbot::General::AimFOV.Value * 0.7f;
 		vTargets.erase(std::remove_if(vTargets.begin(), vTargets.end(), 
 			[flReducedFOV](const Target_t& target) { 
@@ -362,6 +373,12 @@ int CAimbotHitscan::GetHitboxPriority(int nHitbox, CTFPlayer* pLocal, CTFWeaponB
 
 int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
+	if (!AimbotSafety::IsValidEntity(tTarget.m_pEntity) || !AimbotSafety::IsValidPlayer(pLocal) || !pWeapon)
+		return false;
+	
+	if (!AimbotSafety::IsValidGameState())
+		return false;
+	
 	if (Vars::Aimbot::General::Ignore.Value & Vars::Aimbot::General::IgnoreEnum::Unsimulated && H::Entities.GetChoke(tTarget.m_pEntity->entindex()) > Vars::Aimbot::General::TickTolerance.Value)
 		return false;
 
@@ -378,10 +395,19 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 
 	auto pModel = tTarget.m_pEntity->GetModel();
 	if (!pModel) return false;
+	
+	if (!I::ModelInfoClient) return false;
 	auto pHDR = I::ModelInfoClient->GetStudiomodel(pModel);
 	if (!pHDR) return false;
-	auto pSet = pHDR->pHitboxSet(tTarget.m_pEntity->As<CBaseAnimating>()->m_nHitboxSet());
-	if (!pSet) return false;
+	
+	auto pAnimating = tTarget.m_pEntity->As<CBaseAnimating>();
+	if (!pAnimating) return false;
+	
+	int nHitboxSet = pAnimating->m_nHitboxSet();
+	if (nHitboxSet < 0 || nHitboxSet >= pHDR->numhitboxsets) return false;
+	
+	auto pSet = pHDR->pHitboxSet(nHitboxSet);
+	if (!pSet || pSet->numhitboxes <= 0 || pSet->numhitboxes > MAXSTUDIOBONES) return false;
 
 	std::vector<TickRecord*> vRecords = {};
 	if (F::Backtrack.GetRecords(tTarget.m_pEntity, vRecords))
@@ -414,6 +440,9 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 	{
 		matrix3x4 aBones[MAXSTUDIOBONES];
 		
+		// Initialize bone matrix to prevent crashes from uninitialized data
+		memset(aBones, 0, sizeof(aBones));
+		
 		// Use simplified animation processing if enabled
 		if (bReduceAnimationProcessing)
 		{
@@ -439,12 +468,19 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 			for (int i = 0; i < sizeof(essentialHitboxes) / sizeof(int); i++) 
 			{
 				int nHitbox = essentialHitboxes[i];
+				// Validate hitbox index before accessing
+				if (nHitbox < 0 || nHitbox >= pSet->numhitboxes)
+					continue;
 				auto pBox = pSet->pHitbox(nHitbox);
 				if (!pBox) continue;
 
 				// Use simpler collision bounds
 				Vec3 iMin = pBox->bbmin, iMax = pBox->bbmax;
 				int iBone = pBox->bone;
+				
+				if (iBone < 0 || iBone >= MAXSTUDIOBONES)
+					continue;
+				
 				Vec3 vCenter{};
 				Math::VectorTransform((iMin + iMax) / 2, aBones[iBone], vCenter);
 				vHitboxInfos.emplace_back(iBone, nHitbox, vCenter, iMin, iMax);
@@ -452,17 +488,30 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 		}
 		else
 		{
-			// Process all hitboxes normally
-			for (int nHitbox = 0; nHitbox < pSet->numhitboxes; nHitbox++)
+			// Process all hitboxes normally with enhanced safety checks
+			int maxHitboxes = std::min(pSet->numhitboxes, 32); // Limit to reasonable number
+			for (int nHitbox = 0; nHitbox < maxHitboxes; nHitbox++)
 			{
 				auto pBox = pSet->pHitbox(nHitbox);
 				if (!pBox) continue;
 
 				const Vec3 iMin = pBox->bbmin, iMax = pBox->bbmax;
 				const int iBone = pBox->bone;
+				
+				// Enhanced bone validation using safety utilities
+				if (!AimbotSafety::IsValidBoneIndex(iBone, pHDR->numbones))
+					continue;
+				
+				// Validate bone matrix is not null/corrupted
+				if (!AimbotSafety::IsValidBoneMatrix(aBones[iBone]))
+					continue;
+				
 				Vec3 vCenter{};
 				Math::VectorTransform((iMin + iMax) / 2, aBones[iBone], vCenter);
-				vHitboxInfos.emplace_back(iBone, nHitbox, vCenter, iMin, iMax);
+				
+				// Validate the resulting position using safety utilities
+				if (AimbotSafety::IsValidPosition(vCenter))
+					vHitboxInfos.emplace_back(iBone, nHitbox, vCenter, iMin, iMax);
 			}
 		}
 		
@@ -481,8 +530,15 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 	{
 		std::sort(vRecords.begin(), vRecords.end(), [&](const TickRecord* a, const TickRecord* b) -> bool
 			{
+				if (!a || !b || !a->m_BoneMatrix.m_aBones || !b->m_BoneMatrix.m_aBones)
+					return false;
+				
+				if (iTargetBone < 0 || iTargetBone >= MAXSTUDIOBONES)
+					return false;
+				
+				// Fix: vPosB should use 'b', not 'a'
 				Vec3 vPosA = { a->m_BoneMatrix.m_aBones[iTargetBone][0][3], a->m_BoneMatrix.m_aBones[iTargetBone][1][3], a->m_BoneMatrix.m_aBones[iTargetBone][2][3] };
-				Vec3 vPosB = { a->m_BoneMatrix.m_aBones[iTargetBone][0][3], a->m_BoneMatrix.m_aBones[iTargetBone][1][3], a->m_BoneMatrix.m_aBones[iTargetBone][2][3] };
+				Vec3 vPosB = { b->m_BoneMatrix.m_aBones[iTargetBone][0][3], b->m_BoneMatrix.m_aBones[iTargetBone][1][3], b->m_BoneMatrix.m_aBones[iTargetBone][2][3] };
 				Vec3 vAnglesA = Math::CalcAngle(vEyePos, vPosA);
 				Vec3 vAnglesB = Math::CalcAngle(vEyePos, vPosB);
 				return pDoubletapAngle->DeltaAngle(vAnglesA).Length2D() < pDoubletapAngle->DeltaAngle(vAnglesB).Length2D();
@@ -620,6 +676,10 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 
 			for (auto& [tHitboxInfo, iHitbox, _] : vHitboxes)
 			{
+				// Validate bone index to prevent access violation
+				if (tHitboxInfo.m_iBone < 0 || tHitboxInfo.m_iBone >= MAXSTUDIOBONES)
+					continue;
+				
 				Vec3 vAngle; Math::MatrixAngles(aBones[tHitboxInfo.m_iBone], vAngle);
 				Vec3 vMins = tHitboxInfo.m_iMin;
 				Vec3 vMaxs = tHitboxInfo.m_iMax;
@@ -666,6 +726,9 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 
 				for (auto& vPoint : vPoints)
 				{
+					if (tHitboxInfo.m_iBone < 0 || tHitboxInfo.m_iBone >= MAXSTUDIOBONES)
+						break;
+					
 					Vec3 vOrigin; Math::VectorTransform(vPoint, aBones[tHitboxInfo.m_iBone], vOrigin); vOrigin += vOffset;
 
 					if (vEyePos.DistToSqr(vOrigin) > flMaxRange)
@@ -698,7 +761,7 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 					if (bChanged || bVisCheck)
 					{
 						// for the time being, no vischecks against other hitboxes
-						if ((!bChanged || Math::RayToOBB(vEyePos, vForward, vCheckMins, vCheckMaxs, aBones[tHitboxInfo.m_iBone], flModelScale) && SDK::VisPos(pLocal, tTarget.m_pEntity, vEyePos, vEyePos + vForward * flDist))
+						if ((!bChanged || (tHitboxInfo.m_iBone >= 0 && tHitboxInfo.m_iBone < MAXSTUDIOBONES && Math::RayToOBB(vEyePos, vForward, vCheckMins, vCheckMaxs, aBones[tHitboxInfo.m_iBone], flModelScale)) && SDK::VisPos(pLocal, tTarget.m_pEntity, vEyePos, vEyePos + vForward * flDist))
 							&& Math::RayToOBB(vEyePos, vForward, vHullMins, vHullMaxs, mTransform))
 						{
 							iTargetBone = tHitboxInfo.m_iBone;
@@ -959,6 +1022,14 @@ void CAimbotHitscan::Aim(CUserCmd* pCmd, Vec3& vAngle)
 
 void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
+	// Critical safety checks to prevent crashes during map loading/transitions
+	if (!pLocal || !pWeapon || !pCmd || !I::EngineClient || !I::EngineClient->IsInGame() || !I::GlobalVars)
+		return;
+	
+	// Additional validation for textmode stability
+	if (pLocal->IsDormant() || pLocal->entindex() <= 0)
+		return;
+	
 	const int nWeaponID = pWeapon->GetWeaponID();
 
 	static int iStaticAimType = Vars::Aimbot::General::AimType.Value;
@@ -1058,17 +1129,28 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 
 	for (auto& tTarget : vTargets)
 	{
+		// Enhanced target validation
+		if (!tTarget.m_pEntity || tTarget.m_pEntity->IsDormant() || tTarget.m_pEntity->entindex() <= 0)
+			continue;
+		
 		if (bTargetAll && targetedEntities.find(tTarget.m_pEntity->entindex()) != targetedEntities.end())
 			continue;
 
 		if (nWeaponID == TF_WEAPON_MEDIGUN && pWeapon->As<CWeaponMedigun>()->m_hHealingTarget().Get() == tTarget.m_pEntity)
 		{
-			if (G::LastUserCmd->buttons & IN_ATTACK)
+			if (G::LastUserCmd && G::LastUserCmd->buttons & IN_ATTACK)
 				pCmd->buttons |= IN_ATTACK;
 			return;
 		}
 
-		const auto iResult = CanHit(tTarget, pLocal, pWeapon);
+		// Wrap critical operations in try-catch for stability
+		int iResult = 0;
+		try {
+			iResult = CanHit(tTarget, pLocal, pWeapon);
+		} catch (...) {
+			continue; // Skip this target if it causes issues
+		}
+		
 		if (!iResult) continue;
 		if (iResult == 2)
 		{

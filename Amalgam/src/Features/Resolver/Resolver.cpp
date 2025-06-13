@@ -4,6 +4,7 @@
 #include "../Players/PlayerUtils.h"
 #include "../Ticks/Ticks.h"
 #include "../Output/Output.h"
+#include <optional>
 
 void CResolver::Reset()
 {
@@ -44,6 +45,70 @@ std::optional<float> CResolver::GetPitchForSniperDot(CTFPlayer* pEntity, CTFPlay
 	return std::nullopt;
 }
 
+bool CResolver::IsUsingAntiAim(CTFPlayer* pPlayer, CTFPlayerResource* pResource)
+{
+	if (!pPlayer || pPlayer->IsDormant() || !pPlayer->IsAlive())
+		return false;
+
+	int iUserID = pResource->m_iUserID(pPlayer->entindex());
+	auto& tData = m_mResolverData[iUserID];
+
+	bool bUsingAAYaw = fabsf(pPlayer->m_angEyeAnglesY()) > 180.f; // Check for extreme yaw angles
+	bool bUsingAAPitch = fabsf(pPlayer->m_angEyeAnglesX()) == 90.f || fabsf(pPlayer->m_angEyeAnglesX()) > 89.f;
+	bool bSpinbot = tData.m_flLastYawDelta > 120.f; // High yaw delta indicates spinbot
+
+	return bUsingAAYaw || bUsingAAPitch || bSpinbot;
+}
+
+void CResolver::UpdateConfidence(int iUserID, bool bHit, int iHitbox)
+{
+	auto& tData = m_mResolverData[iUserID];
+
+	if (bHit)
+	{
+		tData.m_flYawConfidence = std::min(tData.m_flYawConfidence + 0.3f, 1.0f);
+		tData.m_flPitchConfidence = std::min(tData.m_flPitchConfidence + 0.3f, 1.0f);
+		
+		if (iHitbox == HITBOX_HEAD)
+		{
+			tData.m_flYawConfidence = std::min(tData.m_flYawConfidence + 0.2f, 1.0f);
+			tData.m_flPitchConfidence = std::min(tData.m_flPitchConfidence + 0.2f, 1.0f);
+		}
+
+		tData.m_iMissedShots = 0;
+	}
+	else
+	{
+		tData.m_flYawConfidence = std::max(tData.m_flYawConfidence - 0.2f, 0.0f);
+		tData.m_flPitchConfidence = std::max(tData.m_flPitchConfidence - 0.2f, 0.0f);
+		tData.m_iMissedShots++;
+	}
+}
+
+float CResolver::GetSmartYawOffset(int iUserID, CTFPlayer* pPlayer)
+{
+	auto& tData = m_mResolverData[iUserID];
+	
+	if (tData.m_iMissedShots >= 3)
+	{
+		static const float agressiveOffsets[] = { 0.f, 90.f, -90.f, 45.f, -45.f, 135.f, -135.f, 180.f };
+		int iIndex = (tData.m_iMissedShots - 3) % 8;
+		return agressiveOffsets[iIndex];
+	}
+	else if (tData.m_flYawConfidence < 0.3f)
+	{
+		static const float standardOffsets[] = { 0.f, 58.f, -58.f, 29.f, -29.f };
+		int iIndex = tData.m_iMissedShots % 5;
+		return standardOffsets[iIndex];
+	}
+	else
+	{
+		static const float fineOffsets[] = { 0.f, 15.f, -15.f, 30.f, -30.f };
+		int iIndex = tData.m_iMissedShots % 5;
+		return fineOffsets[iIndex];
+	}
+}
+
 void CResolver::FrameStageNotify()
 {
 	if (!Vars::Resolver::Enabled.Value || !I::EngineClient->IsInGame() || I::EngineClient->IsPlayingDemo())
@@ -64,21 +129,57 @@ void CResolver::FrameStageNotify()
 		int iUserID = pResource->m_iUserID(pPlayer->entindex());
 		auto& tData = m_mResolverData[iUserID];
 
-		if (tData.m_flYaw)
+		float flCurrentYaw = pPlayer->m_angEyeAnglesY();
+		if (tData.m_flLastYaw != 0.f)
+		{
+			float flYawDelta = fabsf(Math::NormalizeAngle(flCurrentYaw - tData.m_flLastYaw));
+			tData.m_flLastYawDelta = flYawDelta;
+		}
+		tData.m_flLastYaw = flCurrentYaw;
+
+		if (IsUsingAntiAim(pPlayer, pResource))
+		{
+			tData.m_flYaw = GetSmartYawOffset(iUserID, pPlayer);
 			tData.m_bYaw = true;
+		}
 		else
+		{
 			tData.m_bYaw = false;
+		}
 
 		if (H::Entities.GetDeltaTime(pPlayer->entindex()) && fabsf(pPlayer->m_angEyeAnglesX()) == 90.f)
 		{
 			if (auto flPitch = GetPitchForSniperDot(pPlayer, pResource))
+			{
 				tData.m_flPitch = flPitch.value();
-			else if (!tData.m_bFirstOOBPitch && tData.m_bAutoSetPitch || tData.m_bInversePitch)
-				tData.m_flPitch = -pPlayer->m_angEyeAnglesX(); // set to inverse by default
-			tData.m_bPitch = true, tData.m_bFirstOOBPitch = true;
+			}
+			else
+			{
+				Vec3 vVelocity = pPlayer->m_vecVelocity();
+				float flSpeed = vVelocity.Length2D();
+				
+				if (flSpeed > 50.f)
+				{
+					Vec3 vAngles = Math::CalcAngle(Vec3(0, 0, 0), vVelocity);
+					tData.m_flPitch = std::clamp(vAngles.x * 0.7f, -89.f, 89.f);
+				}
+				else if (!tData.m_bFirstOOBPitch && (tData.m_bAutoSetPitch || tData.m_bInversePitch))
+				{
+					tData.m_flPitch = -pPlayer->m_angEyeAnglesX();
+				}
+				else
+				{
+					float flPitchOffset = tData.m_flPitchConfidence > 0.5f ? 15.f : 45.f;
+					tData.m_flPitch = pPlayer->m_angEyeAnglesX() > 0 ? -flPitchOffset : flPitchOffset;
+				}
+			}
+			tData.m_bPitch = true;
+			tData.m_bFirstOOBPitch = true;
 		}
 		else
+		{
 			tData.m_bPitch = false;
+		}
 	}
 }
 
@@ -100,20 +201,26 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 
 			if (bAutoYaw)
 			{
-				flYaw = Math::NormalizeAngle(flYaw + Vars::Resolver::AutoResolveYawAmount.Value);
+				// Use smart yaw offset instead of fixed amount
+				flYaw = GetSmartYawOffset(m_iWaitingForTarget, pTarget);
 
 				F::Backtrack.ResolverUpdate(pTarget);
-				F::Output.ReportResolver(I::EngineClient->GetPlayerForUserID(m_iWaitingForTarget), "Cycling", "yaw", flYaw);
+				F::Output.ReportResolver(I::EngineClient->GetPlayerForUserID(m_iWaitingForTarget), "Smart Cycling", "yaw", flYaw);
 			}
 
 			if (bAutoPitch
 				&& (!bAutoYaw || fabsf(flYaw) < fabsf(Vars::Resolver::AutoResolveYawAmount.Value / 2))
 				&& fabsf(pTarget->m_angEyeAnglesX()) == 90.f && !m_mSniperDots.contains(m_iWaitingForTarget))
 			{
-				flPitch = Math::NormalizeAngle(flPitch + Vars::Resolver::AutoResolvePitchAmount.Value, 180.f);
+				// Enhanced pitch cycling with confidence-based adjustments
+				float flPitchAmount = tData.m_flPitchConfidence > 0.5f ? 
+					Vars::Resolver::AutoResolvePitchAmount.Value * 0.5f : 
+					Vars::Resolver::AutoResolvePitchAmount.Value;
+				
+				flPitch = Math::NormalizeAngle(flPitch + flPitchAmount, 180.f);
 
 				F::Backtrack.ResolverUpdate(pTarget);
-				F::Output.ReportResolver(I::EngineClient->GetPlayerForUserID(m_iWaitingForTarget), "Cycling", "pitch", flPitch);
+				F::Output.ReportResolver(I::EngineClient->GetPlayerForUserID(m_iWaitingForTarget), "Smart Cycling", "pitch", flPitch);
 			}
 
 			m_iWaitingForTarget = -1;
@@ -165,11 +272,11 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 				int iUserID = pResource->m_iUserID(pTarget->entindex());
 				auto& tData = m_mResolverData[iUserID];
 
-				float& flYaw = tData.m_flYaw;
-				flYaw = Math::NormalizeAngle(flYaw + Vars::Resolver::CycleYaw.Value);
+				float flOldYaw = tData.m_flYaw;
+				tData.m_flYaw = GetSmartYawOffset(iUserID, pTarget);
 
 				F::Backtrack.ResolverUpdate(pTarget);
-				F::Output.ReportResolver(pTarget->entindex(), "Cycling", "yaw", flYaw);
+				F::Output.ReportResolver(pTarget->entindex(), std::format("Smart Cycling (conf: {:.1f})", tData.m_flYawConfidence), "yaw", tData.m_flYaw);
 			}
 
 			m_flLastYawCycle = SDK::PlatFloatTime();
@@ -192,11 +299,14 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 
 				float& flPitch = tData.m_flPitch;
 
-				flPitch += Vars::Resolver::CyclePitch.Value;
-				flPitch = Math::NormalizeAngle(flPitch + Vars::Resolver::CyclePitch.Value, 180.f);
+				float flPitchAmount = tData.m_flPitchConfidence > 0.5f ? 
+					Vars::Resolver::CyclePitch.Value * 0.5f : 
+					Vars::Resolver::CyclePitch.Value;
+
+				flPitch = Math::NormalizeAngle(flPitch + flPitchAmount, 180.f);
 
 				F::Backtrack.ResolverUpdate(pTarget);
-				F::Output.ReportResolver(pTarget->entindex(), "Cycling", "pitch", flPitch);
+				F::Output.ReportResolver(pTarget->entindex(), std::format("Smart Cycling (conf: {:.1f})", tData.m_flPitchConfidence), "pitch", flPitch);
 			}
 
 			m_flLastPitchCycle = SDK::PlatFloatTime();
@@ -297,7 +407,17 @@ void CResolver::OnPlayerHurt(IGameEvent* pEvent)
 		return;
 
 	if (m_bWaitingForHeadshot && !pEvent->GetBool("crit"))
+	{
+		UpdateConfidence(m_iWaitingForTarget, false, HITBOX_HEAD);
 		return;
+	}
+
+	// Successful hit - update confidence
+	int iDamage = pEvent->GetInt("damageamount");
+	bool bCrit = pEvent->GetBool("crit");
+	int iHitbox = bCrit && m_bWaitingForHeadshot ? HITBOX_HEAD : HITBOX_BODY;
+	
+	UpdateConfidence(m_iWaitingForTarget, true, iHitbox);
 
 	m_iWaitingForTarget = -1;
 	m_flWaitingForDamage = 0.f;

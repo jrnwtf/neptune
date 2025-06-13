@@ -14,8 +14,11 @@ class CMisc
 	void InstantRespawnMVM(CTFPlayer* pLocal);
 	void NoiseSpam(CTFPlayer* pLocal);
 	void VoiceCommandSpam(CTFPlayer* pLocal);
+	void MicSpam(CTFPlayer* pLocal);
 	void RandomVotekick(CTFPlayer* pLocal);
+	void CallVoteSpam(CTFPlayer* pLocal);
 	void ChatSpam(CTFPlayer* pLocal);
+	void AchievementSpam(CTFPlayer* pLocal);
 	void KillSay(int victim);
 	void AutoReply(int speaker, const char* text);
 	void VotekickResponse(int target);
@@ -40,6 +43,9 @@ class CMisc
 	std::vector<std::string> m_vAutoReplyLines;
 	Timer m_tChatSpamTimer;
 	Timer m_tVoiceCommandTimer;
+	Timer m_tCallVoteSpamTimer;
+	Timer m_tMicSpamTimer;
+	Timer m_tAchievementSpamTimer;
 	int m_iTokenBucket = 5;
 	float m_flLastTokenTime = 0.0f;
 	int m_iCurrentChatSpamIndex = 0;

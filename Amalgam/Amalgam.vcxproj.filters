@@ -449,10 +449,12 @@
     <ClInclude Include="src\Features\Aimbot\AimbotHitscan\AimbotHitscan.h" />
     <ClInclude Include="src\Features\Aimbot\AimbotMelee\AimbotMelee.h" />
     <ClInclude Include="src\Features\Aimbot\AimbotProjectile\AimbotProjectile.h" />
+    <ClInclude Include="src\Features\Aimbot\AimbotSafety.h" />
     <ClInclude Include="src\Features\Aimbot\AutoAirblast\AutoAirblast.h" />
     <ClInclude Include="src\Features\Aimbot\AutoDetonate\AutoDetonate.h" />
     <ClInclude Include="src\Features\Aimbot\AutoRocketJump\AutoRocketJump.h" />
     <ClInclude Include="src\Features\Aimbot\AutoHeal\AutoHeal.h" />
+    <ClInclude Include="src\Features\Aimbot\TextmodeConfig.h" />
     <ClInclude Include="src\Features\Misc\AutoQueue\AutoQueue.h" />
     <ClInclude Include="src\Features\Backtrack\Backtrack.h" />
     <ClInclude Include="src\Features\CheaterDetection\CheaterDetection.h" />

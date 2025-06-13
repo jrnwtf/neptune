@@ -21,6 +21,7 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 	NoiseSpam(pLocal);
 	VoiceCommandSpam(pLocal);
+	MicSpam(pLocal);
 	ChatSpam(pLocal);
 	CheatsBypass();
 	WeaponSway();
@@ -41,6 +42,8 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 	AntiAFK(pLocal, pCmd);
 	InstantRespawnMVM(pLocal);
 	RandomVotekick(pLocal);
+	CallVoteSpam(pLocal);
+	AchievementSpam(pLocal);
 
 	if (!pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->m_MoveType() != MOVETYPE_WALK || pLocal->IsSwimming() || pLocal->InCond(TF_COND_SHIELD_CHARGE) || pLocal->InCond(TF_COND_HALLOWEEN_KART))
 		return;
@@ -869,6 +872,62 @@ void CMisc::VoiceCommandSpam(CTFPlayer* pLocal)
 		}
 	}
 
+void CMisc::MicSpam(CTFPlayer* pLocal)
+{
+	if (!Vars::Misc::Automation::MicSpam.Value || !pLocal)
+		return;
+
+	if (!m_tMicSpamTimer.Run(2.0f))
+		return;
+
+	std::vector<std::string> micCommands = {
+		"+voicerecord",
+		"voice_loopback 1",
+		"voice_inputfromfile 0",
+		"voice_outputtofile 0"
+	};
+
+	int randomIndex = SDK::RandomInt(0, micCommands.size() - 1);
+	std::string selectedCommand = micCommands[randomIndex];
+
+	I::EngineClient->ClientCmd_Unrestricted(selectedCommand.c_str());
+}
+
+void CMisc::AchievementSpam(CTFPlayer* pLocal)
+{
+	if (!Vars::Misc::Automation::AchievementSpam.Value || !pLocal || !pLocal->IsAlive())
+		return;
+
+	if (!m_tAchievementSpamTimer.Run(5.0f))
+		return;
+
+	const auto pAchievementMgr = reinterpret_cast<IAchievementMgr*(*)(void)>(U::Memory.GetVFunc(I::EngineClient, 114))();
+	if (!pAchievementMgr)
+		return;
+
+	int achievementCount = pAchievementMgr->GetAchievementCount();
+	if (achievementCount <= 0)
+		return;
+
+	int randomIndex = SDK::RandomInt(0, achievementCount - 1);
+	auto pAchievement = pAchievementMgr->GetAchievementByIndex(randomIndex);
+	if (!pAchievement)
+		return;
+
+	int achievementID = pAchievement->GetAchievementID();
+	
+	pAchievementMgr->AwardAchievement(achievementID);
+	
+	if (I::SteamUserStats && pAchievement->GetName())
+	{
+		I::SteamUserStats->ClearAchievement(pAchievement->GetName());
+		I::SteamUserStats->StoreStats();
+		
+		pAchievementMgr->AwardAchievement(achievementID);
+		I::SteamUserStats->StoreStats();
+	}
+}
+
 void CMisc::RandomVotekick(CTFPlayer* pLocal)
 {
 	if (!Vars::Misc::Automation::RandomVotekick.Value || !I::EngineClient->IsInGame() || !I::EngineClient->IsConnected())
@@ -911,6 +970,62 @@ void CMisc::RandomVotekick(CTFPlayer* pLocal)
 	{
 		I::ClientState->SendStringCmd(std::format("callvote Kick \"{} other\"", pi.userID).c_str());
 	}
+}
+
+void CMisc::CallVoteSpam(CTFPlayer* pLocal)
+{
+	if (!Vars::Misc::Automation::CallVoteSpam.Value || !I::EngineClient->IsInGame() || !I::EngineClient->IsConnected())
+		return;
+
+	if (!m_tCallVoteSpamTimer.Run(1.0f))
+		return;
+
+	// Create a list of possible vote types
+	std::vector<std::string> voteOptions = {
+		"callvote changelevel cp_badlands",
+		"callvote changelevel cp_granary", 
+		"callvote changelevel cp_well",
+		"callvote changelevel cp_5gorge",
+		"callvote changelevel cp_freight_final1",
+		"callvote changelevel cp_yukon_final",
+		"callvote changelevel cp_gravelpit",
+		"callvote changelevel cp_dustbowl",
+		"callvote changelevel cp_egypt_final",
+		"callvote changelevel cp_junction_final",
+		"callvote changelevel cp_steel",
+		"callvote changelevel ctf_2fort",
+		"callvote changelevel ctf_well",
+		"callvote changelevel ctf_sawmill",
+		"callvote changelevel ctf_turbine",
+		"callvote changelevel ctf_doublecross",
+		"callvote changelevel pl_badwater",
+		"callvote changelevel pl_goldrush",
+		"callvote changelevel pl_dustbowl",
+		"callvote changelevel pl_upward",
+		"callvote changelevel pl_thundermountain",
+		"callvote changelevel koth_harvest_final",
+		"callvote changelevel koth_nucleus",
+		"callvote changelevel koth_sawmill",
+		"callvote changelevel koth_viaduct",
+		"callvote changelevel cp_5gorge",
+		"callvote changelevel cp_dustbowl",
+		"callvote changelevel ctf_2fort",
+		"callvote changelevel ctf_doublecross",
+		"callvote changelevel ctf_turbine",
+		"callvote changelevel koth_brazil",
+		"callvote changelevel pl_badwater",
+		"callvote changelevel pl_pheonix",
+		"callvote changelevel plr_bananabay",
+		"callvote changelevel plr_hightower",
+		"callvote scrambleteams"
+	};
+
+	// Pick a random vote option
+	int randomIndex = SDK::RandomInt(0, voteOptions.size() - 1);
+	std::string selectedVote = voteOptions[randomIndex];
+
+	// Send the vote command
+	I::ClientState->SendStringCmd(selectedVote.c_str());
 }
 
 
