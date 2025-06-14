@@ -499,7 +499,7 @@ void CMenu::MenuAimbot(int iTab)
 				}
 				if (Section("Anti Aim", 8))
 				{
-					FToggle(Vars::AntiAim::Enabled);
+					FToggle(Vars::AntiAim::Enabled, FToggleEnum::Left);
 					FDropdown(Vars::AntiAim::PitchReal, FDropdownEnum::Left);
 					FDropdown(Vars::AntiAim::PitchFake, FDropdownEnum::Right);
 					FDropdown(Vars::AntiAim::YawReal, FDropdownEnum::Left);
@@ -523,11 +523,38 @@ void CMenu::MenuAimbot(int iTab)
 						FSlider(Vars::AntiAim::SpinSpeed, FSliderEnum::Left);
 					}
 					PopTransparent();
+					PushTransparent(FGet(Vars::AntiAim::YawFake) != Vars::AntiAim::YawEnum::SineWave && FGet(Vars::AntiAim::YawReal) != Vars::AntiAim::YawEnum::SineWave);
+					{
+						FSlider(Vars::AntiAim::SineWaveSpeed, FSliderEnum::Right);
+					}
+					PopTransparent();
+					PushTransparent(FGet(Vars::AntiAim::YawFake) != Vars::AntiAim::YawEnum::Random && FGet(Vars::AntiAim::YawReal) != Vars::AntiAim::YawEnum::Random);
+					{
+						FSlider(Vars::AntiAim::RandomRange, FSliderEnum::Left);
+					}
+					PopTransparent();
+					PushTransparent(FGet(Vars::AntiAim::YawFake) != Vars::AntiAim::YawEnum::MicroJitter && FGet(Vars::AntiAim::YawReal) != Vars::AntiAim::YawEnum::MicroJitter);
+					{
+						FSlider(Vars::AntiAim::MicroJitterRange, FSliderEnum::Right);
+					}
+					PopTransparent();
+					PushTransparent(FGet(Vars::AntiAim::YawFake) != Vars::AntiAim::YawEnum::DelayedJitter && FGet(Vars::AntiAim::YawReal) != Vars::AntiAim::YawEnum::DelayedJitter);
+					{
+						FSlider(Vars::AntiAim::DelayedJitterTicks, FSliderEnum::Left);
+					}
+					PopTransparent();
+					PushTransparent(FGet(Vars::AntiAim::YawFake) != Vars::AntiAim::YawEnum::LBYBreaker && FGet(Vars::AntiAim::YawReal) != Vars::AntiAim::YawEnum::LBYBreaker);
+					{
+						FSlider(Vars::AntiAim::LBYBreakerDelta, FSliderEnum::Right);
+					}
+					PopTransparent();
 					SetCursorPos({ GetWindowWidth() / 2 + GetStyle().WindowPadding.x / 2, GetRowPos() + H::Draw.Scale(8) });
 					FToggle(Vars::AntiAim::MinWalk, FToggleEnum::Left);
 					FToggle(Vars::AntiAim::AntiOverlap, FToggleEnum::Left);
 					FToggle(Vars::AntiAim::InvalidShootPitch, FToggleEnum::Right);
 					FToggle(Vars::AntiAim::TauntSpin, FToggleEnum::Left);
+					FToggle(Vars::AntiAim::MaxDesync, FToggleEnum::Right);
+					FToggle(Vars::AntiAim::AntiResolverMode, FToggleEnum::Left);
 				} EndSection();
 			}
 
@@ -1688,7 +1715,8 @@ void CMenu::MenuMisc(int iTab)
 				{
 					FToggle(Vars::Misc::MannVsMachine::InstantRespawn, FToggleEnum::Left);
 					FToggle(Vars::Misc::MannVsMachine::InstantRevive, FToggleEnum::Right);
-					FToggle(Vars::Misc::MannVsMachine::AllowInspect);
+					FToggle(Vars::Misc::MannVsMachine::AllowInspect, FToggleEnum::Left);
+					FToggle(Vars::Misc::MannVsMachine::RobotDeathAnims, FToggleEnum::Right);
 				} EndSection();
 				if (Section("Steam RPC", 8))
 				{

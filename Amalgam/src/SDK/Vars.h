@@ -520,30 +520,37 @@ namespace Vars
 	NAMESPACE_BEGIN(AntiAim, Anti-Aim)
 		CVar(Enabled, VA_LIST("Enabled", "Anti-aim enabled"), false);
 		CVarEnum(PitchReal, "Real pitch", 0, NONE, nullptr,
-			VA_LIST("None", "Up", "Down", "Zero", "Jitter", "Reverse jitter"),
-			None, Up, Down, Zero, Jitter, ReverseJitter);
+			VA_LIST("None", "Up", "Down", "Zero", "Jitter", "Reverse jitter", "Random", "Sine wave", "Micro", "Anti-resolver"),
+			None, Up, Down, Zero, Jitter, ReverseJitter, Random, SineWave, Micro, AntiResolver);
 		CVarEnum(PitchFake, "Fake pitch", 0, NONE, nullptr,
-			VA_LIST("None", "Up", "Down", "Jitter", "Reverse jitter"),
-			None, Up, Down, Jitter, ReverseJitter);
-		Enum(Yaw, Forward, Left, Right, Backwards, Edge, Jitter, Spin);
+			VA_LIST("None", "Up", "Down", "Jitter", "Reverse jitter", "Random", "Sine wave", "Micro"),
+			None, Up, Down, Jitter, ReverseJitter, Random, SineWave, Micro);
+		Enum(Yaw, Forward, Left, Right, Backwards, Edge, Jitter, Spin, SineWave, Random, MicroJitter, DelayedJitter, LBYBreaker, Unhittable);
 		CVarValues(YawReal, "Real yaw", 0, NONE, nullptr,
-			"Forward", "Left", "Right", "Backwards", "Edge", "Jitter", "Spin");
+			"Forward", "Left", "Right", "Backwards", "Edge", "Jitter", "Spin", "Sine wave", "Random", "Micro jitter", "Delayed jitter", "Anim breaker", "Unhittable");
 		CVarValues(YawFake, "Fake yaw", 0, NONE, nullptr,
-			"Forward", "Left", "Right", "Backwards", "Edge", "Jitter", "Spin");
-		Enum(YawMode, View, Target);
+			"Forward", "Left", "Right", "Backwards", "Edge", "Jitter", "Spin", "Sine wave", "Random", "Micro jitter", "Delayed jitter", "Anim breaker", "Unhittable");
+		Enum(YawMode, View, Target, Freestanding);
 		CVarValues(RealYawMode, "Real offset", 0, NONE, nullptr,
-			"View", "Target");
+			"View", "Target", "Freestanding");
 		CVarValues(FakeYawMode, "Fake offset", 0, NONE, nullptr,
-			"View", "Target");
+			"View", "Target", "Freestanding");
 		CVar(RealYawOffset, "Real offset", 0.f, SLIDER_CLAMP | SLIDER_PRECISION, -180.f, 180.f, 5.f, "%i");
 		CVar(FakeYawOffset, "Fake offset", 0.f, SLIDER_CLAMP | SLIDER_PRECISION, -180.f, 180.f, 5.f, "%i");
 		CVar(RealYawValue, "Real value", 0.f, SLIDER_CLAMP | SLIDER_PRECISION, -180.f, 180.f, 5.f, "%g");
 		CVar(FakeYawValue, "Fake value", 0.f, SLIDER_CLAMP | SLIDER_PRECISION, -180.f, 180.f, 5.f, "%g");
 		CVar(SpinSpeed, "Spin speed", 15.f, SLIDER_PRECISION, -30.f, 30.f);
+		CVar(SineWaveSpeed, "Sine wave speed", 2.f, SLIDER_PRECISION, 0.1f, 10.f);
+		CVar(RandomRange, "Random range", 60.f, SLIDER_CLAMP | SLIDER_PRECISION, 10.f, 180.f, 5.f);
+		CVar(MicroJitterRange, "Micro jitter range", 5.f, SLIDER_CLAMP | SLIDER_PRECISION, 1.f, 30.f, 1.f);
+		CVar(DelayedJitterTicks, "Delayed jitter ticks", 8, SLIDER_CLAMP, 2, 32);
+		CVar(LBYBreakerDelta, "Anim breaker delta", 120.f, SLIDER_CLAMP | SLIDER_PRECISION, 30.f, 180.f, 5.f);
 		CVar(MinWalk, "Minwalk", true);
 		CVar(AntiOverlap, "Anti-overlap", false);
 		CVar(InvalidShootPitch, "Hide pitch on shot", false);
 		CVar(TauntSpin, "Taunt Spin", false);
+		CVar(MaxDesync, "Enhance fake angles", true);
+		CVar(AntiResolverMode, "Advanced anti-aim", false);
 	NAMESPACE_END(AntiAim);
 
 	NAMESPACE_BEGIN(Resolver)
@@ -1225,6 +1232,7 @@ namespace Vars
 			CVar(InstantRespawn, "Instant respawn", false);
 			CVar(InstantRevive, "Instant revive", false);
 			CVar(AllowInspect, "Allow inspect", false);
+			CVar(RobotDeathAnims, "Robot death animations", false);
 		SUBNAMESPACE_END(MannVsMachine);
 
 		SUBNAMESPACE_BEGIN(SteamRPC, Steam RPC)
@@ -1381,6 +1389,7 @@ namespace Vars
 		CVar(CBaseEntity_BaseInterpolatePart1, "CBaseEntity_BaseInterpolatePart1", true, NOSAVE | DEBUGVAR);
 		CVar(CBaseEntity_EstimateAbsVelocity, "CBaseEntity_EstimateAbsVelocity", true, NOSAVE | DEBUGVAR);
 		CVar(CBaseEntity_FireBullets, "CBaseEntity_FireBullets", true, NOSAVE | DEBUGVAR);
+		CVar(CBaseEntity_GetTeamNumber, "CBaseEntity_GetTeamNumber", true, NOSAVE | DEBUGVAR);
 		CVar(CBaseEntity_ResetLatched, "CBaseEntity_ResetLatched", true, NOSAVE | DEBUGVAR);
 		CVar(CBaseEntity_SetAbsVelocity, "CBaseEntity_SetAbsVelocity", true, NOSAVE | DEBUGVAR);
 		CVar(CBaseEntity_WorldSpaceCenter, "CBaseEntity_WorldSpaceCenter", true, NOSAVE | DEBUGVAR);
