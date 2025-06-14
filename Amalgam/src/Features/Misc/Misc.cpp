@@ -1216,6 +1216,7 @@ void CMisc::ChatSpam(CTFPlayer* pLocal)
 		else
 			chatCommand = "say \"" + chatLine + "\"";
 		
+		I::EngineClient->ClientCmd_Unrestricted(chatCommand.c_str());
 	}
 	catch (...)
 	{
