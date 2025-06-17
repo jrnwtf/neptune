@@ -214,10 +214,6 @@ void CMisc::BreakJump(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 void CMisc::BreakShootSound(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
-	// TODO:
-	// Find a way to properly check whenever we have switched weapons or not 
-	// (current method is too slow and other methods i've tried are not reliable)
-
 	static int iOriginalWeaponSlot = -1;
 	auto pWeapon = H::Entities.GetWeapon();
 	if (!Vars::Misc::Exploits::BreakShootSound.Value || F::Ticks.m_bDoubletap || pLocal->m_iClass() != TF_CLASS_SOLDIER || !pWeapon)
@@ -225,46 +221,34 @@ void CMisc::BreakShootSound(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 	static bool bLastWasInAttack = false;
 	static int iLastWeaponSelect = -1;
-	//static bool bSwitching = false;
 	const int iCurrSlot = pWeapon->GetSlot();
 	if (pCmd->weaponselect && pCmd->weaponselect != iLastWeaponSelect)
-	{
 		iOriginalWeaponSlot = -1;
-	}
+
 	auto pSwap = iCurrSlot == SLOT_SECONDARY ? pLocal->GetWeaponFromSlot(SLOT_PRIMARY) : iCurrSlot == SLOT_PRIMARY ? pLocal->GetWeaponFromSlot(SLOT_SECONDARY) : pLocal->GetWeaponFromSlot(iOriginalWeaponSlot);
-	if (pSwap && !pCmd->weaponselect)
+	if (pSwap && pSwap->CanBeSelected() && !pCmd->weaponselect)
 	{
-		const int iItemDefIdx = pSwap->m_iItemDefinitionIndex();
-		if (iItemDefIdx == Soldier_s_TheBASEJumper || iItemDefIdx == Soldier_s_Gunboats || iItemDefIdx == Soldier_s_TheMantreads)
+		if (bLastWasInAttack)
 		{
-			pSwap = pLocal->GetWeaponFromSlot(SLOT_MELEE);
-		}
-		if ( pSwap )
-		{
-			if ( bLastWasInAttack )
+			if (iOriginalWeaponSlot < 0)
 			{
-				if ( iOriginalWeaponSlot < 0 )
-				{
-					iOriginalWeaponSlot = iCurrSlot;
-					pCmd->weaponselect = pSwap->entindex( );
-					iLastWeaponSelect = pCmd->weaponselect;
-				}
+				iOriginalWeaponSlot = iCurrSlot;
+				pCmd->weaponselect = pSwap->entindex();
+				iLastWeaponSelect = pCmd->weaponselect;
 			}
-			else/* if ( true )*/
+		}
+		else
+		{
+			if (iOriginalWeaponSlot == iCurrSlot && G::CanPrimaryAttack)
+				iOriginalWeaponSlot = -1;
+			else if (iOriginalWeaponSlot >= 0 && iOriginalWeaponSlot != iCurrSlot)
 			{
-				if ( iOriginalWeaponSlot == iCurrSlot && G::CanPrimaryAttack/*&& !G::Choking*/ )
-				{
-					iOriginalWeaponSlot = -1;
-				}
-				else if ( iOriginalWeaponSlot >= 0 && iOriginalWeaponSlot != iCurrSlot )
-				{
-					pCmd->weaponselect = pSwap->entindex( );
-					iLastWeaponSelect = pCmd->weaponselect;
-				}
+				pCmd->weaponselect = pSwap->entindex();
+				iLastWeaponSelect = pCmd->weaponselect;
 			}
 		}
 	}
-	
+
 	bLastWasInAttack = G::Attacking == 1 && G::CanPrimaryAttack;
 }
 
