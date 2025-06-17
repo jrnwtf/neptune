@@ -161,7 +161,7 @@ void CNoSpreadHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* 
 			if (!iTicks || iTicks < TIME_TO_TICKS(flFireRate) * 2)
 			{
 				float flTimeSinceLastShot = TICKS_TO_TIME(pLocal->m_nTickBase()) - pWeapon->m_flLastFireTime();
-				if (flTimeSinceLastShot > (iBulletsPerShot > 1 ? 0.15f : 0.8f))
+				if (flTimeSinceLastShot > (iBulletsPerShot > 1 ? 0.25f : 1.25f))
 					return;
 			}
 		}

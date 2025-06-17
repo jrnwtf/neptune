@@ -14,10 +14,6 @@ private:
 
 	float GetPitch(float flCurPitch);
 	void MinWalk(CTFPlayer* pLocal, CUserCmd* pCmd);
-	
-	void MaximizeDesync(CTFPlayer* pLocal, CUserCmd* pCmd, bool bSendPacket);
-	bool IsBreakingLBY(CTFPlayer* pLocal);
-	void ApplyAntiResolverTechniques(CTFPlayer* pLocal, CUserCmd* pCmd, bool bSendPacket);
 
 public:
 	bool AntiAimOn();
