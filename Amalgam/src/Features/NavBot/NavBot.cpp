@@ -1918,6 +1918,9 @@ bool CNavBot::CaptureObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	if (m_bOverwriteCapture)
 	{
 		F::NavEngine.cancelPath();
+		// Maintain "capture" priority so that lower-priority behaviours (e.g. StayNear) cannot
+		// interrupt the objective while we are already standing on it.
+		F::NavEngine.current_priority = capture;
 		return true;
 	}
 	// No target, bail and set on cooldown

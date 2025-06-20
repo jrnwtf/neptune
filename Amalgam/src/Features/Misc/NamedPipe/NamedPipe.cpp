@@ -84,6 +84,29 @@ namespace F::NamedPipe
         return message;
     }
 
+    std::string GetAppDataAmalgamPath()
+    {
+        char* appDataPath = nullptr;
+        size_t len = 0;
+        if (_dupenv_s(&appDataPath, &len, "APPDATA") == 0 && appDataPath != nullptr) {
+            std::string amalgamPath = std::string(appDataPath) + "\\Amalgam";
+            free(appDataPath);
+            Log("AppData Amalgam path: " + amalgamPath);
+            return amalgamPath;
+        }
+        
+        // Fallback method using SHGetFolderPath
+        char path[MAX_PATH];
+        if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, path))) {
+            std::string amalgamPath = std::string(path) + "\\Amalgam";
+            Log("AppData Amalgam path (fallback): " + amalgamPath);
+            return amalgamPath;
+        }
+        
+        Log("Failed to get AppData path");
+        return "";
+    }
+
     std::string GetTF2Folder()
     {
         // Try common Steam install paths first
@@ -147,15 +170,18 @@ namespace F::NamedPipe
         // Get paths to check
         std::string tf2Folder = GetTF2Folder();
         std::string amalgamFolder = F::Configs.m_sConfigPath;
+        std::string appDataAmalgamFolder = GetAppDataAmalgamPath();
         
         Log("Starting bot ID file search...");
         Log("TF2 folder: " + tf2Folder);
         Log("Amalgam folder: " + amalgamFolder);
+        Log("AppData Amalgam folder: " + appDataAmalgamFolder);
         
         std::regex botFileRegex("bot(\\d+)\\.txt");
         
         // List of folders to check, in order of preference
         std::vector<std::pair<std::string, std::string>> foldersToCheck = {
+            {appDataAmalgamFolder, "AppData Amalgam"},
             {tf2Folder, "TF2"},
             {amalgamFolder, "Amalgam"},
             {std::filesystem::current_path().string(), "Current Working Directory"}

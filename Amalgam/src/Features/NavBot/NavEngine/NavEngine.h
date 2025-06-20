@@ -3,7 +3,7 @@
 #include "MicroPather/micropather.h"
 #include <boost/container_hash/hash.hpp>
 
-#define PLAYER_WIDTH		54.0f
+#define PLAYER_WIDTH		49.0f
 #define HALF_PLAYER_WIDTH	PLAYER_WIDTH / 2.0f
 #define PLAYER_HEIGHT		83.0f
 #define PLAYER_JUMP_HEIGHT	72.0f
@@ -148,13 +148,9 @@ public:
 
 		explicit Map(const char* mapname) : navfile(mapname), mapname(mapname) { state = navfile.m_isOK ? NavState::Active : NavState::Unavailable; }
 
-		float LeastCostEstimate(void* start, void* end) override { return reinterpret_cast<CNavArea*>(start)->m_center.DistToSqr(reinterpret_cast<CNavArea*>(end)->m_center); }
+		float LeastCostEstimate(void* start, void* end) override { return reinterpret_cast<CNavArea*>(start)->m_center.DistTo(reinterpret_cast<CNavArea*>(end)->m_center); }
 
 		void AdjacentCost(void* main, std::vector<micropather::StateCost>* adjacent) override;
-
-		// center path preference (0.0 = edge, 1.0 = center)
-		float CalculateCentralityBonus(CNavArea* area);
-		float ApplySimplicityPenalties(float base_cost, CNavArea* current_area, CNavArea* next_area, float height_diff, const NavPoints& points);
 
 		// Function for getting the closest area to the player, aka "LocalNav"
 		CNavArea* findClosestNavSquare(const Vector& vec);

@@ -83,10 +83,7 @@ void CNavParser::DoSlowAim(Vector& input_angle, float speed, Vector viewangles)
 	{
 		Vector slow_delta = input_angle - viewangles;
 
-		while (slow_delta.y > 180)
-			slow_delta.y -= 360;
-		while (slow_delta.y < -180)
-			slow_delta.y += 360;
+		slow_delta.y = std::remainder(slow_delta.y, 360.0f);
 
 		slow_delta /= speed;
 		input_angle = viewangles + slow_delta;
@@ -132,11 +129,7 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 		{
 			if (this->vischeck_cache[key].vischeck_state)
 			{
-				float cost = tConnection.area->m_center.DistToSqr(tArea.m_center);
-				
-				// Apply simplicity-focused cost modifications
-				cost = ApplySimplicityPenalties(cost, &tArea, tConnection.area, height_diff, points);
-				
+				float cost = tConnection.area->m_center.DistTo(tArea.m_center);
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
 			}
 		}
@@ -148,19 +141,11 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 			{
 				this->vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), 1 };
 
-				float cost = points.next.DistToSqr(points.current);
+				float cost = points.next.DistTo(points.current);
 				if (Vars::NavEng::NavBot::PreferNoJumpPaths.Value && height_diff > 36.0f)
                 {
                     cost *= 2.5f; 
                 }
-                
-                // Apply center preference - prefer nodes that are more central in corridors
-                if (Vars::NavEng::NavBot::PreferCenterPaths.Value)
-                {
-                    float centrality_bonus = CalculateCentralityBonus(tConnection.area);
-                    cost *= (1.0f - centrality_bonus * 0.3f); // Reduce cost by up to 30% for central nodes
-                }
-				cost = ApplySimplicityPenalties(cost, &tArea, tConnection.area, height_diff, points);
 				
 				adjacent->push_back(micropather::StateCost{ reinterpret_cast<void*>(tConnection.area), cost });
 			}
@@ -168,170 +153,6 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 				this->vischeck_cache[key] = CachedConnection{ TICKCOUNT_TIMESTAMP(60), -1 };
 		}
 	}
-}
-
-float CNavParser::Map::CalculateCentralityBonus(CNavArea* area)
-{
-	if (!area || area->m_connections.empty())
-		return 0.0f;
-
-	Vector center = area->m_center;
-	int north_connections = 0, south_connections = 0, east_connections = 0, west_connections = 0;
-	
-	for (const auto& connection : area->m_connections)
-	{
-		if (!connection.area)
-			continue;
-			
-		Vector diff = connection.area->m_center - center;
-		
-		if (std::abs(diff.x) > std::abs(diff.y))
-		{
-			if (diff.x > 0)
-				east_connections++;
-			else
-				west_connections++;
-		}
-		else
-		{
-			if (diff.y > 0)
-				north_connections++;
-			else
-				south_connections++;
-		}
-	}
-	
-	int directions_with_connections = 0;
-	if (north_connections > 0) directions_with_connections++;
-	if (south_connections > 0) directions_with_connections++;
-	if (east_connections > 0) directions_with_connections++;
-	if (west_connections > 0) directions_with_connections++;
-	
-	float direction_bonus = static_cast<float>(directions_with_connections) / 4.0f;
-	
-	float balance_bonus = 0.0f;
-	if (directions_with_connections >= 2)
-	{
-		bool has_opposite_ns = (north_connections > 0 && south_connections > 0);
-		bool has_opposite_ew = (east_connections > 0 && west_connections > 0);
-		
-		if (has_opposite_ns || has_opposite_ew)
-			balance_bonus = 0.3f;
-		if (has_opposite_ns && has_opposite_ew)
-			balance_bonus = 0.5f; 
-	}
-	
-	return std::min(1.0f, direction_bonus + balance_bonus);
-}
-
-float CNavParser::Map::ApplySimplicityPenalties(float base_cost, CNavArea* current_area, CNavArea* next_area, float height_diff, const NavPoints& points)
-{
-	if (!current_area || !next_area)
-		return base_cost;
-		
-	float cost = base_cost;
-	
-	// Heavy penalty for any height changes - prioritize flat paths
-	if (std::abs(height_diff) > 1.0f)
-	{
-		if (height_diff > 36.0f) // Jump required
-		{
-			cost *= 8.0f; // Much higher penalty than before (was 2.5f)
-		}
-		else if (height_diff > 18.0f) // Small jump
-		{
-			cost *= 4.0f;
-		}
-		else if (height_diff < -18.0f) // Drop
-		{
-			cost *= 3.0f;
-		}
-		else // Minor height change
-		{
-			cost *= 1.5f;
-		}
-	}
-	
-	// Penalty for narrow areas (harder to navigate)
-	Vector current_size = current_area->m_seCorner - current_area->m_nwCorner;
-	Vector next_size = next_area->m_seCorner - next_area->m_nwCorner;
-	float min_width = std::min(current_size.x, current_size.y);
-	float next_min_width = std::min(next_size.x, next_size.y);
-	
-	if (min_width < 100.0f || next_min_width < 100.0f) // Narrow corridor
-	{
-		cost *= 2.0f;
-	}
-	
-	// Penalty for sharp direction changes (prefer straight paths)
-	if (current_area->m_connections.size() > 1)
-	{
-		Vector to_next = (next_area->m_center - current_area->m_center);
-		if (to_next.Length() > 0.1f) // Avoid division by zero
-		{
-			to_next = to_next.Normalized();
-			
-			for (const auto& connection : current_area->m_connections)
-			{
-				if (!connection.area || connection.area == next_area)
-					continue;
-					
-				Vector to_other = (connection.area->m_center - current_area->m_center);
-				if (to_other.Length() > 0.1f) // Avoid division by zero
-				{
-					to_other = to_other.Normalized();
-					float dot_product = to_next.Dot(to_other);
-					
-					if (dot_product < -0.5f) // Sharp turn (> 120 degrees)
-					{
-						cost *= 1.8f;
-						break;
-					}
-				}
-			}
-		}
-	}
-	
-	// Penalty for areas with many connections (complex intersections)
-	if (current_area->m_connections.size() > 3)
-	{
-		cost *= 1.5f;
-	}
-	if (next_area->m_connections.size() > 3)
-	{
-		cost *= 1.3f;
-	}
-	
-	// Bonus for wide, open areas (easier navigation)
-	if (min_width > 200.0f && next_min_width > 200.0f)
-	{
-		cost *= 0.8f;
-	}
-	
-	// Bonus for straight-line movement (minimal direction change)
-	Vector movement_dir = (points.next - points.current);
-	Vector area_to_area = (next_area->m_center - current_area->m_center);
-	
-	if (movement_dir.Length() > 0.1f && area_to_area.Length() > 0.1f)
-	{
-		movement_dir = movement_dir.Normalized();
-		area_to_area = area_to_area.Normalized();
-		float alignment = std::abs(movement_dir.Dot(area_to_area));
-		
-		if (alignment > 0.9f) 
-		{
-			cost *= 0.7f;
-		}
-		else if (alignment < 0.3f) 
-		{
-			cost *= 2.0f;
-		}
-	}
-	
-	cost = std::max(cost, base_cost * 0.1f); // Never less than 10% of base cost
-	cost = std::min(cost, base_cost * 50.0f); // Never more than 50x base cost
-	
-	return cost;
 }
 
 CNavArea* CNavParser::Map::findClosestNavSquare(const Vector& vec)
@@ -359,7 +180,7 @@ CNavArea* CNavParser::Map::findClosestNavSquare(const Vector& vec)
 				continue;
 		}
 
-		float dist = i.m_center.DistToSqr(vec);
+		float dist = i.m_center.DistTo(vec);
 		if (dist < best_dist)
 		{
 			best_dist = dist;
@@ -429,8 +250,8 @@ void CNavParser::Map::updateIgnores()
 						area.z += PLAYER_JUMP_HEIGHT;
 
 						// Check if player is close to us
-						float flDistSqr = player_origin.value().DistToSqr(area);
-						if (flDistSqr <= pow(1000.0f, 2))
+						float flDist = player_origin.value().DistTo(area);
+						if (flDist <= 1000.0f)
 						{
 							// Check if player can hurt us
 							if (!F::NavParser.IsVectorVisibleNavigation(player_origin.value(), area, MASK_SHOT))
@@ -490,10 +311,10 @@ void CNavParser::Map::updateIgnores()
 								Vector area = i.m_center;
 								area.z += PLAYER_JUMP_HEIGHT;
 								
-								float flDistSqr = building_origin->DistToSqr(area);
+								float flDist = building_origin->DistTo(area);
 								
 								// High danger - close to sentry
-								if (flDistSqr <= pow(flHighDangerRange + HALF_PLAYER_WIDTH, 2))
+								if (flDist <= flHighDangerRange + HALF_PLAYER_WIDTH)
 								{
 									// Check if sentry can see us
 									if (F::NavParser.IsVectorVisibleNavigation(*building_origin, area, MASK_SHOT))
@@ -503,7 +324,7 @@ void CNavParser::Map::updateIgnores()
 									}
 								}
 								// Medium danger - within sentry range but further away
-								else if (flDistSqr <= pow(flMediumDangerRange + HALF_PLAYER_WIDTH, 2))
+								else if (flDist <= flMediumDangerRange + HALF_PLAYER_WIDTH)
 								{
 									// Only blacklist if sentry can see this area
 									if (F::NavParser.IsVectorVisibleNavigation(*building_origin, area, MASK_SHOT))
@@ -517,7 +338,7 @@ void CNavParser::Map::updateIgnores()
 									}
 								}
 								// Low danger - edge of sentry range (only for weak classes)
-								else if (!is_strong_class && flDistSqr <= pow(flLowDangerRange + HALF_PLAYER_WIDTH, 2))
+								else if (!is_strong_class && flDist <= flLowDangerRange + HALF_PLAYER_WIDTH)
 								{
 									// Only blacklist if sentry can see this area
 									if (F::NavParser.IsVectorVisibleNavigation(*building_origin, area, MASK_SHOT))
@@ -556,7 +377,7 @@ void CNavParser::Map::updateIgnores()
 				area.z += PLAYER_JUMP_HEIGHT;
 
 				// Out of range
-				if (sticky_origin.DistToSqr(area) <= pow(130.0f + HALF_PLAYER_WIDTH, 2))
+				if (sticky_origin.DistTo(area) <= 130.0f + HALF_PLAYER_WIDTH)
 				{
 					CGameTrace trace = {};
 					CTraceFilterProjectile filter = {};
@@ -1152,7 +973,15 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 		last_crumb.navarea = nullptr;
 
 		repath_on_fail = false;
-		current_priority = 0;
+
+		// Only reset priority for jobs that are finished once we reach the destination.
+		// For "capture" and "engineer" we purposely keep the priority so that other
+		// lower-priority behaviours (e.g. Follow Enemies) cannot steal focus and make
+		// the bot leave the objective or building spot.
+		if (current_priority != capture && current_priority != engineer)
+		{
+			current_priority = 0;
+		}
 		return;
 	}
 
@@ -1201,7 +1030,7 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 		current_vec.z = vLocalOrigin.z;
 
 	// We are close enough to the crumb to have reached it
-	if (current_vec.DistToSqr(vLocalOrigin) < pow(50.0f, 2))
+	if (current_vec.DistTo(vLocalOrigin) < 50.0f)
 	{
 		last_crumb = crumbs[0];
 		crumbs.erase(crumbs.begin());
@@ -1211,24 +1040,30 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 		inactivity.Update();
 	}
 
-	current_vec = crumbs[0].vec;
-	if (reset_z)
-		current_vec.z = vLocalOrigin.z;
-
-	// We are close enough to the second crumb, Skip both (This is especially helpful with drop-downs)
-	if (crumbs.size() > 1 && crumbs[1].vec.DistToSqr(vLocalOrigin) < pow(50.0f, 2))
+	bool bSkippedCrumb = false;
+	if (crumbs.size() > 1)
 	{
-		last_crumb = crumbs[1];
-		crumbs.erase(crumbs.begin(), std::next(crumbs.begin()));
-		time_spent_on_crumb.Update();
-		--crumbs_amount;
-		if (!--crumbs_amount)
-			return;
-		inactivity.Update();
+		constexpr float flVerticalThreshold = 18.0f; // ~1 stair height – ignore bigger steps
+		float flHeightDiff = fabsf(crumbs[1].vec.z - vLocalOrigin.z);
+		if (flHeightDiff < flVerticalThreshold && crumbs[1].vec.DistTo(vLocalOrigin) < 50.0f)
+		{
+			last_crumb = crumbs[1];
+			crumbs.erase(crumbs.begin(), std::next(crumbs.begin()));
+			time_spent_on_crumb.Update();
+			--crumbs_amount;
+			if (!--crumbs_amount)
+				return;
+			inactivity.Update();
+			// Update the movement target after we modified the crumbs list
+			current_vec = crumbs[0].vec;
+			if (reset_z)
+				current_vec.z = vLocalOrigin.z;
+			bSkippedCrumb = true;
+		}
 	}
-	// If we make any progress at all, reset this
-	// If we spend way too long on this crumb, ignore the logic below
-	else if (!time_spent_on_crumb.Check(Vars::NavEng::NavEngine::StuckDetectTime.Value))
+
+	// If we did NOT skip the crumb, check if we've spent too long on it (stuck detection)
+	if (!bSkippedCrumb && !time_spent_on_crumb.Check(Vars::NavEng::NavEngine::StuckDetectTime.Value))
 	{
 		// 44.0f -> Revved brass beast, do not use z axis as jumping counts towards that. Yes this will mean long falls will trigger it, but that is not really bad.
 		if (!vel.Get2D().IsZero(40.0f))
@@ -1386,7 +1221,6 @@ void CNavEngine::Render()
 		if (pLocalArea)
 		{
 			const float flMaxDistance = static_cast<float>(Vars::NavEng::NavEngine::CoolRange.Value);
-			const float flMaxDistanceSqr = flMaxDistance * flMaxDistance;
 			
 			std::vector<CNavArea*> areasToRender;
 			std::unordered_set<CNavArea*> checkedAreas;
@@ -1400,8 +1234,8 @@ void CNavEngine::Render()
 				CNavArea* pCurrentArea = areaQueue.front();
 				areaQueue.pop();
 				
-				float flDistanceSqr = pCurrentArea->m_center.DistToSqr(vLocalOrigin);
-				if (flDistanceSqr <= flMaxDistanceSqr)
+				float flDistance = pCurrentArea->m_center.DistTo(vLocalOrigin);
+				if (flDistance <= flMaxDistance)
 				{
 					areasToRender.push_back(pCurrentArea);
 					
