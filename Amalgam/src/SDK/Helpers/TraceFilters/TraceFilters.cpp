@@ -159,22 +159,45 @@ bool CTraceFilterNavigation::ShouldHitEntity(IHandleEntity* pServerEntity, int n
 		return false;
 
 	auto pEntity = reinterpret_cast<CBaseEntity*>(pServerEntity);
-	if (pEntity->entindex() != 0 && pEntity->GetClassID() != ETFClassID::CBaseEntity)
+
+	if (pEntity->entindex() == 0 || pEntity->GetClassID() == ETFClassID::CBaseEntity)
+		return true;
+
+	if (pEntity->GetClassID() == ETFClassID::CFuncRespawnRoomVisualizer)
 	{
-		if (pEntity->GetClassID() == ETFClassID::CFuncRespawnRoomVisualizer)
-		{
-			auto pLocal = H::Entities.GetLocal();
-			const int iTargetTeam = pEntity->m_iTeamNum(), iLocalTeam = pLocal ? pLocal->m_iTeamNum() : iTargetTeam;
+		auto pLocal = H::Entities.GetLocal();
+		const int iTargetTeam = pEntity->m_iTeamNum();
+		const int iLocalTeam = pLocal ? pLocal->m_iTeamNum() : iTargetTeam;
 
-			// Cant we just check for the teamnum here???
+		// When the visualizer is solid towards us we should hit it
+		if (pEntity->ShouldCollide(MOVEMENT_COLLISION_GROUP, iLocalTeam == TF_TEAM_RED ? RED_CONTENTS_MASK : BLU_CONTENTS_MASK))
+			return true;
 
-			// If we can't collide, hit it
-			if (!pEntity->ShouldCollide(MOVEMENT_COLLISION_GROUP, iLocalTeam == TF_TEAM_RED ? RED_CONTENTS_MASK : BLU_CONTENTS_MASK))
-				return true;
-		}
 		return false;
 	}
-	return true;
+
+	if (pEntity->GetClassID() == ETFClassID::CBaseDoor)
+	{
+		if (pEntity->ShouldCollide(MOVEMENT_COLLISION_GROUP, MASK_PLAYERSOLID))
+			return true;
+		return false;
+	}
+
+	if (pEntity->GetClassID() == ETFClassID::CTFPlayer)
+	{
+		auto pLocal = H::Entities.GetLocal();
+		if (!pLocal || pEntity->m_iTeamNum() != pLocal->m_iTeamNum())
+			return true;
+		return false;
+	}
+
+	if (!(pEntity->m_usSolidFlags() & (FSOLID_TRIGGER | FSOLID_NOT_SOLID)))
+	{
+		if (pEntity->ShouldCollide(MOVEMENT_COLLISION_GROUP, MASK_PLAYERSOLID))
+			return true;
+	}
+
+	return false;
 }
 
 TraceType_t CTraceFilterNavigation::GetTraceType() const

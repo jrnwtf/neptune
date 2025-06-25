@@ -1980,9 +1980,6 @@ bool CNavBot::CaptureObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	if (m_bOverwriteCapture)
 	{
 		F::NavEngine.cancelPath();
-		// Maintain "capture" priority so that lower-priority behaviours (e.g. StayNear) cannot
-		// interrupt the objective while we are already standing on it.
-		F::NavEngine.current_priority = capture;
 		return true;
 	}
 	// No target, bail and set on cooldown
@@ -3014,20 +3011,9 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 	
 	// Fast cleanup of invalid blacklists
 	FastCleanupInvalidBlacklists(pLocal);
-
 	// --- Behaviour scheduler ---
-	if (EscapeSpawn(pLocal) || EscapeProjectiles(pLocal) || EscapeDanger(pLocal))
-	{
-		return; // safety first
-	}
-
-	if (F::NavEngine.current_priority == capture)
-	{
-		CaptureObjectives(pLocal, pWeapon);
-		return;
-	}
-
-	if (CaptureObjectives(pLocal, pWeapon)
+	if (EscapeSpawn(pLocal) || EscapeProjectiles(pLocal) || EscapeDanger(pLocal)
+		|| CaptureObjectives(pLocal, pWeapon)
 		|| MeleeAttack(pCmd, pLocal, m_iCurrentSlot, tClosestEnemy)
 		|| GetHealth(pCmd, pLocal)
 		|| GetAmmo(pCmd, pLocal)
