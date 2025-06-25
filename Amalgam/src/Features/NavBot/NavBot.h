@@ -35,6 +35,7 @@ public:
 	std::wstring m_sFollowTargetName{};
 	std::wstring m_sEngineerTask{};
 	int m_iStayNearTargetIdx = -1;
+	bool m_bWaitingForMetal = false;
 	
 	ClosestEnemy_t GetNearestPlayerDistance(CTFPlayer* pLocal, CTFWeaponBase* pWeapon) const;
 

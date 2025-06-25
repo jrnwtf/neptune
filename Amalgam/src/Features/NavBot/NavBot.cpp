@@ -12,6 +12,8 @@
 #include "../Simulation/MovementSimulation/MovementSimulation.h"
 #include "../CritHack/CritHack.h"
 #include <unordered_set>
+#include <format>
+#include <optional>
 
 bool CNavBot::ShouldSearchHealth(CTFPlayer* pLocal, bool bLowPrio) const
 {
@@ -752,7 +754,7 @@ std::optional<std::pair<CNavArea*, int>> CNavBot::FindClosestHidingSpot(CNavArea
 
 	// If the area works, return it
 	if (vVischeckPoint && !F::NavParser.IsVectorVisibleNavigation(vAreaOrigin, *vVischeckPoint))
-		return std::pair<CNavArea*, int>{ pArea, iRecursionIndex - 1 };
+		return std::make_optional(std::pair<CNavArea*, int>{ pArea, iRecursionIndex - 1 });
 	// Termination condition not hit yet
 	else if (iRecursionIndex < iRecursionCount)
 	{
@@ -765,9 +767,9 @@ std::optional<std::pair<CNavArea*, int>> CNavBot::FindClosestHidingSpot(CNavArea
 
 			vAlreadyRecursed.push_back(tConnection.area);
 
-			auto pArea = FindClosestHidingSpot(tConnection.area, vVischeckPoint, iRecursionCount, iRecursionIndex);
-			if (pArea && (!vBestArea || pArea->second < vBestArea->second))
-				vBestArea = { pArea->first, pArea->second };
+			auto pNestedArea = FindClosestHidingSpot(tConnection.area, vVischeckPoint, iRecursionCount, iRecursionIndex);
+			if (pNestedArea && (!vBestArea || pNestedArea->second < vBestArea->second))
+				vBestArea = std::make_optional(std::pair<CNavArea*, int>{ pNestedArea->first, pNestedArea->second });
 		}
 		return vBestArea;
 	}
@@ -1304,34 +1306,64 @@ bool CNavBot::BuildBuilding(CUserCmd* pCmd, CTFPlayer* pLocal, ClosestEnemy_t tC
 		RefreshBuildingSpots(pLocal, pMeleeWeapon, tClosestEnemy, true);
 		vCurrentBuildingSpot = std::nullopt;
 		m_iBuildAttempts = 0;
-		return false;
+		m_sEngineerTask = std::format(L"Build {}", building == dispenser ? L"dispenser" : L"sentry");
+		return NavToSentrySpot();
 	}
 
 	// Make sure we have right amount of metal
 	int iRequiredMetal = (pMeleeWeapon->m_iItemDefinitionIndex() == Engi_t_TheGunslinger || building == dispenser) ? 100 : 130;
 	if (pLocal->m_iMetalCount() < iRequiredMetal)
+	{
+		m_bWaitingForMetal = true;
 		return GetAmmo(pCmd, pLocal, true);
+	}
+	m_bWaitingForMetal = false;
 
 	m_sEngineerTask = std::format(L"Build {}", building == dispenser ? L"dispenser" : L"sentry");
 	static float flPrevYaw = 0.0f;
 	// Try to build! we are close enough
-	if (vCurrentBuildingSpot && vCurrentBuildingSpot->DistToSqr(pLocal->GetAbsOrigin()) <= pow(building == dispenser ? 500.0f : 200.0f, 2))
+	if (vCurrentBuildingSpot && vCurrentBuildingSpot->DistToSqr(pLocal->GetAbsOrigin()) <= pow(building == dispenser ? 600.0f : 250.0f, 2))
 	{
-		// TODO: Rotate our angle to a valid building spot ? also rotate building itself to face enemies ?
-		pCmd->viewangles.x = 20.0f;
-		pCmd->viewangles.y = flPrevYaw += 2.0f;
+		static float flPitch = 30.0f;
+		pCmd->viewangles.x = flPitch;
+		pCmd->viewangles.y = flPrevYaw += 5.0f;
+		flPitch += 5.0f;
+		if (flPitch > 80.0f)
+			flPitch = 30.0f;
 
-		// Gives us 4 1/2 seconds to build
 		static Timer tAttemptTimer;
-		if (tAttemptTimer.Run(0.3f))
+		if (tAttemptTimer.Run(0.25f))
+		{
 			m_iBuildAttempts++;
+			if (m_iBuildAttempts > 90)
+			{
+				(*F::NavEngine.getFreeBlacklist())[F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin())] = BlacklistReason_enum::BR_BAD_BUILDING_SPOT;
+				RefreshBuildingSpots(pLocal, pMeleeWeapon, tClosestEnemy, true);
+				vCurrentBuildingSpot = std::nullopt;
+				m_iBuildAttempts = 0;
+				// Search for another spot right away
+				return NavToSentrySpot();
+			}
+		}
 
 		//auto pCarriedBuilding = GetCarriedBuilding( pLocal );
 		if (!pLocal->m_bCarryingObject())
 		{
 			static Timer command_timer;
-			if (command_timer.Run(0.1f))
-				I::EngineClient->ClientCmd_Unrestricted(std::format("build {}", building).c_str());
+			static Timer attack_timer;
+			if (!pLocal->m_bCarryingObject())
+			{
+				if (command_timer.Run(0.9f))
+				{
+					I::EngineClient->ClientCmd_Unrestricted(std::format("build {}", building).c_str());
+					attack_timer.Update(); 
+				}
+			}
+			else
+			{
+				if (attack_timer.Run(0.05f))
+					pCmd->buttons |= IN_ATTACK;
+			}
 		}
 		//else if (pCarriedBuilding->m_bServerOverridePlacement()) // Can place
 		pCmd->buttons |= IN_ATTACK;
@@ -1351,7 +1383,11 @@ bool CNavBot::BuildingNeedsToBeSmacked(CBaseObject* pBuilding)
 	if (!pBuilding || pBuilding->IsDormant())
 		return false;
 
-	if (pBuilding->m_iUpgradeLevel() != 3 || pBuilding->m_iHealth() / pBuilding->m_iMaxHealth() <= 0.80f)
+	if (pBuilding->m_iUpgradeLevel() < 3)
+		return true;
+
+	// Only repair if health below 95 %
+	if (static_cast<float>(pBuilding->m_iHealth()) / static_cast<float>(pBuilding->m_iMaxHealth()) < 0.95f)
 		return true;
 
 	if (pBuilding->GetClassID() == ETFClassID::CObjectSentrygun)
@@ -1359,16 +1395,18 @@ bool CNavBot::BuildingNeedsToBeSmacked(CBaseObject* pBuilding)
 		int iMaxAmmo = 0;
 		switch (pBuilding->m_iUpgradeLevel())
 		{
-		case 1:
-			iMaxAmmo = 150;
-			break;
+		case 1: iMaxAmmo = 150; break;
 		case 2:
-		case 3:
-			iMaxAmmo = 200;
-			break;
+		case 3: iMaxAmmo = 200; break;
 		}
 
-		return pBuilding->As<CObjectSentrygun>()->m_iAmmoShells() / iMaxAmmo <= 0.50f;
+		if (iMaxAmmo > 0)
+		{
+			float flAmmoRatio = static_cast<float>(pBuilding->As<CObjectSentrygun>()->m_iAmmoShells()) / static_cast<float>(iMaxAmmo);
+			// Only smack if ammo really low (< 40 %)
+			if (flAmmoRatio < 0.40f)
+				return true;
+		}
 	}
 	return false;
 }
@@ -1378,21 +1416,34 @@ bool CNavBot::SmackBuilding(CUserCmd* pCmd, CTFPlayer* pLocal, CBaseObject* pBui
 	if (!pBuilding || pBuilding->IsDormant())
 		return false;
 
+	// If we have no metal, gather some first.
 	if (!pLocal->m_iMetalCount())
+	{
+		m_bWaitingForMetal = true;
+		m_sEngineerTask   = L"Gather metal";
 		return GetAmmo(pCmd, pLocal, true);
+	}
 
-	CTFWeaponBase* pWeapon = H::Entities.GetWeapon();
-	if (!pWeapon)
-		return false;
+	// Ensure we are holding the wrench (slot3) while performing smack tasks.
+	CTFWeaponBase* pCurWeapon = H::Entities.GetWeapon();
+	if (pCurWeapon && pCurWeapon->GetSlot() != SLOT_MELEE)
+	{
+		static Timer tSwitchTimer{};
+		// Do not spam the command every tick – send at most once every 0.25s.
+		if (tSwitchTimer.Run(0.25f))
+		{
+			I::EngineClient->ClientCmd_Unrestricted("slot3");
+		}
+	}
 
 	m_sEngineerTask = std::format(L"Smack {}", pBuilding->GetClassID() == ETFClassID::CObjectDispenser ? L"dispenser" : L"sentry");
 
-	if (pBuilding->GetAbsOrigin().DistToSqr(pLocal->GetAbsOrigin()) <= pow(100.0f, 2) && pWeapon->GetSlot() == SLOT_MELEE)
+	if (pBuilding->GetAbsOrigin().DistToSqr(pLocal->GetAbsOrigin()) <= pow(100.0f, 2) && pCurWeapon->GetSlot() == SLOT_MELEE)
 	{
 		pCmd->buttons |= IN_ATTACK;
 
 		auto vAngTo = Math::CalcAngle(pLocal->GetEyePosition(), pBuilding->GetCenter());
-		G::Attacking = SDK::IsAttacking(pLocal, pWeapon, pCmd, true);
+		G::Attacking = SDK::IsAttacking(pLocal, pCurWeapon, pCmd, true);
 		if (G::Attacking == 1)
 			pCmd->viewangles = vAngTo;
 	}
@@ -1433,7 +1484,12 @@ bool CNavBot::EngineerLogic(CUserCmd* pCmd, CTFPlayer* pLocal, ClosestEnemy_t tC
 		}
 		else
 		{
-			// Try to smack sentry first
+			if (!pLocal->m_iMetalCount())
+			{
+				m_sEngineerTask = L"Gather metal";
+				return GetAmmo(pCmd, pLocal, true);
+			}
+
 			if (BuildingNeedsToBeSmacked(pSentry->As<CBaseObject>()))
 				return SmackBuilding(pCmd, pLocal, pSentry->As<CBaseObject>());
 			else
@@ -1445,6 +1501,12 @@ bool CNavBot::EngineerLogic(CUserCmd* pCmd, CTFPlayer* pLocal, ClosestEnemy_t tC
 				else
 				{
 					// We already have a dispenser, see if it needs to be smacked
+					if (!pLocal->m_iMetalCount())
+					{
+						m_sEngineerTask = L"Gather metal";
+						return GetAmmo(pCmd, pLocal, true);
+					}
+
 					if (BuildingNeedsToBeSmacked(pDispenser->As<CBaseObject>()))
 						return SmackBuilding(pCmd, pLocal, pDispenser->As<CBaseObject>());
 
@@ -2634,6 +2696,9 @@ slots CNavBot::GetBestSlot(CTFPlayer* pLocal, slots eActiveSlot, ClosestEnemy_t 
 
 void CNavBot::UpdateSlot(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, ClosestEnemy_t tClosestEnemy)
 {
+	if (F::NavEngine.current_priority == engineer || (!m_sEngineerTask.empty() && (m_sEngineerTask.rfind(L"Build", 0) == 0 || m_sEngineerTask.rfind(L"Smack", 0)==0)))
+		return;
+
 	static Timer tSlotTimer{};
 	if (!tSlotTimer.Run(0.2f))
 		return;
@@ -2950,16 +3015,24 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 	// Fast cleanup of invalid blacklists
 	FastCleanupInvalidBlacklists(pLocal);
 
-	// Execute behaviors in priority order
-	if (EscapeSpawn(pLocal)
-		|| EscapeProjectiles(pLocal)
+	// --- Behaviour scheduler ---
+	if (EscapeSpawn(pLocal) || EscapeProjectiles(pLocal) || EscapeDanger(pLocal))
+	{
+		return; // safety first
+	}
+
+	if (F::NavEngine.current_priority == capture)
+	{
+		CaptureObjectives(pLocal, pWeapon);
+		return;
+	}
+
+	if (CaptureObjectives(pLocal, pWeapon)
 		|| MeleeAttack(pCmd, pLocal, m_iCurrentSlot, tClosestEnemy)
-		|| EscapeDanger(pLocal)
 		|| GetHealth(pCmd, pLocal)
 		|| GetAmmo(pCmd, pLocal)
 		|| RunSafeReload(pLocal, pWeapon)
 		|| MoveInFormation(pLocal, pWeapon)
-		|| CaptureObjectives(pLocal, pWeapon)
 		|| EngineerLogic(pCmd, pLocal, tClosestEnemy)
 		|| SnipeSentries(pLocal)
 		|| StayNear(pLocal, pWeapon)
