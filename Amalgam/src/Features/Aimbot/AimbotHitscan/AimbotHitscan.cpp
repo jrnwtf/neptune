@@ -9,6 +9,7 @@
 #include "../../Simulation/MovementSimulation/MovementSimulation.h"
 #include "../../NavBot/NavBot.h"
 #include <unordered_set>
+#include <algorithm>
 
 std::vector<Target_t> CAimbotHitscan::GetTargets(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
@@ -39,7 +40,6 @@ std::vector<Target_t> CAimbotHitscan::GetTargets(CTFPlayer* pLocal, CTFWeaponBas
 
 		for (auto pEntity : H::Entities.GetGroup(eGroupType))
 		{
-			// Enhanced entity validation
 			if (!pEntity || pEntity->IsDormant() || pEntity->entindex() <= 0)
 				continue;
 			
@@ -976,8 +976,26 @@ bool CAimbotHitscan::Aim(Vec3 vCurAngle, Vec3 vToAngle, Vec3& vOut, int iMethod)
 		vOut = vToAngle;
 		return false;
 	case Vars::Aimbot::General::AimTypeEnum::Smooth:
-		vOut = vCurAngle.LerpAngle(vToAngle, Vars::Aimbot::General::AssistStrength.Value / 100.f);
+	{
+		// Replicate seoaim style incremental smoothing.
+		const float flSmoothFactor = std::clamp<float>(Vars::Aimbot::General::AssistStrength.Value, 0.f, 100.f);
+		// If the user sets 100 we snap directly to target (no smoothing), same behaviour as seoaim.
+		if (flSmoothFactor >= 100.f)
+		{
+			vOut = vToAngle;
+			return true; // no smoothing, but we still changed the angle
+		}
+
+		// Calculate angular delta and clamp to valid range.
+		Vec3 vDelta = vToAngle - vCurAngle;
+		Math::ClampAngles(vDelta);
+
+		// Remap the user supplied value so low values are fast and high values are slow.
+		const float flSmoothDiv = Math::RemapVal(flSmoothFactor, 1.f, 100.f, 1.5f, 30.f);
+		vOut = vCurAngle + vDelta / flSmoothDiv;
+		Math::ClampAngles(vOut);
 		return true;
+	}
 	case Vars::Aimbot::General::AimTypeEnum::Assistive:
 		Vec3 vMouseDelta = G::CurrentUserCmd->viewangles.DeltaAngle(G::LastUserCmd->viewangles);
 		Vec3 vTargetDelta = vToAngle.DeltaAngle(G::LastUserCmd->viewangles);

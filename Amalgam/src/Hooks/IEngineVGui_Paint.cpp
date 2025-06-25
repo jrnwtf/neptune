@@ -41,7 +41,9 @@ MAKE_HOOK(IEngineVGui_Paint, U::Memory.GetVFunc(I::EngineVGui, 14), void,
 			F::Visuals.DrawPickupTimers();
 			F::ESP.Draw();
 			F::PlayerArrows.Run(pLocal);
-			F::Aimbot.Draw(pLocal);
+			try {
+				F::Aimbot.Draw(pLocal);
+			} catch(...) {}
 			F::Radar.Run(pLocal);
 
 			F::NoSpreadHitscan.Draw(pLocal);

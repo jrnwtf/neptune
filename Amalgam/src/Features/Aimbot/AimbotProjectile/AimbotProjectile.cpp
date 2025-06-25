@@ -6,6 +6,7 @@
 #include "../../Ticks/Ticks.h"
 #include "../../Visuals/Visuals.h"
 #include "../../NavBot/NavBot.h"
+#include <algorithm>
 
 //#define SPLASH_DEBUG1 // normal splash visualization
 //#define SPLASH_DEBUG2 // obstructed splash visualization
@@ -1637,8 +1638,22 @@ bool CAimbotProjectile::Aim(Vec3 vCurAngle, Vec3 vToAngle, Vec3& vOut, int iMeth
 		vOut = vToAngle;
 		return false;
 	case Vars::Aimbot::General::AimTypeEnum::Smooth:
-		vOut = vCurAngle.LerpAngle(vToAngle, Vars::Aimbot::General::AssistStrength.Value / 100.f);
+	{
+		const float flSmoothFactor = std::clamp<float>(Vars::Aimbot::General::AssistStrength.Value, 0.f, 100.f);
+		if (flSmoothFactor >= 100.f)
+		{
+			vOut = vToAngle;
+			return true;
+		}
+
+		Vec3 vDelta = vToAngle - vCurAngle;
+		Math::ClampAngles(vDelta);
+
+		const float flSmoothDiv = Math::RemapVal(flSmoothFactor, 1.f, 100.f, 1.5f, 30.f);
+		vOut = vCurAngle + vDelta / flSmoothDiv;
+		Math::ClampAngles(vOut);
 		return true;
+	}
 	case Vars::Aimbot::General::AimTypeEnum::Assistive:
 		Vec3 vMouseDelta = G::CurrentUserCmd->viewangles.DeltaAngle(G::LastUserCmd->viewangles);
 		Vec3 vTargetDelta = vToAngle.DeltaAngle(G::LastUserCmd->viewangles);

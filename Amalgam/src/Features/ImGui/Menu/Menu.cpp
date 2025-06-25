@@ -327,11 +327,8 @@ void CMenu::MenuAimbot(int iTab)
 					FDropdown(Vars::Aimbot::Hitscan::Modifiers, FDropdownEnum::Right);
 					FSlider(Vars::Aimbot::Hitscan::PointScale);
 					FToggle(Vars::Aimbot::Hitscan::TargetEveryone, FToggleEnum::Left);
-					FDropdown(Vars::Aimbot::Hitscan::LowFPSOptimizations, FDropdownEnum::Right);
-					FSlider(Vars::Aimbot::Hitscan::LowFPSThreshold, FSliderEnum::Left);
-					FSlider(Vars::Aimbot::Hitscan::LowFPSShootingDelay, FSliderEnum::Right);
-					FToggle(Vars::Aimbot::Hitscan::ShootingDelayEnabled, FToggleEnum::Left);
-					FSlider(Vars::Aimbot::Hitscan::ShootingDelay, FSliderEnum::Right);
+					FToggle(Vars::Aimbot::Hitscan::ShootingDelayEnabled, FToggleEnum::Right);
+					FSlider(Vars::Aimbot::Hitscan::ShootingDelay, FSliderEnum::Left);
 					PushTransparent(!(FGet(Vars::Aimbot::Hitscan::Modifiers) & Vars::Aimbot::Hitscan::ModifiersEnum::Tapfire));
 					{
 						FSlider(Vars::Aimbot::Hitscan::TapFireDist);
@@ -344,6 +341,9 @@ void CMenu::MenuAimbot(int iTab)
 					{
 						FSlider(Vars::Aimbot::Hitscan::BoneSizeSubtract);
 						FSlider(Vars::Aimbot::Hitscan::BoneSizeMinimumScale);
+						FDropdown(Vars::Aimbot::Hitscan::LowFPSOptimizations, FDropdownEnum::Right);
+						FSlider(Vars::Aimbot::Hitscan::LowFPSThreshold, FSliderEnum::Left);
+						FSlider(Vars::Aimbot::Hitscan::LowFPSShootingDelay, FSliderEnum::Right);
 					} EndSection();
 				}
 				if (Section("Projectile"))

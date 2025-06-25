@@ -198,7 +198,9 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	F::Backtrack.BacktrackToCrosshair(pCmd);
 
 	F::EnginePrediction.Start(pLocal, pCmd);
-	F::Aimbot.Run(pLocal, pWeapon, pCmd);
+	try {
+		F::Aimbot.Run(pLocal, pWeapon, pCmd);
+	} catch (...) {}
 	F::NavBot.Run(pLocal, pWeapon, pCmd);
 	F::FollowBot.Run(pLocal, pWeapon, pCmd);
 	F::NavEngine.Run(pCmd);
