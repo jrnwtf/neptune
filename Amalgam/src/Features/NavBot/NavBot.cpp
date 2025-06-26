@@ -14,6 +14,7 @@
 #include <unordered_set>
 #include <format>
 #include <optional>
+#include <functional>
 
 bool CNavBot::ShouldSearchHealth(CTFPlayer* pLocal, bool bLowPrio) const
 {
@@ -296,7 +297,7 @@ bool CNavBot::GetHealth(CUserCmd* pCmd, CTFPlayer* pLocal, bool bLowPrio)
 				// Check if we are close enough to the health pack to pick it up (unless its not a health pack)
 				if (pBestEnt->GetAbsOrigin().DistToSqr(pLocal->GetAbsOrigin()) < pow(75.0f, 2) && !pBestEnt->IsDispenser())
 				{
-					// Try to touch the health pack
+					// Try to touch (:3) the health pack
 					auto pLocalNav = F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin());
 					if (pLocalNav)
 					{
@@ -376,7 +377,7 @@ bool CNavBot::GetAmmo(CUserCmd* pCmd, CTFPlayer* pLocal, bool bForce)
 				// Check if we are close enough to the ammo pack to pick it up (unless its not an ammo pack)
 				if (pBestEnt->GetAbsOrigin().DistToSqr(pLocal->GetAbsOrigin()) < pow(75.0f, 2) && !pBestEnt->IsDispenser())
 				{
-					// Try to touch the ammo pack
+					// Try to touch (:3) the ammo pack
 					auto pLocalNav = F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin());
 					if (pLocalNav)
 					{
@@ -3012,40 +3013,56 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 	// Fast cleanup of invalid blacklists
 	FastCleanupInvalidBlacklists(pLocal);
 	// --- Behaviour scheduler ---
-	if (EscapeSpawn(pLocal)
-		|| EscapeProjectiles(pLocal)
-		|| MeleeAttack(pCmd, pLocal, m_iCurrentSlot, tClosestEnemy)
-		|| EscapeDanger(pLocal)
-		|| GetHealth(pCmd, pLocal)
-		|| GetAmmo(pCmd, pLocal)
-		|| RunSafeReload(pLocal, pWeapon)
-		|| MoveInFormation(pLocal, pWeapon)
-		|| CaptureObjectives(pLocal, pWeapon)
-		|| EngineerLogic(pCmd, pLocal, tClosestEnemy)
-		|| SnipeSentries(pLocal)
-		|| StayNear(pLocal, pWeapon)
-		|| Roam(pLocal, pWeapon))
 	{
-		// Force crithack in dangerous conditions
-		// TODO:
-		// Maybe add some logic to it (more logic)
-		CTFPlayer* pPlayer = nullptr;
-		switch (F::NavEngine.current_priority)
+		using TaskFn = std::function<bool()>;
+		std::vector<std::pair<int, TaskFn>> vTasks = {
+			{ danger,       [&]() { return EscapeProjectiles(pLocal) || EscapeDanger(pLocal); } },
+			{ escape_spawn, [&]() { return EscapeSpawn(pLocal); } },
+			{ prio_melee,   [&]() { return MeleeAttack(pCmd, pLocal, m_iCurrentSlot, tClosestEnemy); } },
+			{ health,       [&]() { return GetHealth(pCmd, pLocal); } },
+			{ ammo,         [&]() { return GetAmmo(pCmd, pLocal); } },
+			{ run_safe_reload, [&]() { return RunSafeReload(pLocal, pWeapon); } },
+			{ capture,      [&]() { return CaptureObjectives(pLocal, pWeapon); } },
+			{ engineer,     [&]() { return EngineerLogic(pCmd, pLocal, tClosestEnemy); } },
+			{ snipe_sentry, [&]() { return SnipeSentries(pLocal); } },
+			{ staynear,     [&]() { return StayNear(pLocal, pWeapon); } },
+			{ run_reload,   [&]() { return MoveInFormation(pLocal, pWeapon); } },
+			{ patrol,       [&]() { return Roam(pLocal, pWeapon); } }
+		};
+
+		// Evaluate tasks from highest to lowest priority
+		std::sort(vTasks.begin(), vTasks.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+
+		bool bDidSomething = false;
+		for (auto& [prio, fn] : vTasks)
 		{
-		case staynear:
-			pPlayer = I::ClientEntityList->GetClientEntity(m_iStayNearTargetIdx)->As<CTFPlayer>();
-			if (pPlayer)
-				F::CritHack.m_bForce = !pPlayer->IsDormant() && pPlayer->m_iHealth() >= pWeapon->GetDamage();
-			break;
-		case prio_melee:
-		case health:
-		case danger:
-			pPlayer = I::ClientEntityList->GetClientEntity(tClosestEnemy.m_iEntIdx)->As<CTFPlayer>();
-			F::CritHack.m_bForce = pPlayer && !pPlayer->IsDormant() && pPlayer->m_iHealth() >= pWeapon->GetDamage();
-			break;
-		default:
-			F::CritHack.m_bForce = false;
-			break;
+			if (fn())
+			{
+				bDidSomething = true;
+				break;
+			}
+		}
+
+		if (bDidSomething)
+		{
+			CTFPlayer* pPlayer = nullptr;
+			switch (F::NavEngine.current_priority)
+			{
+			case staynear:
+				pPlayer = I::ClientEntityList->GetClientEntity(m_iStayNearTargetIdx)->As<CTFPlayer>();
+				if (pPlayer)
+					F::CritHack.m_bForce = !pPlayer->IsDormant() && pPlayer->m_iHealth() >= pWeapon->GetDamage();
+				break;
+			case prio_melee:
+			case health:
+			case danger:
+				pPlayer = I::ClientEntityList->GetClientEntity(tClosestEnemy.m_iEntIdx)->As<CTFPlayer>();
+				F::CritHack.m_bForce = pPlayer && !pPlayer->IsDormant() && pPlayer->m_iHealth() >= pWeapon->GetDamage();
+				break;
+			default:
+				F::CritHack.m_bForce = false;
+				break;
+			}
 		}
 	}
 }
