@@ -3012,17 +3012,18 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 	// Fast cleanup of invalid blacklists
 	FastCleanupInvalidBlacklists(pLocal);
 	// --- Behaviour scheduler ---
-	if (EscapeSpawn(pLocal) || EscapeProjectiles(pLocal) || EscapeDanger(pLocal)
-		|| CaptureObjectives(pLocal, pWeapon)
+	if (EscapeSpawn(pLocal)
+		|| EscapeProjectiles(pLocal)
 		|| MeleeAttack(pCmd, pLocal, m_iCurrentSlot, tClosestEnemy)
+		|| EscapeDanger(pLocal)
 		|| GetHealth(pCmd, pLocal)
 		|| GetAmmo(pCmd, pLocal)
 		|| RunSafeReload(pLocal, pWeapon)
 		|| MoveInFormation(pLocal, pWeapon)
+		|| CaptureObjectives(pLocal, pWeapon)
 		|| EngineerLogic(pCmd, pLocal, tClosestEnemy)
 		|| SnipeSentries(pLocal)
 		|| StayNear(pLocal, pWeapon)
-		|| GetHealth(pCmd, pLocal, true)
 		|| Roam(pLocal, pWeapon))
 	{
 		// Force crithack in dangerous conditions
