@@ -49,7 +49,4 @@ void CAutoVote::UserMessage(bf_read& msgData)
 			return;
 		}
 	}
-
-
-	I::ClientState->SendStringCmd(std::format("vote {} option1", iVoteID).c_str());
 }
