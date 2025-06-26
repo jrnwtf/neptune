@@ -7,6 +7,48 @@
 #include "NamedPipe/NamedPipe.h"
 #include <fstream>
 #include <format>
+#include <filesystem>
+#include <algorithm>
+
+namespace
+{
+	bool LoadOrCreateLines(const std::string& fileName,
+						   const std::vector<std::string>& defaultLines,
+						   std::vector<std::string>& outLines)
+	{
+		const std::string filePath = F::Configs.m_sConfigPath + fileName;
+
+		if (std::filesystem::exists(filePath))
+		{
+			std::ifstream file{ filePath };
+			std::string line;
+			while (std::getline(file, line))
+			{
+				if (!line.empty())
+					outLines.push_back(line);
+			}
+		}
+
+		if (outLines.empty())
+		{
+			std::ofstream file{ filePath };
+			if (file.is_open())
+			{
+				for (const auto& l : defaultLines)
+				{
+					file << l << '\n';
+					outLines.push_back(l);
+				}
+			}
+			else
+			{
+				outLines.insert(outLines.end(), defaultLines.begin(), defaultLines.end());
+			}
+		}
+
+		return !outLines.empty();
+	}
+}
 
 void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
@@ -768,17 +810,14 @@ void CMisc::VoiceCommandSpam(CTFPlayer* pLocal)
 	float flCurrentTime = SDK::PlatFloatTime();
 	bool bUseF2PSystem = Vars::Misc::Automation::VoiceF2PMode.Value;
 	
-	// F2Pvoicecommandspam tokensystem
 	if (bUseF2PSystem)
 	{
-		// F2P token bucket system constants
 		const int maxTokens = 5;
 		const float refillInterval = 6.0f; 
 		
 		if (m_tVoiceCommandTimer.Run(refillInterval) && m_iTokenBucket < maxTokens)
 		{
 			m_iTokenBucket++;
-			SDK::Output("VoiceCommandSpam", std::format("F2P Mode: Token added, now: {}", m_iTokenBucket).c_str(), {}, true, true);
 		}
 		
 		if (m_iTokenBucket <= 0)
@@ -1026,16 +1065,13 @@ void CMisc::CallVoteSpam(CTFPlayer* pLocal)
 		"callvote scrambleteams"
 	};
 
-	// Pick a random vote option
 	int randomIndex = SDK::RandomInt(0, voteOptions.size() - 1);
 	std::string selectedVote = voteOptions[randomIndex];
 
-	// Send the vote command
 	I::ClientState->SendStringCmd(selectedVote.c_str());
 }
 
 
-// lmaobox if(crash){(dontcrash)} method down here
 void CMisc::ChatSpam(CTFPlayer* pLocal)
 {
 	if (!Vars::Misc::Automation::ChatSpam::Enable.Value || !pLocal || !I::EngineClient)
@@ -1043,192 +1079,55 @@ void CMisc::ChatSpam(CTFPlayer* pLocal)
 		m_tChatSpamTimer.Update();
 		return;
 	}
-	
-	try
-	{
-		if (!I::EngineClient->IsInGame() || !I::EngineClient->IsConnected())
-		{
-			m_tChatSpamTimer.Update();
-			return;
-		}
-		
-		if (!pLocal->IsAlive() || pLocal->m_iTeamNum() <= 1 || pLocal->m_iClass() == TF_CLASS_UNDEFINED)
-		{
-			m_tChatSpamTimer.Update();
-			return;
-		}
-	}
-	catch (...)
+
+	if (!I::EngineClient->IsInGame() || !I::EngineClient->IsConnected() || !pLocal->IsAlive())
 	{
 		m_tChatSpamTimer.Update();
 		return;
 	}
-		
+
 	if (m_vChatSpamLines.empty())
 	{
+		static const std::vector<std::string> kDefaultLines =
 		{
-			char gamePath[MAX_PATH];
-			GetModuleFileNameA(GetModuleHandleA("tf_win64.exe"), gamePath, MAX_PATH);
-			std::string gameDir = gamePath;
-			size_t lastSlash = gameDir.find_last_of("\\/");
-			if (lastSlash != std::string::npos)
-				gameDir = gameDir.substr(0, lastSlash);
-				
-			
-			std::vector<std::string> pathsToTry = {
-				"cat_chatspam.txt",
-				gameDir + "\\amalgam\\cat_chatspam.txt"
-			};
-			
-			bool fileLoaded = false;
-			std::string successfulPath;
-			
-			for (const auto& path : pathsToTry)
-			{
-				try
-				{
-					std::ifstream file(path);
-					if (file.is_open())
-					{
-						std::string line;
-						while (std::getline(file, line))
-						{
-							if (!line.empty())
-								m_vChatSpamLines.push_back(line);
-						}
-						file.close();
-						
-						SDK::Output("ChatSpam", std::format("Loaded {} lines from {}", m_vChatSpamLines.size(), path).c_str(), {}, true, true);
-						fileLoaded = true;
-						successfulPath = path;
-						break;
-					}
-				}
-				catch (...)
-				{
-					continue;
-				}
-			}
-			
-			if (!fileLoaded)
-			{
-				try
-				{
-					std::string defaultPath = gameDir + "\\amalgam\\cat_chatspam.txt";
-					std::ofstream newFile(defaultPath);
-					
-					if (newFile.is_open())
-					{
-						newFile << "neptune, we love boats!\n";
-						newFile << "dsc.gg/nptntf\n";
-						newFile << "neptune is open source!\n";
-						newFile << "host bots with us now :3\n";
-						newFile << "dont call me bro\n";
-						newFile.close();
-						
-						std::ifstream checkFile(defaultPath);
-						if (checkFile.is_open())
-						{
-							std::string line;
-							while (std::getline(checkFile, line))
-							{
-								if (!line.empty())
-									m_vChatSpamLines.push_back(line);
-							}
-							checkFile.close();
-							
-							SDK::Output("ChatSpam", std::format("Created and loaded default file at {}", defaultPath).c_str(), {}, true, true);
-							fileLoaded = true;
-						}
-					}
-				}
-				catch (...)
-				{
-					// File operations failed, continue to fallback
-				}
-			}
-			
-			if (!fileLoaded || m_vChatSpamLines.empty())
-			{
-				SDK::Output("ChatSpam", "Failed to load or create chat spam file, using built-in messages", {}, true, true);
-				m_vChatSpamLines.push_back("Put your chat spam lines in cat_chatspam.txt");
-				m_vChatSpamLines.push_back("chatspam is running but couldn't find cat_chatspam.txt");
-			}
-		}
+			"neptune, we love boats!",
+			"dsc.gg/nptntf",
+			"neptune is open source!",
+			"host bots with us now :3",
+			"dont call me bro"
+		};
+
+		LoadOrCreateLines("cat_chatspam.txt", kDefaultLines, m_vChatSpamLines);
 	}
-	
+
 	if (m_vChatSpamLines.empty())
-	{
 		return;
-	}
-	
-	float spamInterval = Vars::Misc::Automation::ChatSpam::Interval.Value;
-	if (spamInterval <= 0.2f)
-		spamInterval = 0.2f; 
-	
-	if (!m_tChatSpamTimer.Run(spamInterval))
+
+	float interval = std::max(6.0f, Vars::Misc::Automation::ChatSpam::Interval.Value);
+	if (!m_tChatSpamTimer.Run(interval))
 		return;
-		
+
 	std::string chatLine;
-	const size_t lineCount = m_vChatSpamLines.size();
-	
-	if (lineCount == 0)
-		return;
-	
-	try
+	if (Vars::Misc::Automation::ChatSpam::Randomize.Value)
 	{
-		if (Vars::Misc::Automation::ChatSpam::Randomize.Value)
-		{
-			// Safer random index generation
-			int max = static_cast<int>(lineCount) - 1;
-			if (max < 0) max = 0;
-			int randomIndex = SDK::RandomInt(0, max);
-			
-			// Double-check bounds for safety
-			if (randomIndex >= 0 && randomIndex < static_cast<int>(lineCount))
-				chatLine = m_vChatSpamLines[randomIndex];
-			else
-				chatLine = "[chtspm]";
-		}
-		else
-		{
-			if (m_iCurrentChatSpamIndex < 0 || m_iCurrentChatSpamIndex >= static_cast<int>(lineCount))
-				m_iCurrentChatSpamIndex = 0;
-			
-			if (m_iCurrentChatSpamIndex >= 0 && m_iCurrentChatSpamIndex < static_cast<int>(lineCount))
-			{
-				chatLine = m_vChatSpamLines[m_iCurrentChatSpamIndex];
-				m_iCurrentChatSpamIndex = (m_iCurrentChatSpamIndex + 1) % static_cast<int>(lineCount);
-			}
-			else
-			{
-				chatLine = "[ChatSpam]";
-				m_iCurrentChatSpamIndex = 0;
-			}
-		}
-		
-		// Limit message length to prevent buffer issues
-		if (chatLine.length() > 150) 
-		{
-			chatLine = chatLine.substr(0, 150);
-		}
-		
-		// Process text replacements
-		chatLine = ProcessTextReplacements(chatLine);
-		
-		std::string chatCommand;
-		if (Vars::Misc::Automation::ChatSpam::TeamChat.Value)
-			chatCommand = "say_team \"" + chatLine + "\"";
-		else
-			chatCommand = "say \"" + chatLine + "\"";
-		
-		I::EngineClient->ClientCmd_Unrestricted(chatCommand.c_str());
+		int idx = SDK::RandomInt(0, static_cast<int>(m_vChatSpamLines.size()) - 1);
+		chatLine = m_vChatSpamLines[idx];
 	}
-	catch (...)
+	else
 	{
-		// Silently fail if we encounter any exception during command execution
-		return;
+		chatLine = m_vChatSpamLines[m_iCurrentChatSpamIndex];
+		m_iCurrentChatSpamIndex = (m_iCurrentChatSpamIndex + 1) % static_cast<int>(m_vChatSpamLines.size());
 	}
+
+	if (chatLine.length() > 150)
+		chatLine.resize(150);
+	chatLine = ProcessTextReplacements(chatLine);
+
+	std::string cmd = Vars::Misc::Automation::ChatSpam::TeamChat.Value ?
+		"say_team \"" + chatLine + "\"" :
+		"say \"" + chatLine + "\"";
+
+	I::EngineClient->ClientCmd_Unrestricted(cmd.c_str());
 }
 
 void CMisc::AutoReport()
@@ -1414,98 +1313,16 @@ void CMisc::KillSay(int victim)
 	
 	if (m_vKillSayLines.empty())
 	{
-		try
+		static const std::vector<std::string> kDefaultKillSay =
 		{
-			char gamePath[MAX_PATH];
-			GetModuleFileNameA(GetModuleHandleA("tf_win64.exe"), gamePath, MAX_PATH);
-			std::string gameDir = gamePath;
-			size_t lastSlash = gameDir.find_last_of("\\/");
-			if (lastSlash != std::string::npos)
-				gameDir = gameDir.substr(0, lastSlash);
-			
-			std::vector<std::string> pathsToTry = {
-				"killsay.txt",
-				gameDir + "\\amalgam\\killsay.txt"
-			};
-			
-			bool fileLoaded = false;
-			
-			for (const auto& path : pathsToTry)
-			{
-				try
-				{
-					std::ifstream file(path);
-					if (file.is_open())
-					{
-						std::string line;
-						while (std::getline(file, line))
-						{
-							if (!line.empty())
-								m_vKillSayLines.push_back(line);
-						}
-						file.close();
-						
-						SDK::Output("KillSay", std::format("Loaded {} lines from {}", m_vKillSayLines.size(), path).c_str(), {}, true, true);
-						fileLoaded = true;
-						break;
-					}
-				}
-				catch (...)
-				{
-					continue;
-				}
-			}
-			
-			if (!fileLoaded)
-			{
-				try
-				{
-					std::string defaultPath = gameDir + "\\amalgam\\killsay.txt";
-					std::ofstream newFile(defaultPath);
-					
-					if (newFile.is_open())
-					{
-						newFile << "Get owned %lastkilled%\n";
-						newFile << "Nice try %lastkilled%, better luck next time\n";
-						newFile << "%lastkilled% just got destroyed by %urname%\n";
-						newFile << "%team% > all\n";
-						newFile << "Skill issue, %lastkilled%\n";
-						newFile.close();
-						
-						std::ifstream checkFile(defaultPath);
-						if (checkFile.is_open())
-						{
-							std::string line;
-							while (std::getline(checkFile, line))
-							{
-								if (!line.empty())
-									m_vKillSayLines.push_back(line);
-							}
-							checkFile.close();
-							
-							SDK::Output("KillSay", std::format("Created and loaded default file at {}", defaultPath).c_str(), {}, true, true);
-							fileLoaded = true;
-						}
-					}
-				}
-				catch (...)
-				{
-					// File operations failed, continue to fallback
-				}
-			}
-			
-			if (!fileLoaded || m_vKillSayLines.empty())
-			{
-				SDK::Output("KillSay", "Failed to load or create killsay file, using built-in messages", {}, true, true);
-				m_vKillSayLines.push_back("Get owned %lastkilled%");
-				m_vKillSayLines.push_back("Nice try %lastkilled%, better luck next time");
-				m_vKillSayLines.push_back("%lastkilled% just got destroyed by %urname%");
-			}
-		}
-		catch (...)
-		{
-			m_vKillSayLines.push_back("Get owned %lastkilled%");
-		}
+			"Get owned %lastkilled%",
+			"Nice try %lastkilled%, better luck next time",
+			"%lastkilled% just got destroyed by %urname%",
+			"%team% > all",
+			"Skill issue, %lastkilled%"
+		};
+
+		LoadOrCreateLines("killsay.txt", kDefaultKillSay, m_vKillSayLines);
 	}
 	
 	if (m_vKillSayLines.empty())
@@ -1530,12 +1347,6 @@ void CMisc::KillSay(int victim)
 		chatCommand = "say_team \"" + killsayLine + "\"";
 	else
 		chatCommand = "say \"" + killsayLine + "\"";
-	
-	if (I::EngineClient)
-	{
-		SDK::Output("KillSay", std::format("Sending: {}", chatCommand).c_str(), {}, true, true);
-		I::EngineClient->ClientCmd_Unrestricted(chatCommand.c_str());
-	}
 }
 
 void CMisc::AutoReply(int speaker, const char* text)
@@ -1567,98 +1378,16 @@ void CMisc::AutoReply(int speaker, const char* text)
 	
 	if (m_vAutoReplyLines.empty())
 	{
-		try
+		static const std::vector<std::string> kDefaultAutoReply =
 		{
-			char gamePath[MAX_PATH];
-			GetModuleFileNameA(GetModuleHandleA("tf_win64.exe"), gamePath, MAX_PATH);
-			std::string gameDir = gamePath;
-			size_t lastSlash = gameDir.find_last_of("\\/");
-			if (lastSlash != std::string::npos)
-				gameDir = gameDir.substr(0, lastSlash);
-			
-			std::vector<std::string> pathsToTry = {
-				"autoreply.txt",
-				gameDir + "\\amalgam\\autoreply.txt"
-			};
-			
-			bool fileLoaded = false;
-			
-			for (const auto& path : pathsToTry)
-			{
-				try
-				{
-					std::ifstream file(path);
-					if (file.is_open())
-					{
-						std::string line;
-						while (std::getline(file, line))
-						{
-							if (!line.empty())
-								m_vAutoReplyLines.push_back(line);
-						}
-						file.close();
-						
-						SDK::Output("AutoReply", std::format("Loaded {} lines from {}", m_vAutoReplyLines.size(), path).c_str(), {}, true, true);
-						fileLoaded = true;
-						break;
-					}
-				}
-				catch (...)
-				{
-					continue;
-				}
-			}
-			
-			if (!fileLoaded)
-			{
-				try
-				{
-					std::string defaultPath = gameDir + "\\amalgam\\autoreply.txt";
-					std::ofstream newFile(defaultPath);
-					
-					if (newFile.is_open())
-					{
-						newFile << "I'm not cheating, I'm just better\n";
-						newFile << "Skill issue\n";
-						newFile << "Mad cuz bad\n";
-						newFile << "It's called skill, you should try it sometime\n";
-						newFile << "You're just bad at the game\n";
-						newFile.close();
-						
-						std::ifstream checkFile(defaultPath);
-						if (checkFile.is_open())
-						{
-							std::string line;
-							while (std::getline(checkFile, line))
-							{
-								if (!line.empty())
-									m_vAutoReplyLines.push_back(line);
-							}
-							checkFile.close();
-							
-							SDK::Output("AutoReply", std::format("Created and loaded default file at {}", defaultPath).c_str(), {}, true, true);
-							fileLoaded = true;
-						}
-					}
-				}
-				catch (...)
-				{
-					// File operations failed, continue to fallback
-				}
-			}
-			
-			if (!fileLoaded || m_vAutoReplyLines.empty())
-			{
-				SDK::Output("AutoReply", "Failed to load or create autoreply file, using built-in messages", {}, true, true);
-				m_vAutoReplyLines.push_back("I'm not cheating, I'm just better");
-				m_vAutoReplyLines.push_back("Skill issue");
-				m_vAutoReplyLines.push_back("Mad cuz bad");
-			}
-		}
-		catch (...)
-		{
-			m_vAutoReplyLines.push_back("I'm not cheating, I'm just better");
-		}
+			"I'm not cheating, I'm just better",
+			"Skill issue",
+			"Mad cuz bad",
+			"It's called skill, you should try it sometime",
+			"You're just bad at the game"
+		};
+
+		LoadOrCreateLines("autoreply.txt", kDefaultAutoReply, m_vAutoReplyLines);
 	}
 	
 	if (m_vAutoReplyLines.empty())
@@ -1690,12 +1419,6 @@ void CMisc::AutoReply(int speaker, const char* text)
 		chatCommand = "say_team \"" + replyLine + "\"";
 	else
 		chatCommand = "say \"" + replyLine + "\"";
-	
-	if (I::EngineClient)
-	{
-		SDK::Output("AutoReply", std::format("Sending: {}", chatCommand).c_str(), {}, true, true);
-		I::EngineClient->ClientCmd_Unrestricted(chatCommand.c_str());
-	}
 }
 
 void CMisc::VotekickResponse(int target)
@@ -1733,10 +1456,4 @@ void CMisc::VotekickResponse(int target)
 		chatCommand = "say_team \"" + response + "\"";
 	else
 		chatCommand = "say \"" + response + "\"";
-	
-	if (I::EngineClient)
-	{
-		SDK::Output("VotekickResponse", std::format("Sending: {}", chatCommand).c_str(), {}, true, true);
-		I::EngineClient->ClientCmd_Unrestricted(chatCommand.c_str());
-	}
 }
