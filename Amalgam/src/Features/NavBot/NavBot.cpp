@@ -3043,6 +3043,11 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 			}
 		}
 
+		if (!bDidSomething)
+		{
+			bDidSomething = EscapeDanger(pLocal) || Roam(pLocal, pWeapon);
+		}
+
 		if (bDidSomething)
 		{
 			CTFPlayer* pPlayer = nullptr;
@@ -3062,6 +3067,40 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 			default:
 				F::CritHack.m_bForce = false;
 				break;
+			}
+		}
+
+		//  navbrainfuck fix
+		{
+			static Vector vPrevPos{};
+			static float  flStuckTime = 0.0f;
+			static Timer  tPosTimer{};
+
+			if (tPosTimer.Run(0.2f))
+			{
+				if (pLocal->GetAbsOrigin().DistToSqr(vPrevPos) < pow(10.0f, 2))
+				{
+					flStuckTime += 0.2f;
+				}
+				else
+				{
+					flStuckTime = 0.0f;
+					vPrevPos    = pLocal->GetAbsOrigin();
+				}
+
+				if (flStuckTime >= 3.0f && F::NavEngine.current_priority != 0)
+				{
+					if (auto pArea = F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin()))
+					{
+						(*F::NavEngine.getFreeBlacklist())[pArea] = BlacklistReason(BR_BAD_BUILDING_SPOT);
+					}
+
+					F::NavEngine.cancelPath();
+					flStuckTime = 0.0f;
+					vPrevPos    = pLocal->GetAbsOrigin();
+
+					Roam(pLocal, pWeapon);
+				}
 			}
 		}
 	}
