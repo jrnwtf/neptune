@@ -11,12 +11,12 @@
 #include "../../../SDK/SDK.h"
 #include "../../Players/PlayerUtils.h"
 #include "../../Configs/Configs.h"
+#include "NamedPipeUtils.h"
 
 #include <windows.h>
 #include <thread>
 #include <atomic>
 #include <sstream>
-#include <iostream>
 #include <fstream>
 #include <string>
 #include <cstdio>
@@ -28,7 +28,6 @@ namespace F::NamedPipe
     HANDLE hPipe = INVALID_HANDLE_VALUE;
     std::atomic<bool> shouldRun(true);
     std::thread pipeThread;
-    std::ofstream logFile("C:\\pipe_log.txt", std::ios::app);
     int botId = -1;
     
     const int MAX_RECONNECT_ATTEMPTS = 10;
@@ -59,61 +58,11 @@ namespace F::NamedPipe
     void QueueIncomingMessage(const std::string& type, const std::string& content);
     void ProcessIncomingQueue();
     
-    void Log(const std::string& message)
-    {
-        if (!logFile.is_open())
-        {
-            std::cerr << "Failed to open log file" << std::endl;
-            return;
-        }
-        logFile << message << std::endl;
-        logFile.flush();
-        OutputDebugStringA(("NamedPipe: " + message + "\n").c_str());
-    }
-
-    const char* PIPE_NAME = "\\\\.\\pipe\\AwootismBotPipe";
-
-    std::string GetErrorMessage(DWORD error)
-    {
-        char* messageBuffer = nullptr;
-        size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                     NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
-        std::string message(messageBuffer, size);
-        LocalFree(messageBuffer);
-        return message;
-    }
-
-    std::string gejapdatik()
-    {
-        char* appDataPath = nullptr;
-        size_t len = 0;
-        if (_dupenv_s(&appDataPath, &len, "APPDATA") == 0 && appDataPath != nullptr) {
-            std::string amalgamPath = std::string(appDataPath) + "\\Amalgam";
-            free(appDataPath);
-            Log("AppData Amalgam path: " + amalgamPath);
-            return amalgamPath;
-        }
-        
-        // Fallback method using SHGetFolderPath
-        char path[MAX_PATH];
-        if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, path))) {
-            std::string amalgamPath = std::string(path) + "\\Amalgam";
-            Log("AppData Amalgam path (fallback): " + amalgamPath);
-            return amalgamPath;
-        }
-        
-        Log("Failed to get AppData path");
-        return "";
-    }
-
-    std::string GetTF2Folder()
-    {
-        return "";
-    }
+    // (legacy Log / PIPE_NAME / GetErrorMessage helpers removed — see NamedPipeUtils.h)
 
     int ReadBotIdFromFile()
     {
-        const std::string folder = gejapdatik();
+        const std::string folder = GetAmalgamAppDataPath();
         if (folder.empty()) {
             Log("fix ur system bros theres no appdata.....");
             return -1;
