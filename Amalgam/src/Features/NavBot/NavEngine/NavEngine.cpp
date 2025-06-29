@@ -1218,20 +1218,44 @@ void CNavEngine::Render()
 		{
 			if (!pBlacklist->empty())
 			{
+				const Color_t enemyColor    = Vars::Colors::NavbotCool.Value;      // blue
+				const Color_t stickyColor   = Vars::Colors::NavbotArea.Value;      // green
+				const Color_t sentryColor   = Color_t(255, 255,   0, 180);         // yellow
+				const Color_t buildspotColor= Color_t(255,   0, 255, 180);         // magenta
+				const Color_t blockColor    = Vars::Colors::NavbotBlacklist.Value; // red
 				for (auto& tBlacklistedArea : *pBlacklist)
 				{
 					auto reason = tBlacklistedArea.second.value;
 					Color_t color;
-					if (reason == BR_ENEMY_NORMAL || reason == BR_ENEMY_DORMANT || reason == BR_ENEMY_INVULN)
-						color = Vars::Colors::NavbotCool.Value;      // danger zones
-					else if (reason == BR_STICKY)
-						color = Vars::Colors::NavbotArea.Value;      // sticky hazards
-					else
-						color = Vars::Colors::NavbotBlacklist.Value; // full block zones
-					H::Draw.RenderBox(tBlacklistedArea.first->m_center,
-									 Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), color, false);
-					H::Draw.RenderWireframeBox(tBlacklistedArea.first->m_center,
-											 Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), color, false);
+					switch (reason)
+					{
+					case BR_ENEMY_NORMAL:
+					case BR_ENEMY_DORMANT:
+					case BR_ENEMY_INVULN:
+						color = enemyColor; break;
+					case BR_STICKY:
+						color = stickyColor; break;
+					case BR_SENTRY:
+					case BR_SENTRY_MEDIUM:
+					case BR_SENTRY_LOW:
+						color = sentryColor; break;
+					case BR_BAD_BUILDING_SPOT:
+						color = buildspotColor; break;
+					default:
+						color = blockColor; break;
+					}
+					H::Draw.RenderBox(
+						tBlacklistedArea.first->m_center,
+						Vector(-4.0f, -4.0f, -1.0f),
+						Vector( 4.0f,  4.0f,  1.0f),
+						Vector(), color, false
+					);
+					H::Draw.RenderWireframeBox(
+						tBlacklistedArea.first->m_center,
+						Vector(-4.0f, -4.0f, -1.0f),
+						Vector( 4.0f,  4.0f,  1.0f),
+						Vector(), color, false
+					);
 				}
 			}
 		}
