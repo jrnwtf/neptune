@@ -2449,7 +2449,50 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 
 			// Skip unsafe areas
 			if (!bIsSafe)
-				continue;
+		    {
+				std::vector<std::pair<CNavArea*, BlacklistReason_enum>> vBlacklistedAreas;
+				for (auto& [area, blEntry] : *pBlacklist)
+				{
+					if (blEntry.value == BR_BAD_BUILDING_SPOT)
+						continue;
+					vBlacklistedAreas.emplace_back(area, blEntry.value);
+				}
+			}
+				if (!vBlacklistedAreas.empty())
+				{
+				auto getSeverity = [&](BlacklistReason_enum reason) {
+					switch (reason)
+					{
+					case BR_SENTRY_LOW:
+					case BR_ENEMY_DORMANT:
+						return 0;
+					case BR_SENTRY_MEDIUM:
+					case BR_ENEMY_NORMAL:
+						return 1;
+					case BR_SENTRY:
+					case BR_STICKY:
+					case BR_ENEMY_INVULN:
+						return 2;
+					default:
+						return 1;
+					}
+				};
+				std::sort(vBlacklistedAreas.begin(), vBlacklistedAreas.end(),
+					[&](const auto& a, const auto& b) {
+						int sa = getSeverity(a.second), sb = getSeverity(b.second);
+						if (sa != sb) return sa < sb;
+						return a.first->m_center.DistToSqr(pLocal->GetAbsOrigin()) < b.first->m_center.DistToSqr(pLocal->GetAbsOrigin());
+					});
+				for (auto& [area, reason] : vBlacklistedAreas)
+				{
+					if (F::NavEngine.navTo(area->m_center, danger, true, false))
+					{
+						pTargetArea = area;
+						return true;
+					}
+				}
+			}
+		};
 
 			if (F::NavEngine.navTo(pArea.first->m_center, danger, true, false))
 			{
@@ -2485,6 +2528,49 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 					if (F::NavEngine.navTo(pArea->m_center, danger, true, false))
 					{
 						pTargetArea = pArea;
+						return true;
+					}
+				}
+			}
+		}
+		{
+			std::vector<std::pair<CNavArea*, BlacklistReason_enum>> vBlacklistedAreas;
+			for (auto& [area, blEntry] : *pBlacklist)
+			{
+				if (blEntry.value == BR_BAD_BUILDING_SPOT)
+					continue;
+				vBlacklistedAreas.emplace_back(area, blEntry.value);
+			}
+			if (!vBlacklistedAreas.empty())
+			{
+				auto getSeverity = [&](BlacklistReason_enum reason) {
+					switch (reason)
+					{
+					case BR_SENTRY_LOW:
+					case BR_ENEMY_DORMANT:
+						return 0;
+					case BR_SENTRY_MEDIUM:
+					case BR_ENEMY_NORMAL:
+						return 1;
+					case BR_SENTRY:
+					case BR_STICKY:
+					case BR_ENEMY_INVULN:
+						return 2;
+					default:
+						return 1;
+					}
+				};
+				std::sort(vBlacklistedAreas.begin(), vBlacklistedAreas.end(),
+					[&](const auto& a, const auto& b) {
+						int sa = getSeverity(a.second), sb = getSeverity(b.second);
+						if (sa != sb) return sa < sb;
+						return a.first->m_center.DistToSqr(pLocal->GetAbsOrigin()) < b.first->m_center.DistToSqr(pLocal->GetAbsOrigin());
+					});
+				for (auto& [area, reason] : vBlacklistedAreas)
+				{
+					if (F::NavEngine.navTo(area->m_center, danger, true, false))
+					{
+						pTargetArea = area;
 						return true;
 					}
 				}
