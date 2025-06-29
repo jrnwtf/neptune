@@ -8,6 +8,7 @@
 #include <cmath>
 #include <optional>
 #include <format>
+#include "Controllers/FlagController/FlagController.h"
 
 std::optional<Vector> CNavParser::GetDormantOrigin(int iIndex)
 {
@@ -106,8 +107,11 @@ void CNavParser::Map::AdjacentCost(void* main, std::vector<micropather::StateCos
 			continue;
 
 		// If the extern blacklist is running, ensure we don't try to use a bad area
-		if (!free_blacklist_blocked && std::any_of(free_blacklist.begin(), free_blacklist.end(), [&](const auto& entry) { return entry.first == tConnection.area; }))
-			continue;
+		if (!free_blacklist_blocked) {
+			auto it = free_blacklist.find(tConnection.area);
+			if (it != free_blacklist.end() && it->second.value != BR_SENTRY && it->second.value != BR_SENTRY_MEDIUM && it->second.value != BR_SENTRY_LOW)
+				continue;
+		}
 
 		auto points = F::NavParser.determinePoints(&tArea, tConnection.area);
 
@@ -711,21 +715,33 @@ void CNavEngine::checkBlacklist()
 	if (!pLocal || !pLocal->IsAlive() || !map)
 		return;
 
+	// If carrying intel and configured, ignore all blacklist
+	if (Vars::NavEng::NavBot::Preferences.Value & Vars::NavEng::NavBot::PreferencesEnum::DontEscapeDangerIntel)
+	{
+		int iOurTeam = pLocal->m_iTeamNum();
+		int iCarrierIdx = F::FlagController.GetCarrier(iOurTeam);
+		if (iCarrierIdx == pLocal->entindex())
+		{
+			map->free_blacklist_blocked = true;
+			map->pather.Reset();
+			return;
+		}
+	}
 	// Local player is ubered and does not care about the blacklist
-	// TODO: Only for damage type things
 	if (pLocal->IsInvulnerable())
 	{
 		map->free_blacklist_blocked = true;
 		map->pather.Reset();
 		return;
 	}
-	auto origin = pLocal->GetAbsOrigin();
 
+	auto origin = pLocal->GetAbsOrigin();
 	auto local_area = map->findClosestNavSquare(origin);
+	// reset block state, then only block for non-sentry reasons
+	map->free_blacklist_blocked = false;
 	for (const auto& entry : map->free_blacklist)
 	{
-		// Local player is in a blocked area, so temporarily remove the blacklist as else we would be stuck
-		if (entry.first == local_area)
+		if (entry.first == local_area && entry.second.value != BR_SENTRY && entry.second.value != BR_SENTRY_MEDIUM && entry.second.value != BR_SENTRY_LOW)
 		{
 			map->free_blacklist_blocked = true;
 			map->pather.Reset();
@@ -733,18 +749,16 @@ void CNavEngine::checkBlacklist()
 		}
 	}
 
-	// Local player is not blocking the nav area, so blacklist should not be marked as blocked
-	map->free_blacklist_blocked = false;
-
 	bool should_abandon = false;
 	for (auto& crumb : crumbs)
 	{
-		if (should_abandon)
+		// Only abandon if blacklisted for non-sentry reasons
+		auto it = map->free_blacklist.find(crumb.navarea);
+		if (it != map->free_blacklist.end() && it->second.value != BR_SENTRY && it->second.value != BR_SENTRY_MEDIUM && it->second.value != BR_SENTRY_LOW)
+		{
+			should_abandon = true;
 			break;
-		// A path Node is blacklisted, abandon pathing
-		for (const auto& entry : map->free_blacklist)
-			if (entry.first == crumb.navarea)
-				should_abandon = true;
+		}
 	}
 	if (should_abandon)
 		abandonPath();
@@ -1206,8 +1220,18 @@ void CNavEngine::Render()
 			{
 				for (auto& tBlacklistedArea : *pBlacklist)
 				{
-					H::Draw.RenderBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, false);
-					H::Draw.RenderWireframeBox(tBlacklistedArea.first->m_center, Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), Vars::Colors::NavbotBlacklist.Value, false);
+					auto reason = tBlacklistedArea.second.value;
+					Color_t color;
+					if (reason == BR_ENEMY_NORMAL || reason == BR_ENEMY_DORMANT || reason == BR_ENEMY_INVULN)
+						color = Vars::Colors::NavbotCool.Value;      // danger zones
+					else if (reason == BR_STICKY)
+						color = Vars::Colors::NavbotArea.Value;      // sticky hazards
+					else
+						color = Vars::Colors::NavbotBlacklist.Value; // full block zones
+					H::Draw.RenderBox(tBlacklistedArea.first->m_center,
+									 Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), color, false);
+					H::Draw.RenderWireframeBox(tBlacklistedArea.first->m_center,
+											 Vector(-4.0f, -4.0f, -1.0f), Vector(4.0f, 4.0f, 1.0f), Vector(), color, false);
 				}
 			}
 		}
