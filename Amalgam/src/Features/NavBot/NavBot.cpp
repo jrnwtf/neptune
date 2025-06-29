@@ -1940,13 +1940,8 @@ bool CNavBot::CaptureObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	}
 
 	float flUpdateInterval = (F::GameObjectiveController.m_eGameMode == TF_GAMETYPE_ESCORT) ? 0.5f : 2.f;
-	if (!tCaptureTimer.Check(flUpdateInterval)) {
-		if (F::NavEngine.current_priority == capture && F::NavEngine.isPathing())
-			return true;
-		F::NavEngine.cancelPath();
-		tCaptureTimer.Update();
-		return false;
-	}
+	if (!tCaptureTimer.Check(flUpdateInterval))
+		return F::NavEngine.current_priority == capture;
 
 	// Priority too high, don't try
 	if (F::NavEngine.current_priority > capture)
@@ -3106,18 +3101,18 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 	{
 		using TaskFn = std::function<bool()>;
 		std::vector<std::pair<int, TaskFn>> vTasks = {
-			{ Vars::NavEng::NavBot::Priority_danger.Value,         [&]() { return EscapeProjectiles(pLocal) || EscapeDanger(pLocal); } },
-			{ Vars::NavEng::NavBot::Priority_escape_spawn.Value,   [&]() { return EscapeSpawn(pLocal); } },
-			{ Vars::NavEng::NavBot::Priority_prio_melee.Value,     [&]() { return MeleeAttack(pCmd, pLocal, m_iCurrentSlot, tClosestEnemy); } },
-			{ Vars::NavEng::NavBot::Priority_health.Value,         [&]() { return GetHealth(pCmd, pLocal); } },
-			{ Vars::NavEng::NavBot::Priority_ammo.Value,           [&]() { return GetAmmo(pCmd, pLocal); } },
-			{ Vars::NavEng::NavBot::Priority_run_safe_reload.Value,[&]() { return RunSafeReload(pLocal, pWeapon); } },
-			{ Vars::NavEng::NavBot::Priority_capture.Value,        [&]() { return CaptureObjectives(pLocal, pWeapon); } },
-			{ Vars::NavEng::NavBot::Priority_engineer.Value,       [&]() { return EngineerLogic(pCmd, pLocal, tClosestEnemy); } },
-			{ Vars::NavEng::NavBot::Priority_snipe_sentry.Value,   [&]() { return SnipeSentries(pLocal); } },
-			{ Vars::NavEng::NavBot::Priority_staynear.Value,       [&]() { return StayNear(pLocal, pWeapon); } },
-			{ Vars::NavEng::NavBot::Priority_run_reload.Value,     [&]() { return MoveInFormation(pLocal, pWeapon); } },
-			{ Vars::NavEng::NavBot::Priority_patrol.Value,         [&]() { return Roam(pLocal, pWeapon); } }
+			{ danger,       [&]() { return EscapeProjectiles(pLocal) || EscapeDanger(pLocal); } },
+			{ escape_spawn, [&]() { return EscapeSpawn(pLocal); } },
+			{ prio_melee,   [&]() { return MeleeAttack(pCmd, pLocal, m_iCurrentSlot, tClosestEnemy); } },
+			{ health,       [&]() { return GetHealth(pCmd, pLocal); } },
+			{ ammo,         [&]() { return GetAmmo(pCmd, pLocal); } },
+			{ run_safe_reload, [&]() { return RunSafeReload(pLocal, pWeapon); } },
+			{ capture,      [&]() { return CaptureObjectives(pLocal, pWeapon); } },
+			{ engineer,     [&]() { return EngineerLogic(pCmd, pLocal, tClosestEnemy); } },
+			{ snipe_sentry, [&]() { return SnipeSentries(pLocal); } },
+			{ staynear,     [&]() { return StayNear(pLocal, pWeapon); } },
+			{ run_reload,   [&]() { return MoveInFormation(pLocal, pWeapon); } },
+			{ patrol,       [&]() { return Roam(pLocal, pWeapon); } }
 		};
 
 		// Evaluate tasks from highest to lowest priority
