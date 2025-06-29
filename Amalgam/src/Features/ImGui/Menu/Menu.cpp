@@ -4459,6 +4459,19 @@ void CMenu::MenuNavEng(int iTab)
 								FSlider(Vars::NavEng::NavBot::BlacklistSlightDangerLimit);
 							}
 							PopTransparent();
+							FSlider(Vars::NavEng::NavBot::Priority_patrol, FSliderEnum::Left);
+							FSlider(Vars::NavEng::NavBot::Priority_lowprio_health, FSliderEnum::Right);
+							FSlider(Vars::NavEng::NavBot::Priority_staynear, FSliderEnum::Left);
+							FSlider(Vars::NavEng::NavBot::Priority_run_reload, FSliderEnum::Right);
+							FSlider(Vars::NavEng::NavBot::Priority_run_safe_reload, FSliderEnum::Left);
+							FSlider(Vars::NavEng::NavBot::Priority_snipe_sentry, FSliderEnum::Right);
+							FSlider(Vars::NavEng::NavBot::Priority_capture, FSliderEnum::Left);
+							FSlider(Vars::NavEng::NavBot::Priority_ammo, FSliderEnum::Right);
+							FSlider(Vars::NavEng::NavBot::Priority_prio_melee, FSliderEnum::Left);
+							FSlider(Vars::NavEng::NavBot::Priority_engineer, FSliderEnum::Right);
+							FSlider(Vars::NavEng::NavBot::Priority_health, FSliderEnum::Left);
+							FSlider(Vars::NavEng::NavBot::Priority_escape_spawn, FSliderEnum::Right);
+							FSlider(Vars::NavEng::NavBot::Priority_danger, FSliderEnum::None);
 						}
 						PopTransparent();
 					}
