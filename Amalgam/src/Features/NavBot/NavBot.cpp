@@ -2451,7 +2451,7 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 			if (!bIsSafe)
 				continue;
 
-			if (F::NavEngine.navTo(pArea.first->m_center, danger))
+			if (F::NavEngine.navTo(pArea.first->m_center, danger, true, false))
 			{
 				pTargetArea = pArea.first;
 				return true;
@@ -2482,7 +2482,7 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 					iCalls++;
 					if (iCalls > 5)
 						break;
-					if (F::NavEngine.navTo(pArea->m_center, danger))
+					if (F::NavEngine.navTo(pArea->m_center, danger, true, false))
 					{
 						pTargetArea = pArea;
 						return true;
