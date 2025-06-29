@@ -44,8 +44,6 @@ NOTE: Textmode doesnt fully make the game textmode. You need to preload [TextMod
 # Amalgam
 
 [![GitHub Repo stars](https://img.shields.io/github/stars/mlemlody/neptune)](/../../stargazers)
-[![Discord](https://img.shields.io/discord/1227898008373297223?logo=Discord&label=discord)](https://discord.gg/RbP9DfkUhe)
-[![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/rei-2/Amalgam/msbuild.yml?branch=master)](/../../actions)
-[![GitHub commit activity (branch)](https://img.shields.io/github/commit-activity/m/rei-2/Amalgam)](/../../commits/)
+[![GitHub commit activity (branch)](https://img.shields.io/github/commit-activity/m/mistakesmultiplied/neptune)](/../../commits/)
 
 [VAC bypass](https://github.com/danielkrupinski/VAC-Bypass-Loader) and [Xenos](https://github.com/DarthTon/Xenos/releases) recommended
