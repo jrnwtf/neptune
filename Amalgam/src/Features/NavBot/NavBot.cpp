@@ -2453,13 +2453,12 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 				std::vector<std::pair<CNavArea*, BlacklistReason_enum>> vBlacklistedAreas;
 				for (auto& [area, blEntry] : *pBlacklist)
 				{
-					if (blEntry.value == BR_BAD_BUILDING_SPOT)
-						continue;
-					vBlacklistedAreas.emplace_back(area, blEntry.value);
-				}
+				if (blEntry.value == BR_BAD_BUILDING_SPOT)
+					continue;
+				vBlacklistedAreas.emplace_back(area, blEntry.value);
 			}
-				if (!vBlacklistedAreas.empty())
-				{
+			if (!vBlacklistedAreas.empty())
+			{
 				auto getSeverity = [&](BlacklistReason_enum reason) {
 					switch (reason)
 					{
