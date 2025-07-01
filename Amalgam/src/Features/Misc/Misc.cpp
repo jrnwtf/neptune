@@ -788,7 +788,7 @@ void CMisc::VoiceCommandSpam(CTFPlayer* pLocal)
 	else
 	{
 		static float flLastVoiceTime = 0.0f;
-		if (flCurrentTime - flLastVoiceTime < 6.5f)
+		if (flCurrentTime - flLastVoiceTime < 4.0f)
 			return;
 
 		flLastVoiceTime = flCurrentTime;
