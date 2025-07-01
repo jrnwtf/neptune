@@ -1063,99 +1063,13 @@ void CMisc::ChatSpam(CTFPlayer* pLocal)
 
 	if (m_vChatSpamLines.empty())
 	{
-		{
-			char gamePath[MAX_PATH];
-			GetModuleFileNameA(GetModuleHandleA("tf_win64.exe"), gamePath, MAX_PATH);
-			std::string gameDir = gamePath;
-			size_t lastSlash = gameDir.find_last_of("\\/");
-			if (lastSlash != std::string::npos)
-				gameDir = gameDir.substr(0, lastSlash);
-
-
-			std::vector<std::string> pathsToTry = {
-				"cat_chatspam.txt",
-				gameDir + "\\amalgam\\cat_chatspam.txt"
-			};
-
-			bool fileLoaded = false;
-			std::string successfulPath;
-
-			for (const auto& path : pathsToTry)
-			{
-				try
-				{
-					std::ifstream file(path);
-					if (file.is_open())
-					{
-						std::string line;
-						while (std::getline(file, line))
-						{
-							if (!line.empty())
-								m_vChatSpamLines.push_back(line);
-						}
-						file.close();
-
-						SDK::Output("ChatSpam", std::format("Loaded {} lines from {}", m_vChatSpamLines.size(), path).c_str(), {}, true, true);
-						fileLoaded = true;
-						successfulPath = path;
-						break;
-					}
-				}
-				catch (...)
-				{
-					continue;
-				}
-			}
-
-			if (!fileLoaded)
-			{
-				try
-				{
-					std::string defaultPath = gameDir + "\\amalgam\\cat_chatspam.txt";
-					std::ofstream newFile(defaultPath);
-
-					if (newFile.is_open())
-					{
-						newFile << "Chatspam is highly customizable\n";
-						newFile << "Check misc.cpp for more info\n";
-						newFile << "dsc.gg/nptntf\nn";
-						newFile << "dont call me bro\n";
-						newFile.close();
-
-						std::ifstream checkFile(defaultPath);
-						if (checkFile.is_open())
-						{
-							std::string line;
-							while (std::getline(checkFile, line))
-							{
-								if (!line.empty())
-									m_vChatSpamLines.push_back(line);
-							}
-							checkFile.close();
-
-							SDK::Output("ChatSpam", std::format("Created and loaded default file at {}", defaultPath).c_str(), {}, true, true);
-							fileLoaded = true;
-						}
-					}
-				}
-				catch (...)
-				{
-					// File operations failed, continue to fallback
-				}
-			}
-
-			if (!fileLoaded || m_vChatSpamLines.empty())
-			{
-				SDK::Output("ChatSpam", "Failed to load or create chat spam file, using built-in messages", {}, true, true);
-				m_vChatSpamLines.push_back("Put your chat spam lines in cat_chatspam.txt");
-				m_vChatSpamLines.push_back("chatspam is running but couldn't find cat_chatspam.txt");
-			}
-		}
-	}
-
-	if (m_vChatSpamLines.empty())
-	{
-		return;
+		std::vector<std::string> defaults = {
+			"Chatspam is highly customizable",
+			"Check misc.cpp for more info",
+			"dsc.gg/nptntf",
+			"dont call me bro"
+		};
+		LoadLines("ChatSpam", "cat_chatspam.txt", defaults, m_vChatSpamLines);
 	}
 
 	float spamInterval = Vars::Misc::Automation::ChatSpam::Interval.Value;
@@ -1589,98 +1503,14 @@ void CMisc::KillSay(int victim)
 
 	if (m_vKillSayLines.empty())
 	{
-		try
-		{
-			char gamePath[MAX_PATH];
-			GetModuleFileNameA(GetModuleHandleA("tf_win64.exe"), gamePath, MAX_PATH);
-			std::string gameDir = gamePath;
-			size_t lastSlash = gameDir.find_last_of("\\/");
-			if (lastSlash != std::string::npos)
-				gameDir = gameDir.substr(0, lastSlash);
-
-			std::vector<std::string> pathsToTry = {
-				"killsay.txt",
-				gameDir + "\\amalgam\\killsay.txt"
-			};
-
-			bool fileLoaded = false;
-
-			for (const auto& path : pathsToTry)
-			{
-				try
-				{
-					std::ifstream file(path);
-					if (file.is_open())
-					{
-						std::string line;
-						while (std::getline(file, line))
-						{
-							if (!line.empty())
-								m_vKillSayLines.push_back(line);
-						}
-						file.close();
-
-						SDK::Output("KillSay", std::format("Loaded {} lines from {}", m_vKillSayLines.size(), path).c_str(), {}, true, true);
-						fileLoaded = true;
-						break;
-					}
-				}
-				catch (...)
-				{
-					continue;
-				}
-			}
-
-			if (!fileLoaded)
-			{
-				try
-				{
-					std::string defaultPath = gameDir + "\\amalgam\\killsay.txt";
-					std::ofstream newFile(defaultPath);
-
-					if (newFile.is_open())
-					{
-						newFile << "Get owned %lastkilled%\n";
-						newFile << "Nice try %lastkilled%, better luck next time\n";
-						newFile << "%lastkilled% just got destroyed by %urname%\n";
-						newFile << "%team% > all\n";
-						newFile << "Skill issue, %lastkilled%\n";
-						newFile.close();
-
-						std::ifstream checkFile(defaultPath);
-						if (checkFile.is_open())
-						{
-							std::string line;
-							while (std::getline(checkFile, line))
-							{
-								if (!line.empty())
-									m_vKillSayLines.push_back(line);
-							}
-							checkFile.close();
-
-							SDK::Output("KillSay", std::format("Created and loaded default file at {}", defaultPath).c_str(), {}, true, true);
-							fileLoaded = true;
-						}
-					}
-				}
-				catch (...)
-				{
-					// File operations failed, continue to fallback
-				}
-			}
-
-			if (!fileLoaded || m_vKillSayLines.empty())
-			{
-				SDK::Output("KillSay", "Failed to load or create killsay file, using built-in messages", {}, true, true);
-				m_vKillSayLines.push_back("Get owned %lastkilled%");
-				m_vKillSayLines.push_back("Nice try %lastkilled%, better luck next time");
-				m_vKillSayLines.push_back("%lastkilled% just got destroyed by %urname%");
-			}
-		}
-		catch (...)
-		{
-			m_vKillSayLines.push_back("Get owned %lastkilled%");
-		}
+		std::vector<std::string> defaults = {
+			"Get owned %lastkilled%",
+			"Nice try %lastkilled%, better luck next time",
+			"%lastkilled% just got destroyed by %urname%",
+			"%team% > all",
+			"Skill issue, %lastkilled%"
+		};
+		LoadLines("KillSay", "killsay.txt", defaults, m_vKillSayLines);
 	}
 
 	if (m_vKillSayLines.empty())
@@ -2417,4 +2247,110 @@ void CMisc::LoadVotekickConfig()
 		m_mVotekickResponses["support"].push_back("f1 cheater");
 		m_mVotekickResponses["protest"].push_back("f2 they're legit");
 	}
+}
+
+std::string CMisc::GetGameDirectory()
+{
+	static std::string sGameDir;
+	if (!sGameDir.empty())
+		return sGameDir;
+
+	char gamePath[MAX_PATH] = { 0 };
+	if (!GetModuleFileNameA(GetModuleHandleA("tf_win64.exe"), gamePath, MAX_PATH))
+	{
+		return sGameDir; // empty
+	}
+
+	std::string gameDir = gamePath;
+	size_t lastSlash = gameDir.find_last_of("\\/");
+	if (lastSlash != std::string::npos)
+		gameDir = gameDir.substr(0, lastSlash);
+
+	sGameDir = gameDir;
+	return sGameDir;
+}
+
+// Helper: load text lines from fileName (optionally create with defaults).
+bool CMisc::LoadLines(const std::string& category, const std::string& fileName,
+	const std::vector<std::string>& defaultLines, std::vector<std::string>& outLines)
+{
+	outLines.clear();
+
+	const std::string gameDir = GetGameDirectory();
+	std::vector<std::string> pathsToTry = {
+		fileName,
+		gameDir + "\\amalgam\\" + fileName
+	};
+
+	bool fileLoaded = false;
+
+	for (const auto& path : pathsToTry)
+	{
+		try
+		{
+			std::ifstream file(path);
+			if (file.is_open())
+			{
+				std::string line;
+				while (std::getline(file, line))
+				{
+					if (!line.empty())
+						outLines.push_back(line);
+				}
+				file.close();
+
+				SDK::Output(category.c_str(), std::format("Loaded {} lines from {}", outLines.size(), path).c_str(), {}, true, true);
+				fileLoaded = true;
+				break;
+			}
+		}
+		catch (...)
+		{
+			continue;
+		}
+	}
+
+	if (!fileLoaded)
+	{
+		try
+		{
+			const std::string dirPath = gameDir + "\\amalgam";
+			CreateDirectoryA(dirPath.c_str(), nullptr);
+
+			const std::string defaultPath = dirPath + "\\" + fileName;
+			std::ofstream newFile(defaultPath);
+			if (newFile.is_open())
+			{
+				for (const auto& l : defaultLines)
+					newFile << l << '\n';
+				newFile.close();
+
+				std::ifstream checkFile(defaultPath);
+				if (checkFile.is_open())
+				{
+					std::string line;
+					while (std::getline(checkFile, line))
+					{
+						if (!line.empty())
+							outLines.push_back(line);
+					}
+					checkFile.close();
+					SDK::Output(category.c_str(), std::format("Created and loaded default file at {}", defaultPath).c_str(), {}, true, true);
+					fileLoaded = true;
+				}
+			}
+		}
+		catch (...)
+		{
+			// swallow the cum
+		}
+	}
+
+	if (!fileLoaded)
+	{
+		outLines = defaultLines;
+		SDK::Output(category.c_str(), std::format("Failed to load or create {}, using built-in messages", fileName).c_str(), {}, true, true);
+	}
+
+	return !outLines.empty();
 }

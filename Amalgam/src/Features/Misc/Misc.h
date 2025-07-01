@@ -1,4 +1,3 @@
-
 #pragma once
 #include "../../SDK/SDK.h"
 
@@ -71,5 +70,8 @@ public:
 private:
 	int m_iVoteTarget = -1;
 	std::string m_sVoteType;
+	std::string GetGameDirectory();
+	bool LoadLines(const std::string& category, const std::string& fileName,
+		const std::vector<std::string>& defaultLines, std::vector<std::string>& outLines);
 };
 ADD_FEATURE(CMisc, Misc)
