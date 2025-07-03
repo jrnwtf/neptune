@@ -15,6 +15,8 @@
 #include <format>
 #include <optional>
 #include <functional>
+#include <algorithm>
+#include <cmath>
 
 bool CNavBot::ShouldSearchHealth(CTFPlayer* pLocal, bool bLowPrio) const
 {
@@ -551,6 +553,8 @@ void CNavBot::RefreshBuildingSpots(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, Cl
 						  else
 							  return a.DistTo(*vTarget) < b.DistTo(*vTarget);
 					  });
+
+            m_vBuildingSpots.erase(std::remove_if(m_vBuildingSpots.begin(), m_vBuildingSpots.end(), [&](const Vector& v){ return IsFailedBuildingSpot(v); }), m_vBuildingSpots.end());
 		}
 	}
 }
@@ -595,6 +599,9 @@ bool CNavBot::NavToSentrySpot()
 	if (!tWaitUntilPathSentryTimer.Run(0.3f))
 		return false;
 
+    // Remove failed spots from consideration
+    m_vBuildingSpots.erase(std::remove_if(m_vBuildingSpots.begin(), m_vBuildingSpots.end(), [&](const Vector& v){ return IsFailedBuildingSpot(v); }), m_vBuildingSpots.end());
+
 	// Try to nav to our existing sentry spot
 	if (auto pSentry = I::ClientEntityList->GetClientEntity(m_iMySentryIdx))
 	{
@@ -623,7 +630,7 @@ bool CNavBot::NavToSentrySpot()
 	for (int iAttempts = 0; iAttempts < 10 && iAttempts < m_vBuildingSpots.size(); ++iAttempts)
 	{
 		// Get a semi-random building spot to still keep distance preferrance
-		auto iRandomOffset = SDK::RandomInt(0, std::min(3, (int)m_vBuildingSpots.size()));
+		auto iRandomOffset = SDK::RandomInt(0, std::min(3, (int)m_vBuildingSpots.size()-1));
 
 		Vector vRandom;
 		// Wrap around
@@ -632,12 +639,21 @@ bool CNavBot::NavToSentrySpot()
 		else
 			vRandom = m_vBuildingSpots[iAttempts - iRandomOffset];
 
+        // Skip if this spot previously failed (could have slipped through earlier removal due to epsilon)
+        if (IsFailedBuildingSpot(vRandom))
+            continue;
+
 		// Try to nav there
 		if (F::NavEngine.navTo(vRandom, engineer))
 		{
 			vCurrentBuildingSpot = vRandom;
 			return true;
 		}
+        else
+        {
+            // Mark as failed so we skip it next times
+            AddFailedBuildingSpot(vRandom);
+        }
 	}
 	return false;
 }
@@ -1304,6 +1320,7 @@ bool CNavBot::BuildBuilding(CUserCmd* pCmd, CTFPlayer* pLocal, ClosestEnemy_t tC
 	if (m_iBuildAttempts >= 15)
 	{
 		(*F::NavEngine.getFreeBlacklist())[F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin())] = BlacklistReason_enum::BR_BAD_BUILDING_SPOT;
+        if (vCurrentBuildingSpot) AddFailedBuildingSpot(*vCurrentBuildingSpot);
 		RefreshBuildingSpots(pLocal, pMeleeWeapon, tClosestEnemy, true);
 		vCurrentBuildingSpot = std::nullopt;
 		m_iBuildAttempts = 0;
@@ -1339,6 +1356,7 @@ bool CNavBot::BuildBuilding(CUserCmd* pCmd, CTFPlayer* pLocal, ClosestEnemy_t tC
 			if (m_iBuildAttempts > 90)
 			{
 				(*F::NavEngine.getFreeBlacklist())[F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin())] = BlacklistReason_enum::BR_BAD_BUILDING_SPOT;
+                if (vCurrentBuildingSpot) AddFailedBuildingSpot(*vCurrentBuildingSpot);
 				RefreshBuildingSpots(pLocal, pMeleeWeapon, tClosestEnemy, true);
 				vCurrentBuildingSpot = std::nullopt;
 				m_iBuildAttempts = 0;
@@ -3907,4 +3925,27 @@ void CNavBot::AddTemporaryBlacklist(CNavArea* pArea, BlacklistReason_enum reason
 
 	(*pBlacklist)[pArea] = BlacklistReason(reason);
 	m_mAreaBlacklistExpiry[pArea] = I::GlobalVars->curtime + flDuration;
+}
+
+bool CNavBot::IsFailedBuildingSpot(const Vector& spot) const
+{
+    for (const auto& v : m_vFailedBuildingSpots)
+    {
+        if (v.DistToSqr(spot) < pow(BUILD_SPOT_EQUALITY_EPSILON, 2))
+            return true;
+    }
+    return false;
+}
+
+void CNavBot::AddFailedBuildingSpot(const Vector& spot)
+{
+    if (IsFailedBuildingSpot(spot))
+        return;
+
+    m_vFailedBuildingSpots.push_back(spot);
+    // Prevent uncontrolled growth – keep last 50 spots
+    if (m_vFailedBuildingSpots.size() > 50)
+    {
+        m_vFailedBuildingSpots.erase(m_vFailedBuildingSpots.begin());
+    }
 }

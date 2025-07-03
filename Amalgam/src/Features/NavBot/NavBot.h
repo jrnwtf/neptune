@@ -52,6 +52,7 @@ private:
 	static constexpr int MAX_BUILD_ATTEMPTS = 15;
 	static constexpr int MAX_STAYNEAR_CHECKS_RANGE = 3;
 	static constexpr int MAX_STAYNEAR_CHECKS_CLOSE = 2;
+	static constexpr float BUILD_SPOT_EQUALITY_EPSILON = 200.0f;
 
 	// Controls the bot parameters like distance from enemy
 	struct bot_class_config
@@ -91,6 +92,9 @@ private:
 	Timer m_tBlacklistCleanupTimer;
 	std::unordered_map<CNavArea*, float> m_mAreaDangerScore;
 	std::unordered_map<CNavArea*, float> m_mAreaBlacklistExpiry;
+
+	// List of building spots that have already failed (placement/pathing) so we don't retry them immediately.
+	std::vector<Vector> m_vFailedBuildingSpots;
 
 private:
 	bool ShouldAssist(CTFPlayer* pLocal, int iTargetIdx) const;
@@ -163,6 +167,9 @@ private:
 	void UpdateClassConfig(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
 	void HandleMinigunSpinup(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd, const ClosestEnemy_t& tClosestEnemy);
 	void HandleDoubletapRecharge(CTFWeaponBase* pWeapon);
+
+	bool IsFailedBuildingSpot(const Vector& spot) const;
+	void AddFailedBuildingSpot(const Vector& spot);
 
 public:
 	void Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd);
