@@ -2598,6 +2598,15 @@ bool CNavBot::EscapeDanger(CTFPlayer* pLocal)
 	else if (F::NavEngine.current_priority == danger)
 		F::NavEngine.cancelPath();
 
+	if (F::NavEngine.current_priority == danger && F::NavEngine.isPathing())
+	{
+		auto pCrumbs = F::NavEngine.getCrumbs();
+		if (pCrumbs && pCrumbs->size() <= 2)
+		{
+			F::NavEngine.cancelPath();
+		}
+	}
+
 	return false;
 }
 
@@ -3396,6 +3405,12 @@ bool CNavBot::MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	if (m_iPositionInFormation == 0)
 		return false;
 	
+	static Timer tFormationNavTimer{};
+	if (!tFormationNavTimer.Run(1.0f))
+	{
+		return F::NavEngine.current_priority == patrol;
+	}
+	
 	// Get our offset in the formation
 	auto vOffsetOpt = GetFormationOffset(pLocal, m_iPositionInFormation);
 	if (!vOffsetOpt)
@@ -3408,13 +3423,12 @@ bool CNavBot::MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	
 	if (!m_vLocalBotPositions.empty())
 	{
-		// Find the actual leader in-game
+		// Find the actual leader in-game (by friendsID)
 		for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
 		{
 			PlayerInfo_t pi{};
 			if (!I::EngineClient->GetPlayerInfo(i, &pi))
 				continue;
-				
 			if (pi.friendsID == m_vLocalBotPositions[0].first)
 			{
 				auto pLeader = I::ClientEntityList->GetClientEntity(i);
@@ -3423,60 +3437,37 @@ bool CNavBot::MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 					pLeaderPlayer = pLeader->As<CTFPlayer>();
 					leaderID = pi.friendsID;
 					vLeaderPos = pLeaderPlayer->GetAbsOrigin();
-					break;
 				}
+				break;
 			}
 		}
 	}
 	if (leaderID == 0 || !pLeaderPlayer)
 		return false;
-
+	
 	if (pLeaderPlayer->m_iTeamNum() != pLocal->m_iTeamNum())
 		return false;
-
+	
 	Vector vTargetPos = vLeaderPos + *vOffsetOpt;
 	
 	// If we're already close enough to our position, don't bother moving
 	float distToTarget = pLocal->GetAbsOrigin().DistToSqr(vTargetPos);
 	if (distToTarget <= pow(30.0f, 2))
+	{
+		F::NavEngine.cancelPath();
 		return true;
+	}
 	
 	// Only try to move to the position if we're not already pathing to something important
 	if (F::NavEngine.current_priority > patrol)
 		return false;
 	
-	static Timer tFailureTimer;
-	static int iConsecutiveFailures = 0;
-	static Vector vLastTargetPos;
-	
-	// Check if we're trying to path to the same position but repeatedly failing
-	if (vLastTargetPos.DistToSqr(vTargetPos) <= pow(50.0f, 2) && !F::NavEngine.isPathing())
+	// Try to navigate to our position in formation – smoother: only path when really far away
+	if (distToTarget > pow(120.0f, 2))
 	{
-		iConsecutiveFailures++;
-		
-		// If we've been failing to reach the same target for a while,
-		// temporarily increase the acceptable distance to prevent getting stuck
-		if (iConsecutiveFailures >= 3)
-		{
-			iConsecutiveFailures = 0;
-			
-			// Try a different path approach or temp increase formation distance
-			m_flFormationDistance += 50.0f; // Temp increase formation distance
-			if (m_flFormationDistance > 300.0f) // Cap the maximum distance
-				m_flFormationDistance = 120.0f; // Reset to default if it gets too large
-			
-			return true; // Skip this attempt and try again with new formation distance
-		}
+		if (F::NavEngine.navTo(vTargetPos, patrol, true, !F::NavEngine.isPathing()))
+			return true;
 	}
-	else if (vLastTargetPos.DistToSqr(vTargetPos) > pow(50.0f, 2))
-	{
-		iConsecutiveFailures = 0;
-	}
-	vLastTargetPos = vTargetPos;
-	// Try to navigate to our position in formation
-	if (F::NavEngine.navTo(vTargetPos, patrol, true, !F::NavEngine.isPathing()))
-		return true;
-	
 	return false;
 }
 
