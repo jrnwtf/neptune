@@ -48,41 +48,20 @@ MAKE_HOOK(IBaseClientDLL_DispatchUserMessage, U::Memory.GetVFunc(I::BaseClientDL
 		char locationName[64] = "";
 		msgData.ReadString(locationName, sizeof(locationName), true);
 
-		// Debug
-		SDK::Output("ChatDebug", std::format("Format: '{}', Speaker: '{}', Message: '{}', Location: '{}'",
-			formatString, speakerName, actualMessage, locationName).c_str(), {}, true, true);
-
-		
 		std::string format = formatString;
 		if (format == "TF_Chat_All" || format == "TF_Chat_Team" || format == "TF_Chat_AllDead" || format == "TF_Chat_TeamDead")
 		{
 			std::string message = actualMessage;
 			if (!message.empty())
 			{
-				
 				message.erase(0, message.find_first_not_of(" \t\r\n"));
 				message.erase(message.find_last_not_of(" \t\r\n") + 1);
 
-				SDK::Output("ChatDebug", std::format("Final message from speaker {}: '{}'", speaker, message).c_str(), {}, true, true);
-
 				if (!message.empty() && speaker != I::EngineClient->GetLocalPlayer())
 				{
-					SDK::Output("ChatDebug", "Calling AutoReply", {}, true, true);
 					F::Misc.AutoReply(speaker, message.c_str());
 				}
-				else
-				{
-					SDK::Output("ChatDebug", "Skipping AutoReply - empty message or self-message", {}, true, true);
-				}
 			}
-			else
-			{
-				SDK::Output("ChatDebug", "Empty actual message", {}, true, true);
-			}
-		}
-		else
-		{
-			SDK::Output("ChatDebug", std::format("Non-chat format: '{}'", format).c_str(), {}, true, true);
 		}
 
 		break;
