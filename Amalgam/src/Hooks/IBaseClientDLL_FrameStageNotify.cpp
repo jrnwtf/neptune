@@ -1,5 +1,6 @@
 #include "../SDK/SDK.h"
 
+#include "../Features/Aimbot/Aimbot.h"
 #include "../Features/Backtrack/Backtrack.h"
 #include "../Features/CheaterDetection/CheaterDetection.h"
 #include "../Features/CritHack/CritHack.h"
@@ -41,7 +42,7 @@ MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVirtual(I::BaseClientDLL
 	{
 		H::Entities.Store();
 		F::PlayerUtils.UpdatePlayers();
-	
+
 		try {
 			F::Resolver.FrameStageNotify();
 		}
@@ -91,6 +92,7 @@ MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVirtual(I::BaseClientDLL
 		F::MoveSim.Store();
 		F::CritHack.Store();
 #ifndef TEXTMODE
+		F::Aimbot.Store();
 		auto pLocal = H::Entities.GetLocal();
 		F::ESP.Store(pLocal);
 		F::Chams.Store(pLocal);
@@ -103,6 +105,7 @@ MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVirtual(I::BaseClientDLL
 		F::Spectate.NetUpdateEnd(pLocal);
 
 		F::Visuals.Modulate();
+		F::Visuals.DrawHitboxes(1);
 #endif
 		break;
 	}

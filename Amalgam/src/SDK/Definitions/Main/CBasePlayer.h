@@ -98,4 +98,5 @@ public:
 	Vec3 GetEyePosition();
 	bool OnSolid();
 	bool IsSwimming();
+	bool IsUnderwater();
 };

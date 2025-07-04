@@ -25,7 +25,7 @@ public:
 	NETVAR_OFF(m_bRemoveable, bool, "CBaseCombatWeapon", "m_iState", -12);
 
 	VIRTUAL(CanBeSelected, bool, 233, this);
-	VIRTUAL(GetName, const char*, 333, this);
+	VIRTUAL(GetName, const char*, 334, this);
 
 	SIGNATURE(HasAmmo, bool, CBaseCombatWeapon, this);
 };

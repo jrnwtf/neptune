@@ -134,7 +134,7 @@ void CMovementSimulation::Store()
 		vRecords.emplace_front(
 			vDirection,
 			pPlayer->m_flSimulationTime(),
-			pPlayer->m_nWaterLevel() >= 2 ? 2 : pPlayer->IsOnGround() ? 0 : 1,
+			pPlayer->IsSwimming() ? 2 : pPlayer->IsOnGround() ? 0 : 1,
 			vVelocity,
 			vOrigin
 		);
@@ -366,7 +366,7 @@ bool CMovementSimulation::SetupMoveData(PlayerStorage& tStorage)
 	tStorage.m_flSimTime = tStorage.m_pPlayer->m_flSimulationTime();
 	tStorage.m_flPredictedSimTime = tStorage.m_flSimTime + tStorage.m_flPredictedDelta;
 	tStorage.m_vPredictedOrigin = tStorage.m_MoveData.m_vecAbsOrigin;
-	tStorage.m_bDirectMove = tStorage.m_pPlayer->IsOnGround() || tStorage.m_pPlayer->m_nWaterLevel() >= 2;
+	tStorage.m_bDirectMove = tStorage.m_pPlayer->IsOnGround() || tStorage.m_pPlayer->IsSwimming();
 
 	return true;
 }
@@ -660,7 +660,7 @@ void CMovementSimulation::RunTick(PlayerStorage& tStorage, bool bPath, std::func
 		tStorage.m_MoveData.m_flForwardMove = tStorage.m_MoveData.m_flSideMove = 0.f;
 
 	float flOldSpeed = tStorage.m_MoveData.m_flClientMaxSpeed;
-	if (tStorage.m_pPlayer->m_bDucked() && tStorage.m_pPlayer->IsOnGround() && tStorage.m_pPlayer->m_nWaterLevel() < 2)
+	if (tStorage.m_pPlayer->m_bDucked() && tStorage.m_pPlayer->IsOnGround() && !tStorage.m_pPlayer->IsSwimming())
 		tStorage.m_MoveData.m_flClientMaxSpeed /= 3;
 
 	if (tStorage.m_bBunnyHop && tStorage.m_pPlayer->IsOnGround() && !tStorage.m_pPlayer->m_bDucked())
@@ -683,7 +683,7 @@ void CMovementSimulation::RunTick(PlayerStorage& tStorage, bool bPath, std::func
 		tStorage.m_flPredictedSimTime += tStorage.m_flPredictedDelta;
 	}
 	bool bLastbDirectMove = tStorage.m_bDirectMove;
-	tStorage.m_bDirectMove = tStorage.m_pPlayer->IsOnGround() || tStorage.m_pPlayer->m_nWaterLevel() >= 2;
+	tStorage.m_bDirectMove = tStorage.m_pPlayer->IsOnGround() || tStorage.m_pPlayer->IsSwimming();
 
 	if (tStorage.m_flAverageYaw)
 		tStorage.m_MoveData.m_vecViewAngles.y -= flCorrection;

@@ -365,7 +365,7 @@ void CNavParser::Map::updateIgnores()
 				if (sticky_origin.DistToSqr(area) <= pow(130.0f + HALF_PLAYER_WIDTH, 2))
 				{
 					CGameTrace trace = {};
-					CTraceFilterProjectile filter = {};
+					CTraceFilterCollideable filter = {};
 					SDK::Trace(sticky_origin, area, MASK_SHOT, &filter, &trace);
 
 					// Check if Sticky can see the reason

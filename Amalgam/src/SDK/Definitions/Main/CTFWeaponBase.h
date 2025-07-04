@@ -213,8 +213,8 @@ public:
 	VIRTUAL(IsEnergyWeapon, bool, 435, this);
 	VIRTUAL(AreRandomCritsEnabled, bool, 405, this);
 	VIRTUAL(GetWeaponSpread, float, 470, this);
+	VIRTUAL(GetSwingRange, int, 458, this);
 	VIRTUAL_ARGS(ApplyFireDelay, float, 410, (float flDelay), this, flDelay);
-	VIRTUAL_ARGS(GetSwingRange, int, 458, (CBaseEntity* pLocal), this, pLocal);
 	
 	SIGNATURE(GetMaxClip1, float, CTFWeaponBase, this);
 	SIGNATURE(IncrementAmmo, void, CTFWeaponBase, this);
@@ -235,7 +235,7 @@ public:
 	bool CanSecondaryAttack();
 	bool CanFireCriticalShot(bool bIsHeadshot = false);
 	bool IsInReload();
-	bool CanHeadShot();
+	bool CanHeadshot();
 	bool AmbassadorCanHeadshot(float flCurTime = I::GlobalVars->curtime);
 	float GetDamage(bool bAttribHookValue = true);
 	float GetFireRate(bool bAttribHookValue = true);

@@ -82,6 +82,8 @@ public:
 	NETVAR(m_bArrowAlight, bool, "CTFProjectile_Arrow", "m_bArrowAlight");
 	NETVAR(m_bCritical, bool, "CTFProjectile_Arrow", "m_bCritical");
 	NETVAR(m_iProjectileType, int, "CTFProjectile_Arrow", "m_iProjectileType");
+
+	bool CanHeadshot();
 };
 
 class CTFGrenadePipebombProjectile : public CTFWeaponBaseGrenadeProj

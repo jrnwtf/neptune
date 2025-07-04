@@ -4,6 +4,7 @@
 #include "../FakeAngle/FakeAngle.h"
 #include "../../Backtrack/Backtrack.h"
 #include "../../Players/PlayerUtils.h"
+#include "../../Simulation/ProjectileSimulation/ProjectileSimulation.h"
 
 static inline bool GetPlayerGlow(CBaseEntity* pPlayer, CBaseEntity* pEntity, CTFPlayer* pLocal, Glow_t* pGlow, Color_t* pColor, bool bEnemy, bool bTeam, const float flActualDistance = 0.f)
 {
@@ -80,7 +81,6 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Buildings.Value, Vars::Glow::Team::Buildings.Value, flDistance);
 	}
 	// projectile glow
-	case ETFClassID::CBaseProjectile:
 	case ETFClassID::CBaseGrenade:
 	case ETFClassID::CTFWeaponBaseGrenadeProj:
 	case ETFClassID::CTFWeaponBaseMerasmusGrenade:
@@ -104,21 +104,13 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	case ETFClassID::CTFProjectile_ThrowableBreadMonster:
 	case ETFClassID::CTFProjectile_ThrowableBrick:
 	case ETFClassID::CTFProjectile_ThrowableRepel:
-	{
-		auto pOwner = pEntity->As<CTFWeaponBaseGrenadeProj>()->m_hThrower().Get();
-		if (!pOwner) pOwner = pEntity;
-
-		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
-		flDistance = vDelta.Length2D();
-		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Projectiles.Value, Vars::Glow::Team::Projectiles.Value, flDistance);
-	}
 	case ETFClassID::CTFBaseRocket:
 	case ETFClassID::CTFFlameRocket:
 	case ETFClassID::CTFProjectile_Arrow:
 	case ETFClassID::CTFProjectile_GrapplingHook:
 	case ETFClassID::CTFProjectile_HealingBolt:
 	case ETFClassID::CTFProjectile_Rocket:
-	//case ETFClassID::CTFProjectile_BallOfFire: // lifetime too short
+	case ETFClassID::CTFProjectile_BallOfFire:
 	case ETFClassID::CTFProjectile_MechanicalArmOrb:
 	case ETFClassID::CTFProjectile_SentryRocket:
 	case ETFClassID::CTFProjectile_SpellFireball:
@@ -126,21 +118,11 @@ bool CGlow::GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Colo
 	case ETFClassID::CTFProjectile_SpellKartOrb:
 	case ETFClassID::CTFProjectile_EnergyBall:
 	case ETFClassID::CTFProjectile_Flare:
-	{
-		auto pWeapon = pEntity->As<CTFBaseRocket>()->m_hLauncher().Get();
-		auto pOwner = pWeapon ? pWeapon->As<CTFWeaponBase>()->m_hOwner().Get() : pEntity;
-		if (!pOwner) pOwner = pEntity;
-
-		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
-		flDistance = vDelta.Length2D();
-		return GetPlayerGlow(pOwner, pEntity, pLocal, pGlow, pColor, Vars::Glow::Enemy::Projectiles.Value, Vars::Glow::Team::Projectiles.Value, flDistance);
-	}
 	case ETFClassID::CTFBaseProjectile:
-	case ETFClassID::CTFProjectile_EnergyRing: // not drawn, shoulddraw check, small anyways
-	//case ETFClassID::CTFProjectile_Syringe: // not drawn
+	case ETFClassID::CTFProjectile_EnergyRing:
+	//case ETFClassID::CTFProjectile_Syringe:
 	{
-		auto pWeapon = pEntity->As<CTFBaseProjectile>()->m_hLauncher().Get();
-		auto pOwner = pWeapon ? pWeapon->As<CTFWeaponBase>()->m_hOwner().Get() : pEntity;
+		auto pOwner = F::ProjSim.GetEntities(pEntity).second->As<CBaseEntity>();
 		if (!pOwner) pOwner = pEntity;
 
 		vDelta = pEntity->m_vecOrigin() - pLocal->m_vecOrigin();
@@ -410,12 +392,9 @@ void CGlow::DrawModel(CBaseEntity* pEntity)
 	if (pEntity->IsPlayer())
 	{
 		auto pPlayer = pEntity->As<CTFPlayer>();
-
 		float flOldInvisibility = pPlayer->m_flInvisibility();
 		pPlayer->m_flInvisibility() = 0.f;
-
 		pEntity->DrawModel(STUDIO_RENDER | STUDIO_NOSHADOWS);
-		
 		pPlayer->m_flInvisibility() = flOldInvisibility;
 	}
 	else*/
@@ -440,7 +419,7 @@ void CGlow::Store(CTFPlayer* pLocal)
 
 		Glow_t tGlow = {}; Color_t tColor = {};
 		if (GetGlow(pLocal, pEntity, &tGlow, &tColor)
-			&& SDK::IsOnScreen(pEntity, !H::Entities.IsProjectile(pEntity) /*&& pEntity->GetClassID() != ETFClassID::CTFMedigunShield*/))
+			&& SDK::IsOnScreen(pEntity, !pEntity->IsProjectile() /*&& pEntity->GetClassID() != ETFClassID::CTFMedigunShield*/))
 			m_mEntities[tGlow].emplace_back(pEntity, tColor);
 
 		if (pEntity->IsPlayer() && !pEntity->IsDormant())
