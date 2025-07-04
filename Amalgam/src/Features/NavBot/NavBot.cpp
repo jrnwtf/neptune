@@ -27,6 +27,9 @@ bool CNavBot::ShouldSearchHealth(CTFPlayer* pLocal, bool bLowPrio) const
 	if (F::NavEngine.current_priority > health)
 		return false;
 
+	if (SDK::IsSaxton(pLocal))
+		return false;
+
 	// Check if being gradually healed in any way
 	if (pLocal->m_nPlayerCond() & (1 << 21)/*TFCond_Healing*/)
 		return false;
@@ -45,6 +48,9 @@ bool CNavBot::ShouldSearchAmmo(CTFPlayer* pLocal) const
 
 	// Priority too high
 	if (F::NavEngine.current_priority > ammo)
+		return false;
+
+	if (SDK::IsSaxton(pLocal))
 		return false;
 
 	for (int i = 0; i < 2; i++)
@@ -246,6 +252,9 @@ std::vector<CBaseEntity*> CNavBot::GetEntities(CTFPlayer* pLocal, bool bHealth) 
 
 bool CNavBot::GetHealth(CUserCmd* pCmd, CTFPlayer* pLocal, bool bLowPrio)
 {
+	if (SDK::IsSaxton(pLocal))
+		return false;
+
 	const Priority_list ePriority = bLowPrio ? lowprio_health : health;
 	static Timer tHealthCooldown{};
 	static Timer tRepathTimer;
@@ -325,6 +334,9 @@ bool CNavBot::GetHealth(CUserCmd* pCmd, CTFPlayer* pLocal, bool bLowPrio)
 
 bool CNavBot::GetAmmo(CUserCmd* pCmd, CTFPlayer* pLocal, bool bForce)
 {
+	if (SDK::IsSaxton(pLocal))
+	return false;
+
 	static Timer tRepathTimer;
 	static Timer tAmmoCooldown{};
 	static bool bWasForce = false;

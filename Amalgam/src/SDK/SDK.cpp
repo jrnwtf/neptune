@@ -6,6 +6,7 @@
 #include "../Features/Configs/Configs.h"
 #include <random>
 #include <fstream>
+#include <algorithm>
 
 #pragma warning (disable : 6385)
 
@@ -1084,4 +1085,21 @@ std::string SDK::GetLevelName()
 	}
 
 	return { data + slash, bsp - slash };
+}
+
+bool SDK::IsSaxton(CTFPlayer* pPlayer)
+{
+	if (!pPlayer)
+		pPlayer = H::Entities.GetLocal();
+
+	if (!pPlayer)
+		return false;
+
+	if (pPlayer->GetMaxHealth() <= 750)
+		return false;
+
+	std::string mapName = GetLevelName();
+	std::transform(mapName.begin(), mapName.end(), mapName.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+	return mapName.find("vsh_") != std::string::npos;
 }

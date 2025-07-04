@@ -46,6 +46,17 @@ void CGameObjectiveController::Update()
 	case TF_GAMETYPE_ESCORT:
 		F::PLController.Update();
 		break;
+	case TF_GAMETYPE_ARENA:
+	{
+		// Versus Saxton Hale maps use Arena gametype but behave like single control point capture
+		std::string map_name = SDK::GetLevelName();
+		std::transform(map_name.begin(), map_name.end(), map_name.begin(), [](unsigned char c){ return std::tolower(c); });
+		if (map_name.rfind("vsh_", 0) == 0)
+		{
+			F::CPController.Update();
+		}
+		break;
+	}
 	default:
 		if (m_bDoomsday)
 		{
