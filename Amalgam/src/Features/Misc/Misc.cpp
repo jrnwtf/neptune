@@ -11,6 +11,58 @@
 #include <functional>
 #include <algorithm>
 
+namespace
+{
+	static std::string EscapeJson(const std::string &input)
+	{
+		std::string output;
+		output.reserve(input.size() * 2);
+		for (char c : input)
+		{
+			switch (c)
+			{
+			case '"': output += "\\\""; break;
+			case '\\': output += "\\\\"; break;
+			case '\b': output += "\\b";  break;
+			case '\f': output += "\\f";  break;
+			case '\n': output += "\\n";  break;
+			case '\r': output += "\\r";  break;
+			case '\t': output += "\\t";  break;
+			default:   output += c;         break;
+			}
+		}
+		return output;
+	}
+
+	static std::string FormatTime(const std::chrono::system_clock::time_point &tp, const char *fmt)
+	{
+		std::time_t tt = std::chrono::system_clock::to_time_t(tp);
+		std::tm tmBuf{};
+#ifdef _WIN32
+		if (localtime_s(&tmBuf, &tt) != 0)
+			return "Unknown Time";
+#else
+		if (!localtime_r(&tt, &tmBuf))
+			return "Unknown Time";
+#endif
+		char buffer[64]{};
+		if (!std::strftime(buffer, sizeof(buffer), fmt, &tmBuf))
+			return "Unknown Time";
+		return buffer;
+	}
+
+	static const char *TeamToString(int team)
+	{
+		switch (team)
+		{
+		case 2:  return "RED";
+		case 3:  return "BLU";
+		case 1:  return "SPEC";
+		default: return "UNK";
+		}
+	}
+}
+
 void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
 	// f2p voicecommandspam
@@ -2379,7 +2431,6 @@ void CMisc::LoadVotekickConfig()
 	}
 }
 
-// Chat Relay Implementation
 void CMisc::ChatRelay(int speaker, const char* text, bool teamChat)
 {
 	if (!Vars::Misc::Automation::ChatRelay::Enable.Value)
@@ -2392,7 +2443,6 @@ void CMisc::ChatRelay(int speaker, const char* text, bool teamChat)
 			return;
 	}
 
-	// Create message hash to prevent duplicates
 	std::string messageText = text ? text : "";
 	std::string playerName = "Unknown";
 	
@@ -2416,63 +2466,20 @@ void CMisc::ChatRelay(int speaker, const char* text, bool teamChat)
 
 	try
 	{
-		// Get current time for timestamp
-		auto now = std::chrono::system_clock::now();
-		auto time_t_now = std::chrono::system_clock::to_time_t(now);
-		
-		// Format timestamp
-		char timeBuffer[64];
-		std::tm local_tm{};
-		if (localtime_s(&local_tm, &time_t_now) != 0)
-		{
-			strcpy_s(timeBuffer, sizeof(timeBuffer), "Unknown Time");
-		}
-		else
-		{
-			strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d %H:%M:%S", &local_tm);
-		}
+		const std::string timestamp = FormatTime(std::chrono::system_clock::now(), "%Y-%m-%d %H:%M:%S");
 
-		// Get team info
-		std::string teamName = "Unknown";
-		auto pResource = H::Entities.GetPR();
-		if (pResource && pResource->m_bValid(speaker))
-		{
-			int team = pResource->m_iTeam(speaker);
-			switch (team)
-			{
-			case 2: teamName = "RED"; break;
-			case 3: teamName = "BLU"; break;
-			case 1: teamName = "SPEC"; break;
-			default: teamName = "UNK"; break;
-			}
-		}
+		std::string teamName = "UNK";
+		if (auto pResource = H::Entities.GetPR(); pResource && pResource->m_bValid(speaker))
+			teamName = TeamToString(pResource->m_iTeam(speaker));
 
-		// Escape JSON characters in message and player name
-		auto escapeJson = [](const std::string& input) -> std::string {
-			std::string output;
-			for (char c : input) {
-				switch (c) {
-				case '"': output += "\\\""; break;
-				case '\\': output += "\\\\"; break;
-				case '\b': output += "\\b"; break;
-				case '\f': output += "\\f"; break;
-				case '\n': output += "\\n"; break;
-				case '\r': output += "\\r"; break;
-				case '\t': output += "\\t"; break;
-				default: output += c; break;
-				}
-			}
-			return output;
-		};
-
-		std::string escapedMessage = escapeJson(messageText);
-		std::string escapedPlayerName = escapeJson(playerName);
-		std::string escapedServerName = escapeJson(m_sServerIdentifier);
+		const std::string escapedMessage     = EscapeJson(messageText);
+		const std::string escapedPlayerName  = EscapeJson(playerName);
+		const std::string escapedServerName  = EscapeJson(m_sServerIdentifier);
 
 		// Create JSON log entry
 		std::string logEntry = std::format(
 			"{{\"timestamp\":\"{}\",\"server\":\"{}\",\"player\":\"{}\",\"team\":\"{}\",\"message\":\"{}\",\"teamchat\":{}}}\n",
-			timeBuffer, escapedServerName, escapedPlayerName, teamName, escapedMessage, teamChat ? "true" : "false"
+			timestamp, escapedServerName, escapedPlayerName, teamName, escapedMessage, teamChat ? "true" : "false"
 		);
 
 		// Write to file
@@ -2556,22 +2563,8 @@ std::string CMisc::GetChatRelayPath()
 	if (appDataPath.empty())
 		return "";
 
-	// Create unique filename based on current date and server
-	auto now = std::chrono::system_clock::now();
-	auto time_t_now = std::chrono::system_clock::to_time_t(now);
-	
-	char dateBuffer[32];
-	std::tm local_tm{};
-	if (localtime_s(&local_tm, &time_t_now) != 0)
-	{
-		strcpy_s(dateBuffer, sizeof(dateBuffer), "unknown_date");
-	}
-	else
-	{
-		strftime(dateBuffer, sizeof(dateBuffer), "%Y%m%d", &local_tm);
-	}
-	
-	std::string filename = std::format("chat_relay_{}.log", dateBuffer);
+	const std::string dateStr = FormatTime(std::chrono::system_clock::now(), "%Y%m%d");
+	const std::string filename = std::format("chat_relay_{}.log", dateStr);
 	return appDataPath + "\\Amalgam\\" + filename;
 }
 

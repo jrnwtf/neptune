@@ -126,11 +126,14 @@ class ChatRelayBot(commands.Bot):
             logger.error(f"Failed to send startup message: {e}")
 
     async def start_monitoring(self):
-        """Start the monitoring task with configured interval"""
+        """Start the monitoring task if it's not already running."""
+        if self.monitor_task and self.monitor_task.is_running():
+            return
+
         @tasks.loop(seconds=self.CHECK_INTERVAL)
         async def monitor_task():
             await self.monitor_chat_logs()
-        
+
         self.monitor_task = monitor_task
         self.monitor_task.start()
     
@@ -364,12 +367,8 @@ class ChatRelayBot(commands.Bot):
     async def reload_command(self, ctx):
         """Reload the monitoring task"""
         try:
-            if hasattr(self, 'monitor_task') and self.monitor_task:
-                self.monitor_task.restart()
-                await ctx.send("✅ Monitoring task reloaded!")
-            else:
-                await self.start_monitoring()
-                await ctx.send("✅ Monitoring task started!")
+            await self.start_monitoring()
+            await ctx.send("✅ Monitoring task running!")
         except Exception as e:
             await ctx.send(f"❌ Error reloading: {e}")
 
