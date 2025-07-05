@@ -1118,6 +1118,7 @@ namespace Vars
 			CVar(VACBypass, "Valve allows cheats", false);
 			CVar(AntiCheatCompatibility, "Anti-cheat compatibility", false);
 			CVar(AntiCheatCritHack, "Anti-cheat crit hack", false, NOSAVE | DEBUGVAR);
+			CVar(BotNetworking, "Bot networking", true);
 		SUBNAMESPACE_END(Game);
 
 		SUBNAMESPACE_BEGIN(Queueing)

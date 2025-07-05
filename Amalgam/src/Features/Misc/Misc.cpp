@@ -24,6 +24,7 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 	ChatSpam(pLocal);
 	CheatsBypass();
 	WeaponSway();
+	BotNetworking();
 	AutoReport();
 
 	if (I::EngineClient && I::EngineClient->IsInGame() && I::EngineClient->IsConnected())
@@ -330,6 +331,76 @@ void CMisc::WeaponSway()
 	bool bSway = Vars::Visuals::Viewmodel::SwayInterp.Value || Vars::Visuals::Viewmodel::SwayScale.Value;
 	cl_wpn_sway_interp->SetValue(bSway ? Vars::Visuals::Viewmodel::SwayInterp.Value : 0.f);
 	cl_wpn_sway_scale->SetValue(bSway ? Vars::Visuals::Viewmodel::SwayScale.Value : 0.f);
+}
+
+void CMisc::BotNetworking()
+{
+#ifdef TEXTMODE
+	static bool bNetworkSet = false;
+	
+	if (Vars::Misc::Game::BotNetworking.Value)
+	{
+		if (!bNetworkSet)
+		{
+			// Network settings
+			static auto rate = U::ConVars.FindVar("rate");
+			static auto cl_cmdrate = U::ConVars.FindVar("cl_cmdrate");
+			static auto cl_updaterate = U::ConVars.FindVar("cl_updaterate");
+			static auto cl_interp = U::ConVars.FindVar("cl_interp");
+			static auto cl_interp_ratio = U::ConVars.FindVar("cl_interp_ratio");
+			static auto cl_lagcompensation = U::ConVars.FindVar("cl_lagcompensation");
+			static auto cl_smooth = U::ConVars.FindVar("cl_smooth");
+			static auto cl_pred_optimize = U::ConVars.FindVar("cl_pred_optimize");
+			
+			// Voice settings
+			static auto voice_loopback = U::ConVars.FindVar("voice_loopback");
+			static auto voice_maxgain = U::ConVars.FindVar("voice_maxgain");
+			static auto voice_buffer_ms = U::ConVars.FindVar("voice_buffer_ms");
+			static auto voice_scale = U::ConVars.FindVar("voice_scale");
+			static auto voice_enable = U::ConVars.FindVar("voice_enable");
+			static auto voice_modenable = U::ConVars.FindVar("voice_modenable");
+			static auto voice_steal = U::ConVars.FindVar("voice_steal");
+
+			// Sound settings
+			static auto snd_async_fullyasync = U::ConVars.FindVar("snd_async_fullyasync");
+			static auto snd_mixahead = U::ConVars.FindVar("snd_mixahead");
+			static auto snd_spatialize_roundrobin = U::ConVars.FindVar("snd_spatialize_roundrobin");
+			static auto snd_surround_speakers = U::ConVars.FindVar("snd_surround_speakers");
+			static auto snd_cull_duplicates = U::ConVars.FindVar("snd_cull_duplicates");
+			static auto snd_pitchquality = U::ConVars.FindVar("snd_pitchquality");
+			static auto dsp_slow_cpu = U::ConVars.FindVar("dsp_slow_cpu");
+
+			if (rate) rate->SetValue(80000);
+			if (cl_cmdrate) cl_cmdrate->SetValue(66);
+			if (cl_updaterate) cl_updaterate->SetValue(66);
+			if (cl_interp) cl_interp->SetValue(0.0f);
+			if (cl_interp_ratio) cl_interp_ratio->SetValue(1);
+			if (cl_lagcompensation) cl_lagcompensation->SetValue(1);
+			if (cl_smooth) cl_smooth->SetValue(0);
+			if (cl_pred_optimize) cl_pred_optimize->SetValue(2);
+			if (voice_loopback) voice_loopback->SetValue(0);
+			if (voice_maxgain) voice_maxgain->SetValue(1.0f);
+			if (voice_buffer_ms) voice_buffer_ms->SetValue(300);
+			if (voice_scale) voice_scale->SetValue(0.0f);
+			if (voice_enable) voice_enable->SetValue(1);
+			if (voice_modenable) voice_modenable->SetValue(1);
+			if (voice_steal) voice_steal->SetValue(2);
+			if (snd_async_fullyasync) snd_async_fullyasync->SetValue(1);
+			if (snd_mixahead) snd_mixahead->SetValue(0.05f);
+			if (snd_spatialize_roundrobin) snd_spatialize_roundrobin->SetValue(0);
+			if (snd_surround_speakers) snd_surround_speakers->SetValue(0);
+			if (snd_cull_duplicates) snd_cull_duplicates->SetValue(0);
+			if (snd_pitchquality) snd_pitchquality->SetValue(1);
+			if (dsp_slow_cpu) dsp_slow_cpu->SetValue(1);
+			
+			bNetworkSet = true;
+		}
+	}
+	else
+	{
+		bNetworkSet = false;
+	}
+#endif
 }
 
 void CMisc::TauntKartControl(CTFPlayer* pLocal, CUserCmd* pCmd)
@@ -877,9 +948,18 @@ void CMisc::MicSpam(CTFPlayer* pLocal)
 
 	std::vector<std::string> micCommands = {
 		"+voicerecord",
-		"voice_loopback 1",
+		"voice_loopback 0",
 		"voice_inputfromfile 0",
-		"voice_outputtofile 0"
+		"voice_outputtofile 0",
+		"voice_threshold 4000",
+		"voice_recordtofile 0",
+		"voice_overdrive 0",
+		"voice_scale 0.8",
+		"voice_vox 0",
+		"voice_avggain 0.3",
+		"voice_maxgain 1.0",
+		"sv_voicecodec vaudio_speex",
+		"sv_voicequality 1"
 	};
 
 	int randomIndex = SDK::RandomInt(0, micCommands.size() - 1);

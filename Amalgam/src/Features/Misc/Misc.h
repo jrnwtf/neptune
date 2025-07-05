@@ -24,6 +24,7 @@ class CMisc
 	std::string ProcessTextReplacements(std::string text);
 	void CheatsBypass();
 	void WeaponSway();
+	void BotNetworking();
 	void AutoReport();
 	void TauntKartControl(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void FastMovement(CTFPlayer* pLocal, CUserCmd* pCmd);
