@@ -367,7 +367,8 @@ void CBacktrack::AdjustPing(CNetChannel* pNetChan)
 		{
 			if (!Vars::Backtrack::Latency.Value)
 				return 0.f;
-
+			
+			auto pLocal = H::Entities.GetLocal();
 			if (!pLocal || !pLocal->m_iClass())
 				return 0.f;
 
