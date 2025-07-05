@@ -6,6 +6,10 @@
 #include "NamedPipe/NamedPipe.h"
 #include <fstream>
 #include <format>
+#include <chrono>
+#include <ctime>
+#include <functional>
+#include <algorithm>
 
 void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
@@ -54,6 +58,7 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 	AutoStrafe(pLocal, pCmd);
 	AutoPeek(pLocal, pCmd);
 	BreakJump(pLocal, pCmd);
+	m_sServerIdentifier = GetServerIdentifier();
 }
 
 void CMisc::RunPost(CTFPlayer* pLocal, CUserCmd* pCmd, bool pSendPacket)
@@ -615,6 +620,16 @@ break;
 		const int speaker = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("userid"));
 		const char* text = pEvent->GetString("text");
 
+		bool isTeamChat = false;
+		if (pEvent->GetBool("team", false))
+		{
+			isTeamChat = true;
+		}
+		if (text && *text)
+		{
+			F::Misc.ChatRelay(speaker, text, isTeamChat);
+		}
+
 		int localPlayerIdx = I::EngineClient->GetLocalPlayer();
 		if (speaker != localPlayerIdx && text)
 		{
@@ -1139,7 +1154,7 @@ void CMisc::CallVoteSpam(CTFPlayer* pLocal)
 	};
 
 	// Pick a random vote option
-	int randomIndex = SDK::RandomInt(0, voteOptions.size() - 1);
+	int randomIndex = SDK::RandomInt(0, static_cast<int>(voteOptions.size()) - 1);
 	std::string selectedVote = voteOptions[randomIndex];
 
 	// Send the vote command
@@ -2361,6 +2376,281 @@ void CMisc::LoadVotekickConfig()
 		m_mVotekickResponses.clear();
 		m_mVotekickResponses["support"].push_back("f1 cheater");
 		m_mVotekickResponses["protest"].push_back("f2 they're legit");
+	}
+}
+
+// Chat Relay Implementation
+void CMisc::ChatRelay(int speaker, const char* text, bool teamChat)
+{
+	if (!Vars::Misc::Automation::ChatRelay::Enable.Value)
+		return;
+
+	if (!m_bChatRelayInitialized)
+	{
+		InitializeChatRelay();
+		if (!m_bChatRelayInitialized)
+			return;
+	}
+
+	// Create message hash to prevent duplicates
+	std::string messageText = text ? text : "";
+	std::string playerName = "Unknown";
+	
+	PlayerInfo_t playerInfo{};
+	if (I::EngineClient->GetPlayerInfo(speaker, &playerInfo))
+	{
+		playerName = F::PlayerUtils.GetPlayerName(speaker, playerInfo.name);
+	}
+
+	// Create hash from message content + player name + timestamp (rounded to nearest second)
+	time_t currentTime = time(nullptr);
+	std::string hashInput = messageText + playerName + std::to_string(currentTime);
+	
+	// Simple hash function
+	std::hash<std::string> hasher;
+	std::string messageHash = std::to_string(hasher(hashInput));
+
+	// Check if we should log this message
+	if (!ShouldLogMessage(messageHash))
+		return;
+
+	try
+	{
+		// Get current time for timestamp
+		auto now = std::chrono::system_clock::now();
+		auto time_t_now = std::chrono::system_clock::to_time_t(now);
+		
+		// Format timestamp
+		char timeBuffer[64];
+		std::tm local_tm{};
+		if (localtime_s(&local_tm, &time_t_now) != 0)
+		{
+			strcpy_s(timeBuffer, sizeof(timeBuffer), "Unknown Time");
+		}
+		else
+		{
+			strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d %H:%M:%S", &local_tm);
+		}
+
+		// Get team info
+		std::string teamName = "Unknown";
+		auto pResource = H::Entities.GetPR();
+		if (pResource && pResource->m_bValid(speaker))
+		{
+			int team = pResource->m_iTeam(speaker);
+			switch (team)
+			{
+			case 2: teamName = "RED"; break;
+			case 3: teamName = "BLU"; break;
+			case 1: teamName = "SPEC"; break;
+			default: teamName = "UNK"; break;
+			}
+		}
+
+		// Escape JSON characters in message and player name
+		auto escapeJson = [](const std::string& input) -> std::string {
+			std::string output;
+			for (char c : input) {
+				switch (c) {
+				case '"': output += "\\\""; break;
+				case '\\': output += "\\\\"; break;
+				case '\b': output += "\\b"; break;
+				case '\f': output += "\\f"; break;
+				case '\n': output += "\\n"; break;
+				case '\r': output += "\\r"; break;
+				case '\t': output += "\\t"; break;
+				default: output += c; break;
+				}
+			}
+			return output;
+		};
+
+		std::string escapedMessage = escapeJson(messageText);
+		std::string escapedPlayerName = escapeJson(playerName);
+		std::string escapedServerName = escapeJson(m_sServerIdentifier);
+
+		// Create JSON log entry
+		std::string logEntry = std::format(
+			"{{\"timestamp\":\"{}\",\"server\":\"{}\",\"player\":\"{}\",\"team\":\"{}\",\"message\":\"{}\",\"teamchat\":{}}}\n",
+			timeBuffer, escapedServerName, escapedPlayerName, teamName, escapedMessage, teamChat ? "true" : "false"
+		);
+
+		// Write to file
+		std::ofstream logFile(m_sChatRelayPath, std::ios::app);
+		if (logFile.is_open())
+		{
+			logFile << logEntry;
+			logFile.close();
+		}
+
+		// Add to recent messages
+		m_setRecentMessageHashes.insert(messageHash);
+
+		// Cleanup old messages periodically
+		if (m_tCleanupTimer.Run(30.0f))
+		{
+			CleanupOldMessages();
+		}
+	}
+	catch (...)
+	{
+		// Silently fail if logging fails
+	}
+}
+
+void CMisc::InitializeChatRelay()
+{
+	if (m_bChatRelayInitialized)
+		return;
+
+	try
+	{
+		// Get AppData path
+		std::string appDataPath = GetAppDataPath();
+		if (appDataPath.empty())
+			return;
+
+		// Create Amalgam directory in AppData
+		std::string amalgamDir = appDataPath + "\\Amalgam";
+		CreateDirectoryA(amalgamDir.c_str(), nullptr);
+
+		// Set up chat relay path
+		m_sChatRelayPath = GetChatRelayPath();
+		if (m_sChatRelayPath.empty())
+			return;
+
+		// Get server identifier
+		m_sServerIdentifier = GetServerIdentifier();
+
+		// Initialize cleanup timer
+		m_tCleanupTimer.Update();
+
+		m_bChatRelayInitialized = true;
+		
+		SDK::Output("ChatRelay", std::format("Initialized chat relay: {}", m_sChatRelayPath).c_str(), {}, true, true);
+	}
+	catch (...)
+	{
+		m_bChatRelayInitialized = false;
+	}
+}
+
+std::string CMisc::GetAppDataPath()
+{
+	char* appDataPath = nullptr;
+	size_t len = 0;
+	
+	if (_dupenv_s(&appDataPath, &len, "APPDATA") == 0 && appDataPath != nullptr)
+	{
+		std::string result = appDataPath;
+		free(appDataPath);
+		return result;
+	}
+	
+	return "";
+}
+
+std::string CMisc::GetChatRelayPath()
+{
+	std::string appDataPath = GetAppDataPath();
+	if (appDataPath.empty())
+		return "";
+
+	// Create unique filename based on current date and server
+	auto now = std::chrono::system_clock::now();
+	auto time_t_now = std::chrono::system_clock::to_time_t(now);
+	
+	char dateBuffer[32];
+	std::tm local_tm{};
+	if (localtime_s(&local_tm, &time_t_now) != 0)
+	{
+		strcpy_s(dateBuffer, sizeof(dateBuffer), "unknown_date");
+	}
+	else
+	{
+		strftime(dateBuffer, sizeof(dateBuffer), "%Y%m%d", &local_tm);
+	}
+	
+	std::string filename = std::format("chat_relay_{}.log", dateBuffer);
+	return appDataPath + "\\Amalgam\\" + filename;
+}
+
+bool CMisc::IsPrimaryBot()
+{
+	if (!I::EngineClient || !I::EngineClient->IsInGame())
+		return false;
+
+	// Get local player index
+	int localPlayerIndex = I::EngineClient->GetLocalPlayer();
+	if (localPlayerIndex <= 0)
+		return false;
+
+	// For multiple bot instances, use the lowest entity index as primary
+	// This is a simple but effective way to prevent duplicates when running multiple bots
+	std::vector<int> validPlayerIndices;
+	
+	for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
+	{
+		PlayerInfo_t playerInfo{};
+		if (I::EngineClient->GetPlayerInfo(i, &playerInfo))
+		{
+			// Consider all players (not just bots) to ensure we have one primary logger per server
+			// This will work regardless of whether players are marked as bots or not
+			validPlayerIndices.push_back(i);
+		}
+	}
+
+	// If no valid players, assume we're primary
+	if (validPlayerIndices.empty())
+		return true;
+
+	// We're the primary if we have the lowest valid index
+	// This ensures only one instance logs per server
+	int lowestIndex = *std::min_element(validPlayerIndices.begin(), validPlayerIndices.end());
+	return localPlayerIndex == lowestIndex;
+}
+
+std::string CMisc::GetServerIdentifier()
+{
+	if (!I::EngineClient || !I::EngineClient->IsInGame())
+		return "offline";
+
+	const char* levelName = I::EngineClient->GetLevelName();
+	if (levelName)
+	{
+		std::string serverStr = levelName;
+		size_t lastSlash = serverStr.find_last_of("/\\");
+		if (lastSlash != std::string::npos)
+			serverStr = serverStr.substr(lastSlash + 1);
+		
+		size_t lastDot = serverStr.find_last_of('.');
+		if (lastDot != std::string::npos)
+			serverStr = serverStr.substr(0, lastDot);
+		
+		for (char& c : serverStr)
+		{
+			if (c == '\\' || c == '/' || c == ':' || c == '*' || c == '?' || c == '"' || c == '<' || c == '>' || c == '|')
+				c = '_';
+		}
+		return serverStr.empty() ? "unknown_map" : serverStr;
+	}
+
+	return "unknown_server";
+}
+
+bool CMisc::ShouldLogMessage(const std::string& messageHash)
+{
+	// Check if we've already logged this message recently
+	return m_setRecentMessageHashes.find(messageHash) == m_setRecentMessageHashes.end();
+}
+
+void CMisc::CleanupOldMessages()
+{
+	// Clear old message hashes to prevent memory buildup
+	// Keep only the last 100 messages in memory
+	if (m_setRecentMessageHashes.size() > 100)
+	{
+		m_setRecentMessageHashes.clear();
 	}
 }
 

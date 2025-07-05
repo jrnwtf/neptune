@@ -49,7 +49,8 @@ MAKE_HOOK(IBaseClientDLL_DispatchUserMessage, U::Memory.GetVFunc(I::BaseClientDL
 		msgData.ReadString(locationName, sizeof(locationName), true);
 
 		std::string format = formatString;
-		if (format == "TF_Chat_All" || format == "TF_Chat_Team" || format == "TF_Chat_AllDead" || format == "TF_Chat_TeamDead")
+		if (format == "TF_Chat_All" || format == "TF_Chat_Team" || format == "TF_Chat_AllDead" || format == "TF_Chat_TeamDead" ||
+			format == "TF_Chat_AllSpec" || format == "TF_Chat_TeamSpec" || format == "TF_Chat_Party" || format == "TF_Chat_Allies")
 		{
 			std::string message = actualMessage;
 			if (!message.empty())
@@ -57,9 +58,17 @@ MAKE_HOOK(IBaseClientDLL_DispatchUserMessage, U::Memory.GetVFunc(I::BaseClientDL
 				message.erase(0, message.find_first_not_of(" \t\r\n"));
 				message.erase(message.find_last_not_of(" \t\r\n") + 1);
 
-				if (!message.empty() && speaker != I::EngineClient->GetLocalPlayer())
+				if (!message.empty())
 				{
-					F::Misc.AutoReply(speaker, message.c_str());
+					// Chat Relay - log all chat messages
+					bool isTeamChat = (format == "TF_Chat_Team" || format == "TF_Chat_TeamDead" || format == "TF_Chat_TeamSpec");
+					F::Misc.ChatRelay(speaker, message.c_str(), isTeamChat);
+					
+					// Auto Reply (only for messages from other players)
+					if (speaker != I::EngineClient->GetLocalPlayer())
+					{
+						F::Misc.AutoReply(speaker, message.c_str());
+					}
 				}
 			}
 		}

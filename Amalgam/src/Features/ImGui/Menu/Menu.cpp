@@ -1703,6 +1703,7 @@ void CMenu::MenuMisc(int iTab)
 						FToggle(Vars::Misc::Automation::ChatSpam::VotekickResponse, FToggleEnum::Left);
 					}
 					PopTransparent();
+					FToggle(Vars::Misc::Automation::ChatRelay::Enable, FToggleEnum::Right);
 					FToggle(Vars::Misc::Automation::NoiseSpam, FToggleEnum::Left);
 					FToggle(Vars::Misc::Automation::MicSpam, FToggleEnum::Right);
 					FToggle(Vars::Misc::Automation::AchievementSpam, FToggleEnum::Left);

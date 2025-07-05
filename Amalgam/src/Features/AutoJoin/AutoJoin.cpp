@@ -14,6 +14,11 @@ int CAutoJoin::GetRandomClass()
 		if ((Vars::Misc::Automation::ExcludeProjectileClasses.Value & (1 << 1)) && i == 4) excluded = true; // Demoman
 		if ((Vars::Misc::Automation::ExcludeProjectileClasses.Value & (1 << 2)) && i == 7) excluded = true; // Pyro
 		if ((Vars::Misc::Automation::ExcludeProjectileClasses.Value & (1 << 3)) && i == 5) excluded = true; // Medic
+		if ((Vars::Misc::Automation::ExcludeProjectileClasses.Value & (1 << 4)) && i == 1) excluded = true; // Scout
+		if ((Vars::Misc::Automation::ExcludeProjectileClasses.Value & (1 << 5)) && i == 6) excluded = true; // Heavy
+		if ((Vars::Misc::Automation::ExcludeProjectileClasses.Value & (1 << 6)) && i == 9) excluded = true; // Engineer
+		if ((Vars::Misc::Automation::ExcludeProjectileClasses.Value & (1 << 7)) && i == 2) excluded = true; // Sniper
+		if ((Vars::Misc::Automation::ExcludeProjectileClasses.Value & (1 << 8)) && i == 8) excluded = true; // Spy
 
 		if (!excluded)
 			availableClasses.push_back(i);

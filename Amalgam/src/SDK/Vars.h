@@ -1061,8 +1061,8 @@ namespace Vars
 			CVar(RandomClassSwitch, "Random class switch", false);
 			CVar(RandomClassInterval, "Random class switch interval", 5, SLIDER_MIN, 1, 15, 1, "%i min");
 			CVarEnum(ExcludeProjectileClasses, "Exclude projectile classes", 0b0000, DROPDOWN_MULTI, "None",
-				VA_LIST("Soldier", "Demoman", "Pyro", "Medic"),
-				Soldier = 1 << 0, Demoman = 1 << 1, Pyro = 1 << 2, Medic = 1 << 3);
+				VA_LIST("Soldier", "Demoman", "Pyro", "Medic", "Scout", "Heavy", "Engineer", "Sniper", "Spy"),
+				Soldier = 1 << 0, Demoman = 1 << 1, Pyro = 1 << 2, Medic = 1 << 3, Scout = 1 << 4, Heavy = 1 << 5, Engineer = 1 << 6, Sniper = 1 << 7, Spy = 1 << 8);
 			CVarEnum(VoiceCommandSpam, "Voice command spam", 0, NONE, nullptr,
 				VA_LIST("Off", "Random", "Medic", "Thanks", "Nice Shot", "Cheers", "Jeers", "Go Go Go", "Move Up", "Go Left", "Go Right", "Yes", "No", "Incoming", "Spy", "Sentry Ahead", "Need Teleporter", "Pootis", "Need Sentry", "Activate Charge", "Help", "Battle Cry"),
 				Off, Random, Medic, Thanks, NiceShot, Cheers, Jeers, GoGoGo, MoveUp, GoLeft, GoRight, Yes, No, Incoming, Spy, Sentry, NeedTeleporter, Pootis, NeedSentry, ActivateCharge, Help, BattleCry);
@@ -1080,6 +1080,10 @@ namespace Vars
 				CVar(AutoReply, "Auto reply", false);
 				CVar(VotekickResponse, "Votekick response", false);
 			SUBNAMESPACE_END(ChatSpam);
+
+			SUBNAMESPACE_BEGIN(ChatRelay)
+				CVar(Enable, "Chat relay", false);
+			SUBNAMESPACE_END(ChatRelay);
 
 			SUBNAMESPACE_BEGIN(AutoItem)
 				CVarEnum(Enable, "Enable", 0b0, DROPDOWN_MULTI, nullptr,

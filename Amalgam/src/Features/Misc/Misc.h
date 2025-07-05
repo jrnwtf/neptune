@@ -1,5 +1,6 @@
 #pragma once
 #include "../../SDK/SDK.h"
+#include <set>
 
 class bf_read;
 
@@ -30,6 +31,7 @@ class CMisc
 	void FastMovement(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void AutoPeek(CTFPlayer* pLocal, CUserCmd* pCmd, bool bPost = false);
 	void EdgeJump(CTFPlayer* pLocal, CUserCmd* pCmd, bool bPost = false);
+	
 	bool m_bPeekPlaced = false;
 	Vec3 m_vPeekReturnPos = {};
 	//bool bSteamCleared = false;
@@ -58,6 +60,14 @@ class CMisc
 	int m_iAchievementSpamID = -1;
 	const char* m_sAchievementSpamName = nullptr;
 
+	// Chat Relay variables
+	bool m_bChatRelayInitialized = false;
+	std::string m_sChatRelayPath;
+	std::string m_sServerIdentifier;
+	std::set<std::string> m_setRecentMessageHashes;
+	Timer m_tCleanupTimer;
+	int m_iLocalPlayerIndex = -1;
+
 public:
 	void RunPre(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void RunPost(CTFPlayer* pLocal, CUserCmd* pCmd, bool pSendPacket);
@@ -73,6 +83,15 @@ public:
 	std::unordered_map<std::string, std::vector<std::string>> m_mVotekickResponses;
 	void LoadVotekickConfig();
 	void LoadAutoReplyConfig();
+	
+	void ChatRelay(int speaker, const char* text, bool teamChat = false);
+	void InitializeChatRelay();
+	std::string GetAppDataPath();
+	std::string GetChatRelayPath();
+	bool IsPrimaryBot();
+	std::string GetServerIdentifier();
+	bool ShouldLogMessage(const std::string& messageHash);
+	void CleanupOldMessages();
 	int m_iWishCmdrate = -1;
 	bool m_bAntiAFK = false;
 	Timer m_tRandomVotekickTimer;
