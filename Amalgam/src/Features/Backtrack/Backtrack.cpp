@@ -322,10 +322,6 @@ void CBacktrack::Store()
 	if (!I::EngineClient->IsInGame())
 		return;
 
-	auto pLocal = H::Entities.GetLocal();
-	if (!pLocal || !pLocal->IsAlive() || !pLocal->m_iClass() || pLocal->m_iHealth() <= 1)
-		return;
-
 	static auto sv_maxunlag = U::ConVars.FindVar("sv_maxunlag");
 	m_flMaxUnlag = sv_maxunlag->GetFloat();
 	
@@ -357,19 +353,15 @@ void CBacktrack::ReportShot(int iIndex)
 
 void CBacktrack::AdjustPing(CNetChannel* pNetChan)
 {
-	auto pLocal = H::Entities.GetLocal();
-	if (!pLocal || !pLocal->IsAlive() || !pLocal->m_iClass() || pLocal->m_iHealth() <= 1)
-		return;
-
 	m_nOldInSequenceNr = pNetChan->m_nInSequenceNr, m_nOldInReliableState = pNetChan->m_nInReliableState;
 
 	auto Set = [&]()
 		{
 			if (!Vars::Backtrack::Latency.Value)
 				return 0.f;
-			
+
 			auto pLocal = H::Entities.GetLocal();
-			if (!pLocal || !pLocal->m_iClass())
+			if (!pLocal || !pLocal->m_iClass() || !pLocal->IsAlive())
 				return 0.f;
 
 			static auto host_timescale = U::ConVars.FindVar("host_timescale");
