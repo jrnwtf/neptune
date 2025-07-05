@@ -207,6 +207,7 @@ void CCore::Load()
 	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_hud_playerclass_use_playermodel 0").c_str());
 #ifdef TEXTMODE
 	I::EngineClient->ClientCmd_Unrestricted(std::format("fps_max 24").c_str());
+	I::EngineClient->ClientCmd_Unrestricted(std::format("hud_fastswitch 1").c_str());
 	I::EngineClient->ClientCmd_Unrestricted(std::format("exec autoexec").c_str());
 	I::EngineClient->ClientCmd_Unrestricted(std::format("sv_cheats 1").c_str());
 	I::EngineClient->ClientCmd_Unrestricted(std::format("fps_max 24").c_str());

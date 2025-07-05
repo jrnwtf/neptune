@@ -1155,6 +1155,55 @@ bool CNavBot::MeleeAttack(CUserCmd* pCmd, CTFPlayer* pLocal, int iSlot, ClosestE
 	if (F::NavEngine.current_priority > prio_melee)
 		return false;
 
+	Vector vTargetOrigin = pPlayer->GetAbsOrigin();
+	Vector vLocalOrigin = pLocal->GetAbsOrigin();
+	
+	float flHeightDiff = vTargetOrigin.z - vLocalOrigin.z;
+	const float flMaxMeleeHeight = 120.0f;
+	
+	if (flHeightDiff > flMaxMeleeHeight)
+	{
+		auto pLocalNav = F::NavEngine.findClosestNavSquare(vLocalOrigin);
+		auto pTargetNav = F::NavEngine.findClosestNavSquare(vTargetOrigin);
+		
+		if (!pLocalNav || !pTargetNav)
+			return false;
+		
+		float flNavHeightDiff = pTargetNav->m_center.z - pLocalNav->m_center.z;
+		if (flNavHeightDiff > flMaxMeleeHeight * 1.2f)
+			return false;
+		
+		if (F::NavEngine.current_priority == prio_melee && F::NavEngine.isPathing())
+		{
+			auto pCrumbs = F::NavEngine.getCrumbs();
+			if (pCrumbs && pCrumbs->size() <= 2)
+				return false;
+		}
+		
+		static Timer tPathTestCooldown{};
+		static bool bLastPathTestResult = false;
+		static int iLastTestedEnemy = -1;
+		
+		if (tPathTestCooldown.Run(2.0f) || iLastTestedEnemy != tClosestEnemy.m_iEntIdx)
+		{
+			bool bCanPath = F::NavEngine.navTo(vTargetOrigin, prio_melee, true, true);
+			if (bCanPath)
+			{
+				auto pTestCrumbs = F::NavEngine.getCrumbs();
+				bLastPathTestResult = pTestCrumbs && pTestCrumbs->size() > 3;
+			}
+			else
+			{
+				bLastPathTestResult = false;
+			}
+			
+			F::NavEngine.cancelPath();
+			iLastTestedEnemy = tClosestEnemy.m_iEntIdx;
+		}
+		
+		if (!bLastPathTestResult)
+			return false;
+	}
 	
 	static Timer tVischeckCooldown{};
 	if (tVischeckCooldown.Run(0.2f))
@@ -1165,8 +1214,6 @@ bool CNavBot::MeleeAttack(CUserCmd* pCmd, CTFPlayer* pLocal, int iSlot, ClosestE
 		bIsVisible = trace.DidHit() ? trace.m_pEnt && trace.m_pEnt == pPlayer : true;
 	}
 
-	Vector vTargetOrigin = pPlayer->GetAbsOrigin();
-	Vector vLocalOrigin = pLocal->GetAbsOrigin();
 	// If we are close enough, don't even bother with using the navparser to get there
 	if (tClosestEnemy.m_flDist < pow(100.0f, 2) && bIsVisible)
 	{

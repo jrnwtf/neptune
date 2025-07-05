@@ -21,8 +21,19 @@ std::vector<Target_t> CAimbotHitscan::GetTargets(CTFPlayer* pLocal, CTFWeaponBas
 	
 	const auto iSort = Vars::Aimbot::General::TargetSelection.Value;
 
-	Vec3 vLocalPos = F::Ticks.GetShootPos();
-	Vec3 vLocalAngles = I::EngineClient->GetViewAngles();
+			Vec3 vLocalPos = F::Ticks.GetShootPos();
+		Vec3 vLocalAngles = I::EngineClient->GetViewAngles();
+		
+#ifdef TEXTMODE
+		bool bFlamethrowerFOVAdjust = false;
+		float flOriginalFOV = Vars::Aimbot::General::AimFOV.Value;
+		if (pWeapon && pWeapon->GetWeaponID() == TF_WEAPON_FLAMETHROWER)
+		{
+			bFlamethrowerFOVAdjust = true;
+			// Increase FOV slightly for flamethrower to make targeting more forgiving
+			Vars::Aimbot::General::AimFOV.Value = std::min(flOriginalFOV * 1.3f, 90.f);
+		}
+#endif
 
 	bool bLowFPS = G::GetFPS() < Vars::Aimbot::Hitscan::LowFPSThreshold.Value;
 	int iLowFPSFlags = bLowFPS ? Vars::Aimbot::Hitscan::LowFPSOptimizations.Value : 0;
@@ -148,6 +159,13 @@ std::vector<Target_t> CAimbotHitscan::GetTargets(CTFPlayer* pLocal, CTFWeaponBas
 			vTargets.emplace_back(pEntity, TargetEnum::Bomb, vPos, vAngleTo, flFOVTo, flDistTo);
 		}
 	}
+
+#ifdef TEXTMODE
+	if (bFlamethrowerFOVAdjust)
+	{
+		Vars::Aimbot::General::AimFOV.Value = flOriginalFOV;
+	}
+#endif
 
 	return vTargets;
 }
@@ -391,7 +409,15 @@ int CAimbotHitscan::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBase* 
 	bool bReduceMemoryUsage = bLowFPS && (iLowFPSFlags & Vars::Aimbot::Hitscan::LowFPSOptimizationsEnum::ReduceMemoryUsage);
 
 	Vec3 vEyePos = pLocal->GetShootPos(), vPeekPos = {};
-	const float flMaxRange = powf(pWeapon->GetRange(), 2.f);
+	float flMaxRange = powf(pWeapon->GetRange(), 2.f);
+	
+#ifdef TEXTMODE
+	// Special handling for flamethrower in textmode - it has limited range
+	if (pWeapon->GetWeaponID() == TF_WEAPON_FLAMETHROWER)
+	{
+		flMaxRange = powf(230.f, 2.f); // Flamethrower has ~230 unit range
+	}
+#endif
 
 	auto pModel = tTarget.m_pEntity->GetModel();
 	if (!pModel) return false;
@@ -886,8 +912,20 @@ bool CAimbotHitscan::ShouldFire(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 	if (Vars::Aimbot::Hitscan::ShootingDelayEnabled.Value)
 	{
 		float flCurrentTime = I::GlobalVars->curtime;
-		if (flCurrentTime - m_flLastShotTime < Vars::Aimbot::Hitscan::ShootingDelay.Value)
-			return false;
+		
+#ifdef TEXTMODE
+		// Flamethrower needs continuous fire - reduce delay significantly
+		if (pWeapon->GetWeaponID() == TF_WEAPON_FLAMETHROWER)
+		{
+			if (flCurrentTime - m_flLastShotTime < 0.05f) // Very short delay for flamethrower
+				return false;
+		}
+		else
+#endif
+		{
+			if (flCurrentTime - m_flLastShotTime < Vars::Aimbot::Hitscan::ShootingDelay.Value)
+				return false;
+		}
 	}
 	
 	bool bLowFPS = G::GetFPS() < Vars::Aimbot::Hitscan::LowFPSThreshold.Value;
@@ -1107,6 +1145,12 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 		if (pWeapon->As<CTFMinigun>()->m_iWeaponState() != AC_STATE_FIRING && pWeapon->As<CTFMinigun>()->m_iWeaponState() != AC_STATE_SPINNING)
 			return;
 		break;
+#ifdef TEXTMODE
+	case TF_WEAPON_FLAMETHROWER:
+		// Flamethrower needs continuous fire to be effective
+		// Don't apply strict timing restrictions like other weapons
+		break;
+#endif
 	}
 
 	auto vTargets = SortTargets(pLocal, pWeapon);

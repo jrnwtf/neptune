@@ -427,7 +427,12 @@ EWeaponType SDK::GetWeaponType(CTFWeaponBase* pWeapon, EWeaponType* pSecondaryTy
 	case TF_WEAPON_ROCKETLAUNCHER_DIRECTHIT:
 	case TF_WEAPON_PARTICLE_CANNON:
 	case TF_WEAPON_RAYGUN:
+#ifdef TEXTMODE
 	case TF_WEAPON_FLAMETHROWER:
+		return EWeaponType::HITSCAN; // Use hitscan aimbot for flamethrower in textmode
+#else
+	case TF_WEAPON_FLAMETHROWER:
+#endif
 	case TF_WEAPON_FLAME_BALL:
 	case TF_WEAPON_FLAREGUN:
 	case TF_WEAPON_FLAREGUN_REVENGE:
