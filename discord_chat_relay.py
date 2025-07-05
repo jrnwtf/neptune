@@ -9,13 +9,17 @@ from pathlib import Path
 import time
 from typing import Dict, Set
 import traceback
+import aiohttp
+import re
+import sys
+from discord import app_commands
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('discord_bot.log'),
+        logging.FileHandler('discord_bot.log', encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -46,6 +50,10 @@ class ChatRelayBot(commands.Bot):
         self.MAX_MESSAGE_CACHE = settings.get('max_message_cache', 1000)
         self.DEBUG_LOGGING = settings.get('enable_debug_logging', False)
         
+        # Experimental: avatar fetching toggle and cache
+        self.SHOW_AVATARS = settings.get('show_avatars', False)
+        self.avatar_cache: Dict[int, str] = {}
+        
         # Formatting
         formatting = self.config.get('formatting', {})
         self.team_colors = {
@@ -70,6 +78,15 @@ class ChatRelayBot(commands.Bot):
         
         # File monitoring
         self.last_check = time.time()
+        
+        # Register slash command
+        @app_commands.command(name="avatars", description="Toggle avatar display on embeds")
+        async def avatars_slash(interaction: discord.Interaction):
+            self.SHOW_AVATARS = not self.SHOW_AVATARS
+            state = 'enabled' if self.SHOW_AVATARS else 'disabled'
+            await interaction.response.send_message(f"🖼️ Avatar display {state}.", ephemeral=True)
+
+        self.tree.add_command(avatars_slash)
         
     def load_config(self):
         """Load configuration from config.json"""
@@ -108,7 +125,14 @@ class ChatRelayBot(commands.Bot):
             logger.error(f"Could not find channel with ID {self.CHANNEL_ID}")
             return
             
-        logger.info(f'Target channel: #{self.target_channel.name}')
+        # Safely log channel name without UnicodeEncodeError on Windows consoles
+        try:
+            channel_display = self.target_channel.name
+            sys.stdout.write("")  # ensure stdout present
+            channel_display.encode(sys.stdout.encoding or 'utf-8')
+        except (UnicodeEncodeError, AttributeError):
+            channel_display = channel_display.encode('ascii', 'replace').decode('ascii')
+        logger.info(f'Target channel: #{channel_display}')
         
         # Start monitoring task
         await self.start_monitoring()
@@ -172,12 +196,20 @@ class ChatRelayBot(commands.Bot):
                 return
                 
             current_size = os.path.getsize(log_file)
+
+            if filename not in self.processed_files:
+                self.processed_files[filename] = current_size
+
             last_position = self.processed_files.get(filename, 0)
-            
+
+            if current_size < last_position:
+                self.processed_files[filename] = current_size
+                return
+
             # If file hasn't grown, nothing to do
             if current_size <= last_position:
                 return
-                
+            
             # Read new content
             with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
                 f.seek(last_position)
@@ -208,6 +240,8 @@ class ChatRelayBot(commands.Bot):
             team = data.get('team', 'UNK')
             message = data.get('message', '')
             is_team_chat = data.get('teamchat', False)
+            steamid32 = data.get('steamid32')
+            server_ip = data.get('serverip', '')
             
             # Create message hash to prevent duplicates
             message_hash = f"{timestamp}:{player}:{message}"
@@ -223,15 +257,15 @@ class ChatRelayBot(commands.Bot):
                 for old_hash in old_hashes:
                     self.processed_messages.discard(old_hash)
             
-            # Format and send Discord message
-            await self.send_chat_to_discord(timestamp, server, player, team, message, is_team_chat)
+            # Format and send Discord message with extended details
+            await self.send_chat_to_discord(timestamp, server, server_ip, player, team, message, is_team_chat, steamid32)
             
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse JSON: {json_line[:100]}... Error: {e}")
         except Exception as e:
             logger.error(f"Error processing chat message: {e}")
 
-    async def send_chat_to_discord(self, timestamp: str, server: str, player: str, team: str, message: str, is_team_chat: bool):
+    async def send_chat_to_discord(self, timestamp: str, server: str, server_ip: str, player: str, team: str, message: str, is_team_chat: bool, steamid32: int = None):
         try:
             # Use configured colors and emojis
             color = self.team_colors.get(team, 0xcccccc)
@@ -249,18 +283,33 @@ class ChatRelayBot(commands.Bot):
             # Format server name (truncate if too long)
             server_display = server[:30] + "..." if len(server) > 30 else server
             
+            # Build profile link & avatar (optional)
+            profile_url = f"https://steamcommunity.com/profiles/[U:1:{steamid32}]" if steamid32 else None
+
+            icon_url = f"https://via.placeholder.com/32/{team.lower()}/ffffff?text={team[0]}"
+            if self.SHOW_AVATARS and steamid32:
+                avatar_url = await self.get_avatar_url(steamid32)
+                if avatar_url:
+                    icon_url = avatar_url
+
             # Set author (player info)
             embed.set_author(
                 name=f"{team_emoji} {player} [{team}]",
-                icon_url=f"https://via.placeholder.com/32/{team.lower()}/ffffff?text={team[0]}"
+                icon_url=icon_url,
+                url=profile_url
             )
             
             # Message content
             embed.description = f"{chat_type}\n```{message}```"
             
             # Footer with server and timestamp info
+            footer_text = f"📡 {server_display}"
+            if server_ip:
+                footer_text += f" • {server_ip}"
+            footer_text += f" • {timestamp}"
+
             embed.set_footer(
-                text=f"📡 {server_display} • {timestamp}",
+                text=footer_text,
                 icon_url="https://via.placeholder.com/16/ffaa00/ffffff?text=TF2"
             )
             
@@ -279,6 +328,40 @@ class ChatRelayBot(commands.Bot):
                 await self.target_channel.send(simple_msg[:2000])  # Discord limit
             except:
                 logger.error("Failed to send even simple message")
+
+    async def get_avatar_url(self, steamid32: int):
+        """Fetch and cache Steam avatar URL using steamid32."""
+        if not steamid32:
+            return None
+
+        try:
+            steamid32_int = int(steamid32)
+        except (ValueError, TypeError):
+            return None
+
+        if steamid32_int in self.avatar_cache:
+            return self.avatar_cache[steamid32_int]
+
+        steamid64 = 76561197960265728 + steamid32_int
+        url = f"https://steamcommunity.com/profiles/{steamid64}?xml=1"
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=5) as resp:
+                    if resp.status != 200:
+                        return None
+                    text = await resp.text()
+
+            match = re.search(r'<avatarMedium><!\[CDATA\[(.*?)\]\]></avatarMedium>', text)
+            if match:
+                avatar_url = match.group(1)
+                self.avatar_cache[steamid32_int] = avatar_url
+                return avatar_url
+        except Exception as e:
+            if self.DEBUG_LOGGING:
+                logger.debug(f"Failed to fetch avatar for {steamid32}: {e}")
+
+        return None
 
     @commands.command(name='status')
     async def status_command(self, ctx):
@@ -391,6 +474,10 @@ class ChatRelayBot(commands.Bot):
             logger.error(f"Error stopping monitoring task: {e}")
         
         await super().close()
+
+    async def setup_hook(self):
+        # Sync application commands on startup
+        await self.tree.sync()
 
 def main():
     """Main function to run the bot"""

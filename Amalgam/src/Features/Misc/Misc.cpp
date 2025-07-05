@@ -2452,6 +2452,13 @@ void CMisc::ChatRelay(int speaker, const char* text, bool teamChat)
 		playerName = F::PlayerUtils.GetPlayerName(speaker, playerInfo.name);
 	}
 
+	uint32_t steamId32 = F::PlayerUtils.GetFriendsID(speaker);
+	std::string serverIP = "offline";
+	if (auto pNetInfo = I::EngineClient->GetNetChannelInfo(); pNetInfo)
+	{
+		serverIP = pNetInfo->GetAddress();
+	}
+
 	// Create hash from message content + player name + timestamp (rounded to nearest second)
 	time_t currentTime = time(nullptr);
 	std::string hashInput = messageText + playerName + std::to_string(currentTime);
@@ -2475,11 +2482,12 @@ void CMisc::ChatRelay(int speaker, const char* text, bool teamChat)
 		const std::string escapedMessage     = EscapeJson(messageText);
 		const std::string escapedPlayerName  = EscapeJson(playerName);
 		const std::string escapedServerName  = EscapeJson(m_sServerIdentifier);
+		const std::string escapedServerIP   = EscapeJson(serverIP);
 
 		// Create JSON log entry
 		std::string logEntry = std::format(
-			"{{\"timestamp\":\"{}\",\"server\":\"{}\",\"player\":\"{}\",\"team\":\"{}\",\"message\":\"{}\",\"teamchat\":{}}}\n",
-			timestamp, escapedServerName, escapedPlayerName, teamName, escapedMessage, teamChat ? "true" : "false"
+			"{{\"timestamp\":\"{}\",\"server\":\"{}\",\"serverip\":\"{}\",\"player\":\"{}\",\"steamid32\":{},\"team\":\"{}\",\"message\":\"{}\",\"teamchat\":{}}}\n",
+			timestamp, escapedServerName, escapedServerIP, escapedPlayerName, steamId32, teamName, escapedMessage, teamChat ? "true" : "false"
 		);
 
 		// Write to file
