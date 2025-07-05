@@ -946,7 +946,7 @@ void CMisc::MicSpam(CTFPlayer* pLocal)
 	if (!m_tMicSpamTimer.Run(2.0f))
 		return;
 
-	std::vector<std::string> micCommands = {
+	static std::vector<std::string> micCommands = {
 		"+voicerecord",
 		"voice_loopback 0",
 		"voice_inputfromfile 0",
@@ -962,10 +962,11 @@ void CMisc::MicSpam(CTFPlayer* pLocal)
 		"sv_voicequality 1"
 	};
 
-	int randomIndex = SDK::RandomInt(0, micCommands.size() - 1);
-	std::string selectedCommand = micCommands[randomIndex];
-
-	I::EngineClient->ClientCmd_Unrestricted(selectedCommand.c_str());
+	static size_t currentIndex = 0;
+	
+	I::EngineClient->ClientCmd_Unrestricted(micCommands[currentIndex].c_str());
+	
+	currentIndex = (currentIndex + 1) % micCommands.size();
 }
 
 
@@ -973,42 +974,76 @@ void CMisc::MicSpam(CTFPlayer* pLocal)
 void CMisc::AchievementSpam(CTFPlayer* pLocal)
 {
 	if (!Vars::Misc::Automation::AchievementSpam.Value || !pLocal || !pLocal->IsAlive())
+	{
+		m_eAchievementSpamState = AchievementSpamState::IDLE;
 		return;
-	if (!m_tAchievementSpamTimer.Run(20.0f))
-		return;
+	}
 
 	const auto pAchievementMgr = reinterpret_cast<IAchievementMgr * (*)(void)>(U::Memory.GetVFunc(I::EngineClient, 114))();
 	if (!pAchievementMgr)
-		return;
-
-	// Kill Everyone You Meet achievement by default
-	// TODO: add a new column to edit achievement timer & number directly in cheat (like you did with autoitem)
-	int specificAchievementID = 1105;
-
-	IAchievement* pAchievement = nullptr;
-	for (int i = 0; i < pAchievementMgr->GetAchievementCount(); i++)
 	{
-		IAchievement* pCurrentAchievement = pAchievementMgr->GetAchievementByIndex(i);
-		if (pCurrentAchievement && pCurrentAchievement->GetAchievementID() == specificAchievementID)
-		{
-			pAchievement = pCurrentAchievement;
-			break;
-		}
+		m_eAchievementSpamState = AchievementSpamState::IDLE;
+		return;
 	}
 
-	if (!pAchievement || !pAchievement->GetName())
-		return;
+	switch (m_eAchievementSpamState)
+	{
+	case AchievementSpamState::IDLE:
+	{
+		if (!m_tAchievementSpamTimer.Run(20.0f))
+			return;
 
-	I::SteamUserStats->RequestCurrentStats();
-	I::SteamUserStats->ClearAchievement(pAchievement->GetName());
-	I::SteamUserStats->StoreStats();
+		// Kill Everyone You Meet achievement by default
+		// TODO: add a new column to edit achievement timer & number directly in cheat (like you did with autoitem)
+		int specificAchievementID = 1105;
 
-	Sleep(100);
+		IAchievement* pAchievement = nullptr;
+		for (int i = 0; i < pAchievementMgr->GetAchievementCount(); i++)
+		{
+			IAchievement* pCurrentAchievement = pAchievementMgr->GetAchievementByIndex(i);
+			if (pCurrentAchievement && pCurrentAchievement->GetAchievementID() == specificAchievementID)
+			{
+				pAchievement = pCurrentAchievement;
+				break;
+			}
+		}
 
-	I::SteamUserStats->RequestCurrentStats();
+		if (!pAchievement || !pAchievement->GetName())
+			return;
 
-	pAchievementMgr->AwardAchievement(specificAchievementID);
-	I::SteamUserStats->StoreStats();
+		m_iAchievementSpamID = specificAchievementID;
+		m_sAchievementSpamName = pAchievement->GetName();
+		m_eAchievementSpamState = AchievementSpamState::CLEARING;
+		break;
+	}
+	case AchievementSpamState::CLEARING:
+	{
+		I::SteamUserStats->RequestCurrentStats();
+		I::SteamUserStats->ClearAchievement(m_sAchievementSpamName);
+		I::SteamUserStats->StoreStats();
+
+		m_tAchievementDelayTimer.Update();
+		m_eAchievementSpamState = AchievementSpamState::WAITING;
+		break;
+	}
+	case AchievementSpamState::WAITING:
+	{
+		if (!m_tAchievementDelayTimer.Run(0.1f))
+			return;
+
+		m_eAchievementSpamState = AchievementSpamState::AWARDING;
+		break;
+	}
+	case AchievementSpamState::AWARDING:
+	{
+		I::SteamUserStats->RequestCurrentStats();
+		pAchievementMgr->AwardAchievement(m_iAchievementSpamID);
+		I::SteamUserStats->StoreStats();
+
+		m_eAchievementSpamState = AchievementSpamState::IDLE;
+		break;
+	}
+	}
 }
 
 void CMisc::RandomVotekick(CTFPlayer* pLocal)

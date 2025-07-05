@@ -46,6 +46,17 @@ class CMisc
 	int m_iCurrentChatSpamIndex = 0;
 	int m_iLastKilledPlayer = 0;
 	std::string m_sLastKilledPlayerName;
+	enum class AchievementSpamState
+	{
+		IDLE,
+		CLEARING,
+		WAITING,
+		AWARDING
+	};
+	AchievementSpamState m_eAchievementSpamState = AchievementSpamState::IDLE;
+	Timer m_tAchievementDelayTimer;
+	int m_iAchievementSpamID = -1;
+	const char* m_sAchievementSpamName = nullptr;
 
 public:
 	void RunPre(CTFPlayer* pLocal, CUserCmd* pCmd);
