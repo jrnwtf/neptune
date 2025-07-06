@@ -5,6 +5,8 @@
 #include "../../Backtrack/Backtrack.h"
 #include "../../Players/PlayerUtils.h"
 
+#ifndef TEXTMODE
+
 static inline bool GetPlayerChams(CBaseEntity* pPlayer, CBaseEntity* pEntity, CTFPlayer* pLocal, Chams_t* pChams, bool bEnemy, bool bTeam)
 {
 	if (Vars::Chams::Player::Local.Value && pPlayer == pLocal
@@ -535,3 +537,5 @@ bool CChams::RenderViewmodel(const DrawModelState_t& pState, const ModelRenderIn
 
 	return true;
 }
+
+#endif

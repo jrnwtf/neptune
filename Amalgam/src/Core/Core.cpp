@@ -282,6 +282,7 @@ void CCore::Unload()
 	U::BytePatches.Unload();
 	H::Events.Unload();
 
+#ifndef TEXTMODE
 	if (F::Menu.m_bIsOpen)
 		I::MatSystemSurface->SetCursorAlwaysVisible(false);
 	F::Visuals.RestoreWorldModulation();
@@ -296,6 +297,7 @@ void CCore::Unload()
 	U::ConVars.FindVar("cl_wpn_sway_interp")->SetValue(0.f);
 	U::ConVars.FindVar("cl_wpn_sway_scale")->SetValue(0.f);
 
+#endif
 	Sleep(250);
 	F::NamedPipe::Shutdown();
 	U::ConVars.Unload();

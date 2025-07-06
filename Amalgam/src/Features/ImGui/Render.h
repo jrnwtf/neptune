@@ -1,7 +1,15 @@
 #pragma once
 #include "../../SDK/SDK.h"
-#include <ImGui/imgui_impl_dx9.h>
+
+// Dear ImGui main header – always included to share core definitions (ImColor, ImFont, etc.)
 #include <ImGui/imgui.h>
+
+#ifndef TEXTMODE
+#  include <ImGui/imgui_impl_dx9.h>
+#else
+// When building in TEXTMODE we don't have access to DirectX headers, so just forward-declare the type
+struct IDirect3DDevice9;
+#endif
 
 class CRender
 {

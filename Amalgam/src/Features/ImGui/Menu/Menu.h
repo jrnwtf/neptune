@@ -3,6 +3,8 @@
 #include "../Render.h"
 #include <ImGui/TextEditor.h>
 
+#ifndef TEXTMODE
+
 struct Output_t
 {
 	std::string m_sFunction;
@@ -41,3 +43,5 @@ public:
 };
 
 ADD_FEATURE(CMenu, Menu);
+
+#endif

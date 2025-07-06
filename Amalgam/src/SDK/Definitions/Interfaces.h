@@ -18,17 +18,25 @@
 #include "Interfaces/IInput.h"
 #include "Interfaces/IInputSystem.h"
 #include "Interfaces/IKeyValuesSystem.h"
+#ifndef TEXTMODE
 #include "Interfaces/IMaterialSystem.h"
 #include "Interfaces/IMatSystemSurface.h"
+#endif
 #include "Interfaces/IMoveHelper.h"
 #include "Interfaces/IPanel.h"
+#ifndef TEXTMODE
 #include "Interfaces/IStudioRender.h"
+#endif
 #include "Interfaces/IUniformRandomStream.h"
 #include "Interfaces/IVEngineClient.h"
+#ifndef TEXTMODE
 #include "Interfaces/IViewRender.h"
+#endif
 #include "Interfaces/IVModelInfo.h"
+#ifndef TEXTMODE
 #include "Interfaces/IVModelRender.h"
 #include "Interfaces/IVRenderView.h"
+#endif
 #include "Interfaces/Prediction.h"
 #include "Interfaces/SteamInterfaces.h"
 #include "Interfaces/ViewRenderBeams.h"

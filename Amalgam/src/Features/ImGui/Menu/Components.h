@@ -9,6 +9,8 @@
 #include <ImGui/imgui_stdlib.h>
 #include <numeric>
 
+#ifndef TEXTMODE
+
 Enum(FTabs, None = 0, Horizontal = 0, Vertical = 1 << 0, HorizontalIcons = 0, VerticalIcons = 1 << 1, AlignCenter = 0, AlignLeft = 1 << 2, AlignRight = 1 << 3, AlignTop = 1 << 4, AlignBottom = 1 << 5, AlignForward = 0, AlignReverse = 1 << 6, BarLeft = 1 << 7, BarRight = 1 << 8, BarTop = 1 << 9, BarBottom = 1 << 10, Fit = 1 << 11);
 Enum(FText, None = 0, Middle = 1 << 0, Right = 1 << 1, SameLine = 1 << 2);
 Enum(FButton, None = 0, Left = 1 << 0, Right = 1 << 1, Fit = 1 << 2, SameLine = 1 << 3, NoUpper = 1 << 4);
@@ -2823,3 +2825,5 @@ namespace ImGui
 	WRAPPER(FColorPicker, Color_t, VA_LIST(int iOffset = 0, int iFlags = 0), VA_LIST(&val, iOffset, iFlags))
 	WRAPPER(FColorPicker, Gradient_t, VA_LIST(bool bStart = true, int iOffset = 0, int iFlags = 0), VA_LIST(bStart ? &val.StartColor : &val.EndColor, iOffset, iFlags))
 }
+
+#endif

@@ -11,6 +11,8 @@
 #include "../../Misc/Misc.h"
 #include "../../Output/Output.h"
 
+#ifndef TEXTMODE
+
 void CMenu::DrawMenu()
 {
 	using namespace ImGui;
@@ -4503,3 +4505,5 @@ void CMenu::MenuNavEng(int iTab)
 	} break;
 	}
 }
+
+#endif

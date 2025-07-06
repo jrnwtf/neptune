@@ -11,6 +11,7 @@
 #include "../Features/NavBot/NavEngine/Controllers/Controller.h"
 #include "../Features/NavBot/NavEngine/NavEngine.h"
 #include "../Features/NavBot/NavBot.h"
+#ifndef TEXTMODE
 
 MAKE_HOOK(CViewRender_LevelInit, U::Memory.GetVFunc(I::ViewRender, 1), void,
 	void* rcx)
@@ -39,3 +40,6 @@ MAKE_HOOK(CViewRender_LevelInit, U::Memory.GetVFunc(I::ViewRender, 1), void,
 	CALL_ORIGINAL(rcx);
     HOOK_CATCH("CViewRender_LevelInit", void)
 }
+
+
+#endif

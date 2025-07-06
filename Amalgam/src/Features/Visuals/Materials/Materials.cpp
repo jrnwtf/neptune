@@ -7,6 +7,8 @@
 #include <filesystem>
 #include <fstream>
 
+#ifndef TEXTMODE
+
 IMaterial* CMaterials::Create(char const* szName, KeyValues* pKV)
 {
 	IMaterial* pMaterial = I::MaterialSystem->CreateMaterial(szName, pKV);
@@ -358,3 +360,5 @@ void CMaterials::RemoveMaterial(const char* sName)
 
 	m_bLoaded = true;
 }
+
+#endif

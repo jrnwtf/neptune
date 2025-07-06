@@ -1,6 +1,9 @@
 #include "CameraWindow.h"
 
 #include "../../Visuals/Materials/Materials.h"
+#include "../../../SDK/Definitions/Interfaces/IViewRender.h"
+
+#ifndef TEXTMODE
 
 // Draws camera to the screen
 void CCameraWindow::Draw()
@@ -105,3 +108,5 @@ void CCameraWindow::Unload()
 		m_pCameraTexture = nullptr;
 	}
 }
+
+#endif

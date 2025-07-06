@@ -1,6 +1,8 @@
 #pragma once
 #include "../../../SDK/SDK.h"
 
+#ifndef TEXTMODE
+
 class CChams
 {
 	bool GetChams(CTFPlayer* pLocal, CBaseEntity* pEntity, Chams_t* pChams);
@@ -39,3 +41,5 @@ public:
 };
 
 ADD_FEATURE(CChams, Chams)
+
+#endif
