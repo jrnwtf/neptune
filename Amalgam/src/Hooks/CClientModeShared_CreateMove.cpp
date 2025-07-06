@@ -190,16 +190,17 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 #ifndef TEXTMODE
 	F::Spectate.CreateMove(pCmd);
 #endif
+try {
 	F::Misc.RunPre(pLocal, pCmd);
 	F::AutoJoin.Run(pLocal);
 	F::AutoItem.Run(pLocal);
-	F::GameObjectiveController.Update();
 	F::EnginePrediction.Start(pLocal, pCmd);
-	try {
-		F::Aimbot.Run(pLocal, pWeapon, pCmd);
-	} catch (...) {}
-	F::NavBot.Run(pLocal, pWeapon, pCmd);
-	F::FollowBot.Run(pLocal, pWeapon, pCmd);
+	F::Aimbot.Run(pLocal, pWeapon, pCmd);
+	if (F::NavEngine.isReady()) {
+		F::NavBot.Run(pLocal, pWeapon, pCmd);
+		F::FollowBot.Run(pLocal, pWeapon, pCmd);
+		F::GameObjectiveController.Update();
+	}
 	F::NavEngine.Run(pCmd);
 	F::EnginePrediction.End(pLocal, pCmd);
 
@@ -207,6 +208,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	F::Misc.RunPost(pLocal, pCmd, *pSendPacket);
 	F::PacketManip.Run(pLocal, pWeapon, pCmd, pSendPacket);
 	F::Resolver.CreateMove(pLocal);
+} catch (...) {}
 #ifndef TEXTMODE
 	F::Visuals.CreateMove(pLocal, pWeapon);
 	F::Backtrack.BacktrackToCrosshair(pCmd);
