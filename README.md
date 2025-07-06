@@ -41,12 +41,18 @@
 
 ###### AVX2 may be faster than SSE2 though not all CPUs support it (Steam > Help > System Information > Processor Information > AVX2). Freetype uses freetype as the text rasterizer and includes some custom fonts, which results in better looking text but larger DLL sizes. Textmode disables amalgam's and some of the game's visuals. PDBs are for developer use.
 NOTE: Textmode doesnt fully make the game textmode. You need to preload [TextModeTF2](https://github.com/TheGameEnhancer2004/TextmodeTF2) module to make the game textmode.
-# Amalgam
+# Neptune
 
 [![GitHub Repo stars](https://img.shields.io/github/stars/mistakesmultiplied/neptune)](/../../stargazers)
 [![GitHub commit activity (branch)](https://img.shields.io/github/commit-activity/m/mistakesmultiplied/neptune)](/../../commits/)
 
 [VAC bypass](https://github.com/danielkrupinski/VAC-Bypass-Loader) and [Xenos](https://github.com/DarthTon/Xenos/releases) recommended
+
+
+
+
+
+
 
 # TF2 Chat Relay Discord Bot
 
