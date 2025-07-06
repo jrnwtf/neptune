@@ -3,6 +3,8 @@
 #include "../../EnginePrediction/EnginePrediction.h"
 #include "../../CritHack/CritHack.h"
 
+#ifndef TEXTMODE
+
 bool CProjectileSimulation::GetInfoMain(CTFPlayer* pPlayer, CTFWeaponBase* pWeapon, Vec3 vAngles, ProjectileInfo& tProjInfo, int iFlags, float flAutoCharge)
 {
 	if (!pPlayer || !pPlayer->IsAlive() || pPlayer->IsAGhost() || pPlayer->IsTaunting() || !pWeapon)
@@ -629,3 +631,5 @@ Vec3 CProjectileSimulation::GetVelocity()
 	obj->GetVelocity(&vOut, nullptr);
 	return vOut;
 }
+
+#endif

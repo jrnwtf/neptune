@@ -7,12 +7,16 @@ inline bool IsTextModeEnabled()
 #ifdef TEXTMODE
 	return true;
 #else
-	if (I::CVar)
+	static const bool kCachedResult = []() -> bool
 	{
-		const char* textmode = I::CVar->GetCommandLineValue("-textmode");
-		return textmode != nullptr;
-	}
-	return false;
+		if (I::CVar)
+		{
+			const char* textmode = I::CVar->GetCommandLineValue("-textmode");
+			return textmode != nullptr;
+		}
+		return false;
+	}();
+	return kCachedResult;
 #endif
 }
 

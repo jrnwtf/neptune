@@ -14,6 +14,8 @@
 #include <queue>
 #include <unordered_set>
 
+#ifndef TEXTMODE
+
 MAKE_SIGNATURE(CBaseAnimating_DrawServerHitboxes, "server.dll", "44 88 44 24 ? 53 48 81 EC", 0x0);
 MAKE_SIGNATURE(GetServerAnimating, "server.dll", "48 83 EC ? 8B D1 85 C9 7E ? 48 8B 05", 0x0);
 MAKE_SIGNATURE(CTFPlayer_FireEvent, "client.dll", "48 89 5C 24 ? 48 89 74 24 ? 48 89 7C 24 ? 4C 89 64 24 ? 55 41 56 41 57 48 8D 6C 24", 0x0);
@@ -1029,3 +1031,5 @@ void CVisuals::CreateMove(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	if (flNewRatio != flOldRatio)
 		r_aspectratio->SetValue(flNewRatio);
 }
+
+#endif

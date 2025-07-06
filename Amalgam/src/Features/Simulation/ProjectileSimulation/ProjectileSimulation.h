@@ -2,6 +2,8 @@
 #include "../../../SDK/SDK.h"
 #include "../MovementSimulation/MovementSimulation.h"
 
+#ifndef TEXTMODE
+
 Enum(ProjSim,
 	None = 0,
 	Trace = 1 << 0,
@@ -62,3 +64,5 @@ public:
 };
 
 ADD_FEATURE(CProjectileSimulation, ProjSim)
+
+#endif

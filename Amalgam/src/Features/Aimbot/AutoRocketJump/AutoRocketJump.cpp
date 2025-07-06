@@ -3,6 +3,8 @@
 #include "../../Simulation/ProjectileSimulation/ProjectileSimulation.h"
 #include "../../Simulation/MovementSimulation/MovementSimulation.h"
 
+#ifndef TEXTMODE
+
 bool CAutoRocketJump::SetAngles(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
 	m_vAngles = pCmd->viewangles;
@@ -272,3 +274,4 @@ void CAutoRocketJump::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* p
 
 	m_bRunning = m_iFrame != -1; // prevent stuff like anti-aim messing with timing
 }
+#endif

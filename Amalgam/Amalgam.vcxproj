@@ -1105,6 +1105,7 @@
     <ClCompile Include="src\BytePatches\BytePatches.cpp" />
     <ClCompile Include="src\Core\Core.cpp" />
     <ClCompile Include="src\DllMain.cpp" />
+    <ClCompile Include="src\TextmodeStubs.cpp" />
     <ClCompile Include="src\Features\Aimbot\Aimbot.cpp" />
     <ClCompile Include="src\Features\Aimbot\AimbotGlobal\AimbotGlobal.cpp" />
     <ClCompile Include="src\Features\Aimbot\AimbotHitscan\AimbotHitscan.cpp" />

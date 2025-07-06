@@ -3,6 +3,8 @@
 #include "../../EnginePrediction/EnginePrediction.h"
 #include <numeric>
 
+#ifndef TEXTMODE
+
 // we'll use this to set current player's command, without it CGameMovement::CheckInterval will try to access a nullptr
 static CUserCmd DummyCmd = {};
 
@@ -747,3 +749,5 @@ float CMovementSimulation::GetPredictedDelta(CBaseEntity* pEntity)
 	}
 	return TICK_INTERVAL;
 }
+
+#endif

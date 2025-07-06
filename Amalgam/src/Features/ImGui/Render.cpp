@@ -10,6 +10,8 @@
 #include "Fonts/Roboto/RobotoBlack.h"
 #include "Menu/Menu.h"
 
+#ifndef TEXTMODE
+
 void CRender::Render(IDirect3DDevice9* pDevice)
 {
 	using namespace ImGui;
@@ -167,3 +169,5 @@ void CRender::Initialize(IDirect3DDevice9* pDevice)
 	LoadStyle();
 }
 #endif 
+
+#endif
