@@ -24,6 +24,8 @@ MAKE_HOOK(CSkyboxView_Enable3dSkyboxFog, S::CSkyboxView_Enable3dSkyboxFog(), voi
 		float blend[3] = { float(Vars::Colors::FogModulation.Value.r) / 255.f, float(Vars::Colors::FogModulation.Value.g) / 255.f, float(Vars::Colors::FogModulation.Value.b) / 255.f };
 		pRenderContext->FogColor3fv(blend);
 	}
+#else
+	CALL_ORIGINAL(rcx);
 #endif
     HOOK_CATCH("CSkyboxView_Enable3dSkyboxFog", void)
 }

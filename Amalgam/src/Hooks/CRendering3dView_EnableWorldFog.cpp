@@ -23,6 +23,8 @@ MAKE_HOOK(CRendering3dView_EnableWorldFog, S::CRendering3dView_EnableWorldFog(),
 		float blend[3] = { float(Vars::Colors::FogModulation.Value.r) / 255.f, float(Vars::Colors::FogModulation.Value.g) / 255.f, float(Vars::Colors::FogModulation.Value.b) / 255.f };
 		pRenderContext->FogColor3fv(blend);
 	}
+#else
+	CALL_ORIGINAL();
 #endif
     HOOK_CATCH("CRendering3dView_EnableWorldFog", void)
 }
