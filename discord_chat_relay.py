@@ -72,7 +72,7 @@ class ChatRelayBot(commands.Bot):
         
         # State tracking
         self.processed_files: Dict[str, int] = {}  # filename -> last_position
-        self.processed_messages: Set[str] = set()  # message hashes to prevent duplicates
+        self.processed_messages: Dict[str, float] = {}  # message hashes to prevent duplicates
         self.target_channel = None
         self.monitor_task = None
         
@@ -243,19 +243,19 @@ class ChatRelayBot(commands.Bot):
             steamid32 = data.get('steamid32')
             server_ip = data.get('serverip', '')
             
-            # Create message hash to prevent duplicates
-            message_hash = f"{timestamp}:{player}:{message}"
-            if message_hash in self.processed_messages:
-                return
-                
-            self.processed_messages.add(message_hash)
-            
-            # Clean up old hashes (keep only configured amount)
+            # Smarter duplicate prevention: ignore repeated player+message within 4 s
+            msg_key = f"{player}:{message}"
+            now_ts = time.time()
+            last_ts = self.processed_messages.get(msg_key)
+            if last_ts and (now_ts - last_ts) < 4:
+                return  # duplicate within timeout
+
+            self.processed_messages[msg_key] = now_ts
+
+            # Clean up old entries to keep dict size reasonable
             if len(self.processed_messages) > self.MAX_MESSAGE_CACHE:
-                cleanup_count = min(100, len(self.processed_messages) // 10)
-                old_hashes = list(self.processed_messages)[:cleanup_count]
-                for old_hash in old_hashes:
-                    self.processed_messages.discard(old_hash)
+                cutoff = now_ts - 10  # keep last ~10 s window for speed
+                self.processed_messages = {k: v for k, v in self.processed_messages.items() if v >= cutoff}
             
             # Format and send Discord message with extended details
             await self.send_chat_to_discord(timestamp, server, server_ip, player, team, message, is_team_chat, steamid32)
