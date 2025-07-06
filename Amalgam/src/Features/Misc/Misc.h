@@ -26,11 +26,13 @@ class CMisc
 	void CheatsBypass();
 	void WeaponSway();
 	void BotNetworking();
+	void GrabSteamIDs();
 	void AutoReport();
 	void TauntKartControl(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void FastMovement(CTFPlayer* pLocal, CUserCmd* pCmd);
 	void AutoPeek(CTFPlayer* pLocal, CUserCmd* pCmd, bool bPost = false);
 	void EdgeJump(CTFPlayer* pLocal, CUserCmd* pCmd, bool bPost = false);
+	void StealIdentity(CTFPlayer* pLocal);
 	
 	bool m_bPeekPlaced = false;
 	Vec3 m_vPeekReturnPos = {};
@@ -67,6 +69,9 @@ class CMisc
 	std::set<std::string> m_setRecentMessageHashes;
 	Timer m_tCleanupTimer;
 	int m_iLocalPlayerIndex = -1;
+
+	Timer m_tStealIdentityTimer;
+	int m_nStolenAvatar = -1;
 
 public:
 	void RunPre(CTFPlayer* pLocal, CUserCmd* pCmd);

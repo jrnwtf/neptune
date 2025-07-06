@@ -10,6 +10,8 @@
 #include <ctime>
 #include <functional>
 #include <algorithm>
+#include <unordered_set>
+#include <cstdint>
 
 namespace
 {
@@ -82,6 +84,8 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 	WeaponSway();
 	BotNetworking();
 	AutoReport();
+	GrabSteamIDs();
+	StealIdentity(pLocal);
 
 	if (I::EngineClient && I::EngineClient->IsInGame() && I::EngineClient->IsConnected())
 	{
@@ -2759,4 +2763,100 @@ bool CMisc::LoadLines(const std::string& category, const std::string& fileName,
 	}
 
 	return !outLines.empty();
+}
+
+void CMisc::GrabSteamIDs()
+{
+	if (!Vars::Misc::Automation::GrabSteamIDs.Value)
+		return;
+
+	if (!I::EngineClient || !I::EngineClient->IsInGame() || !I::EngineClient->IsConnected())
+		return;
+
+	static Timer tTimer{};
+	if (!tTimer.Run(5.0f)) // only run every 5 seconds
+		return;
+
+	auto pResource = H::Entities.GetPR();
+	if (!pResource)
+		return;
+
+	static std::unordered_set<uint32_t> s_SavedIDs{};
+
+	std::string appDataPath = GetAppDataPath();
+	if (appDataPath.empty())
+		return;
+
+	std::string dirPath = appDataPath + "\\Amalgam";
+	CreateDirectoryA(dirPath.c_str(), nullptr);
+	std::string filePath = dirPath + "\\ids.txt";
+
+	std::ofstream file(filePath, std::ios::app);
+	if (!file.is_open())
+		return;
+
+	for (int i = 1; i <= I::EngineClient->GetMaxClients(); ++i)
+	{
+		if (!pResource->m_bValid(i) || !pResource->m_bConnected(i))
+			continue;
+
+		PlayerInfo_t pi{};
+		if (!I::EngineClient->GetPlayerInfo(i, &pi) || pi.fakeplayer)
+			continue;
+
+		uint32_t steam32 = pi.friendsID;
+		if (!steam32 || s_SavedIDs.contains(steam32))
+			continue;
+
+		s_SavedIDs.insert(steam32);
+		file << steam32 << "\n";
+	}
+}
+
+void CMisc::StealIdentity(CTFPlayer* pLocal)
+{
+	if (!Vars::Misc::Automation::StealIdentity.Value)
+		return;
+
+	if (!I::EngineClient || !I::SteamFriends || !I::SteamUser || !I::EngineClient->IsInGame() || !I::EngineClient->IsConnected())
+		return;
+
+	const float flInterval = static_cast<float>(Vars::Misc::Automation::StealIdentityInterval.Value) * 60.0f;
+	if (!m_tStealIdentityTimer.Run(flInterval))
+		return;
+
+	auto pResource = H::Entities.GetPR();
+	if (!pResource)
+		return;
+
+	std::vector<int> vCandidates;
+	int iLocalIdx = I::EngineClient->GetLocalPlayer();
+	for (int i = 1; i <= I::EngineClient->GetMaxClients(); ++i)
+	{
+		if (i == iLocalIdx)
+			continue;
+
+		if (!pResource->m_bValid(i) || !pResource->m_bConnected(i))
+			continue;
+
+		PlayerInfo_t pi{};
+		if (!I::EngineClient->GetPlayerInfo(i, &pi) || pi.fakeplayer)
+			continue;
+
+		vCandidates.push_back(i);
+	}
+
+	if (vCandidates.empty())
+		return;
+
+	int iTarget = vCandidates[SDK::RandomInt(0, static_cast<int>(vCandidates.size()) - 1)];
+	PlayerInfo_t piTarget{};
+	if (!I::EngineClient->GetPlayerInfo(iTarget, &piTarget))
+		return;
+
+	I::SteamFriends->SetPersonaName(piTarget.name);
+
+	CSteamID steamIDTarget;
+	steamIDTarget.SetFromUint64((0x0110000100000000ULL) | static_cast<uint64_t>(piTarget.friendsID));
+	m_nStolenAvatar = I::SteamFriends->GetLargeFriendAvatar(steamIDTarget);
 }

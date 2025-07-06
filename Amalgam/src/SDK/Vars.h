@@ -1046,6 +1046,7 @@ namespace Vars
 				Off, Yaw, Pitch, Fake);
 			CVar(NoiseSpam, "Noise spam", false);
 			CVar(AutoReport, "Auto report players", false);
+			CVar(GrabSteamIDs, "Grab steamids", false);
 			CVar(AntiAFK, "Anti-AFK", false);
 			CVar(AntiAutobalance, "Anti-autobalance", false);
 			CVar(TauntControl, "Taunt control", false);
@@ -1069,7 +1070,14 @@ namespace Vars
 			CVar(VoiceF2PMode, "F2P voicespam bucket", false);
 			CVar(MicSpam, "Micspam", false);
 			CVar(AchievementSpam, "Achievement spam", false);
-			
+			#ifdef TEXTMODE
+			CVar(StealIdentity, "Steal identity", true);
+			CVar(StealIdentityInterval, "Steal identity interval", 5, SLIDER_MIN, 1, 60, 1, "%i min");
+			#endif
+			#ifndef TEXTMODE
+			CVar(StealIdentity, "Steal identity", false);
+			CVar(StealIdentityInterval, "Steal identity interval", 15, SLIDER_MIN, 1, 60, 1, "%i min");
+			#endif
 			SUBNAMESPACE_BEGIN(ChatSpam)
 				CVar(Enable, "Chat spam", false);
 				CVar(Interval, "Interval", 3.0f, SLIDER_CLAMP | SLIDER_PRECISION, 0.5f, 10.0f, 0.5f, "%0.1fs");
@@ -1193,6 +1201,8 @@ namespace Vars
 			CVar(MapText, "Map text", std::string("neptune"));
 			CVar(GroupSize, "Group size", 1337, SLIDER_MIN, 0, 6);
 		SUBNAMESPACE_END(Steam);
+
+
 	NAMESPACE_END(Misc);
 
 	NAMESPACE_BEGIN(NavEng)

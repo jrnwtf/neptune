@@ -1,5 +1,11 @@
-#include "../SDK/SDK.h"
+// Disable these hooks entirely in text-only builds.
+#ifdef TEXTMODE
 
+// (intentionally left empty – scoreboard avatar hooks are not required)
+
+#else
+
+#include "../SDK/SDK.h"
 #include "../Features/Players/PlayerUtils.h"
 
 // are all of these even used? (i.e. CTFHudMatchStatus_UpdatePlayerAvatar)
@@ -99,6 +105,8 @@ MAKE_HOOK(SectionedListPanel_SetItemFgColor, S::SectionedListPanel_SetItemFgColo
 		}
 	}
 
-	CALL_ORIGINAL(rcx, itemID, color);
+    CALL_ORIGINAL(rcx, itemID, color);
     HOOK_CATCH("SectionedListPanel_SetItemFgColor", void)
 }
+
+#endif // TEXTMODE guard

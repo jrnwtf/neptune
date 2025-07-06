@@ -1647,6 +1647,12 @@ void CMenu::MenuMisc(int iTab)
 						FSlider(Vars::Misc::Automation::AutoVoteMapOption, FSliderEnum::Right);
 					}
 					PopTransparent();
+					FToggle(Vars::Misc::Automation::StealIdentity, FToggleEnum::Left);
+					PushTransparent(!FGet(Vars::Misc::Automation::StealIdentity));
+					{
+						FSlider(Vars::Misc::Automation::StealIdentityInterval, FSliderEnum::Right);
+					}
+					PopTransparent();
 				} EndSection();
 				if (Section("Auto-Item"))
 				{
