@@ -26,6 +26,18 @@
 #define SNAP_SIZE_EPSILON (10.f - MATH_EPSILON)
 #define SNAP_NOISE_EPSILON (0.5f + MATH_EPSILON)
 
+#define SAFE_CALL(expr)                \
+    do                                \
+    {                                 \
+        try                           \
+        {                             \
+            expr;                     \
+        }                             \
+        catch (...)                   \
+        {                             \
+        }                             \
+    } while (false)
+
 struct CmdHistory_t
 {
 	Vec3 m_vAngle;
@@ -188,31 +200,30 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 
 	// run features
 #ifndef TEXTMODE
-	F::Spectate.CreateMove(pCmd);
+	SAFE_CALL(F::Spectate.CreateMove(pCmd));
 #endif
-try {
-	F::Misc.RunPre(pLocal, pCmd);
-	F::AutoJoin.Run(pLocal);
-	F::AutoItem.Run(pLocal);
-	F::EnginePrediction.Start(pLocal, pCmd);
-	F::Aimbot.Run(pLocal, pWeapon, pCmd);
+	SAFE_CALL(F::Misc.RunPre(pLocal, pCmd));
+	SAFE_CALL(F::AutoJoin.Run(pLocal));
+	SAFE_CALL(F::AutoItem.Run(pLocal));
+	SAFE_CALL(F::EnginePrediction.Start(pLocal, pCmd));
+	SAFE_CALL(F::Aimbot.Run(pLocal, pWeapon, pCmd));
 	if (F::NavEngine.isReady()) {
-		F::NavBot.Run(pLocal, pWeapon, pCmd);
-		F::FollowBot.Run(pLocal, pWeapon, pCmd);
-		F::GameObjectiveController.Update();
+		SAFE_CALL(F::NavBot.Run(pLocal, pWeapon, pCmd));
+		SAFE_CALL(F::FollowBot.Run(pLocal, pWeapon, pCmd));
+		SAFE_CALL(F::GameObjectiveController.Update());
 	}
-	F::NavEngine.Run(pCmd);
-	F::EnginePrediction.End(pLocal, pCmd);
+	SAFE_CALL(F::NavEngine.Run(pCmd));
+	SAFE_CALL(F::EnginePrediction.End(pLocal, pCmd));
 
-	F::CritHack.Run(pLocal, pWeapon, pCmd);
-	F::Misc.RunPost(pLocal, pCmd, *pSendPacket);
-	F::PacketManip.Run(pLocal, pWeapon, pCmd, pSendPacket);
-	F::Resolver.CreateMove(pLocal);
-} catch (...) {}
+	SAFE_CALL(F::CritHack.Run(pLocal, pWeapon, pCmd));
+	SAFE_CALL(F::Misc.RunPost(pLocal, pCmd, *pSendPacket));
+	SAFE_CALL(F::PacketManip.Run(pLocal, pWeapon, pCmd, pSendPacket));
+	SAFE_CALL(F::Resolver.CreateMove(pLocal));
+
 #ifndef TEXTMODE
-	F::Visuals.CreateMove(pLocal, pWeapon);
-	F::Backtrack.BacktrackToCrosshair(pCmd);
-	F::NoSpread.Run(pLocal, pWeapon, pCmd);
+	SAFE_CALL(F::Visuals.CreateMove(pLocal, pWeapon));
+	SAFE_CALL(F::Backtrack.BacktrackToCrosshair(pCmd));
+	SAFE_CALL(F::NoSpread.Run(pLocal, pWeapon, pCmd));
 #endif
 
 	{
@@ -223,8 +234,10 @@ try {
 		else if (bWasSet || !bCanChoke)
 			*pSendPacket = true, bWasSet = false;
 	}
-	F::Ticks.CreateMove(pLocal, pCmd, pSendPacket);
-	F::AntiAim.Run(pLocal, pWeapon, pCmd, *pSendPacket);
+	try {
+		F::Ticks.CreateMove(pLocal, pCmd, pSendPacket);
+		F::AntiAim.Run(pLocal, pWeapon, pCmd, *pSendPacket);
+	} catch (...) {}
 
 #ifndef TEXTMODE
 	if (pLocal)
@@ -254,7 +267,7 @@ try {
 		}
 	}
 #endif
-
+try {
 	G::Choking = !*pSendPacket;
 	G::LastUserCmd = pCmd;
 	F::NoSpreadHitscan.AskForPlayerPerf();
@@ -315,6 +328,6 @@ try {
 			}
 		}
 	}
-
+	} catch (...) {}
 	return false;
 }
