@@ -45,21 +45,26 @@ void CAutoJoin::Run(CTFPlayer* pLocal)
 		{
 			if (Vars::Misc::Automation::RandomClassSwitch.Value)
 			{
-				bool needsInitialClassSelect = (pLocal->m_iTeamNum() == TF_TEAM_RED || pLocal->m_iTeamNum() == TF_TEAM_BLUE) && 
-					pLocal->m_iClass() == 0; // Class is not selected yet
+				static int iCurrentRandomClass = GetRandomClass();
 
-				float switchInterval = Vars::Misc::Automation::RandomClassInterval.Value * 60.f; // Convert minutes to seconds
-				
-				if (needsInitialClassSelect || tRandomClassTimer.Run(switchInterval))
+				const float flSwitchInterval = Vars::Misc::Automation::RandomClassInterval.Value * 60.f;
+
+				if (iCurrentRandomClass < 1 || iCurrentRandomClass > 9 || tRandomClassTimer.Run(flSwitchInterval))
 				{
-					// Select random class
-					int selectedClass = GetRandomClass();
-					
-					if (pLocal->m_iTeamNum() == TF_TEAM_RED || pLocal->m_iTeamNum() == TF_TEAM_BLUE)
-					{
-						I::EngineClient->ClientCmd_Unrestricted(std::format("joinclass {}", m_aClassNames[selectedClass - 1]).c_str());
-						I::EngineClient->ClientCmd_Unrestricted("menuclosed");
-					}
+					iCurrentRandomClass = GetRandomClass();
+				}
+
+				if (pLocal->m_iTeamNum() == TF_TEAM_RED || pLocal->m_iTeamNum() == TF_TEAM_BLUE)
+				{
+					I::EngineClient->ClientCmd_Unrestricted(std::format("joinclass {}", m_aClassNames[iCurrentRandomClass - 1]).c_str());
+					I::EngineClient->ClientCmd_Unrestricted("menuclosed");
+				}
+				else
+				{
+					I::EngineClient->ClientCmd_Unrestricted("team_ui_setup");
+					I::EngineClient->ClientCmd_Unrestricted("menuopen");
+					I::EngineClient->ClientCmd_Unrestricted("autoteam");
+					I::EngineClient->ClientCmd_Unrestricted("menuclosed");
 				}
 			}
 			else if (Vars::Misc::Automation::ForceClass.Value)
