@@ -5,8 +5,10 @@ MAKE_SIGNATURE(CThirdPersonManager_Update, "client.dll", "40 53 48 83 EC ? 48 8B
 MAKE_HOOK(CThirdPersonManager_Update, S::CThirdPersonManager_Update(), void,
 	void* rcx)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CThirdPersonManager_Update[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
 #endif
+    HOOK_CATCH("CThirdPersonManager_Update", void)
 }

@@ -52,6 +52,7 @@ MAKE_SIGNATURE(IHasGenericMeter_GetMeterMultiplier, "client.dll", "F3 0F 10 81 ?
 MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 21), bool,
 		  CClientModeShared* rcx, float flInputSampleTime, CUserCmd* pCmd)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CClientModeShared_CreateMove[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, flInputSampleTime, pCmd);
@@ -330,4 +331,5 @@ try {
 	}
 	} catch (...) {}
 	return false;
+    HOOK_CATCH("CClientModeShared_CreateMove", bool)
 }

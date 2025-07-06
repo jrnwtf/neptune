@@ -10,6 +10,7 @@ MAKE_SIGNATURE(CTFInput_ApplyMouse_InCond_Call, "client.dll", "84 C0 74 ? F3 0F 
 MAKE_HOOK(CTFPlayerShared_InCond, S::CTFPlayerShared_InCond(), bool,
 	void* rcx, ETFCond nCond)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFPlayerShared_InCond[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, nCond);
@@ -60,4 +61,5 @@ MAKE_HOOK(CTFPlayerShared_InCond, S::CTFPlayerShared_InCond(), bool,
 	}
 
 	return CALL_ORIGINAL(rcx, nCond);
+    HOOK_CATCH("CTFPlayerShared_InCond", bool)
 }

@@ -7,6 +7,7 @@ MAKE_SIGNATURE(CNetChannel_SendDatagram, "engine.dll", "40 55 57 41 56 48 8D AC 
 MAKE_HOOK(CNetChannel_SendDatagram, S::CNetChannel_SendDatagram(), int,
 	CNetChannel* pNetChan, bf_write* datagram)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CNetChannel_SendDatagram[DEFAULT_BIND])
 		return CALL_ORIGINAL(pNetChan, datagram);
@@ -19,4 +20,5 @@ MAKE_HOOK(CNetChannel_SendDatagram, S::CNetChannel_SendDatagram(), int,
 	const int iReturn = CALL_ORIGINAL(pNetChan, datagram);
 	F::Backtrack.RestorePing(pNetChan);
 	return iReturn;
+    HOOK_CATCH("CNetChannel_SendDatagram", int)
 }

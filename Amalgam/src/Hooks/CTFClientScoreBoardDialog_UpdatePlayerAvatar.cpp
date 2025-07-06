@@ -15,6 +15,7 @@ static int CTFClientScoreBoardDialog_UpdatePlayerList_PlayerIndex;
 MAKE_HOOK(CTFClientScoreBoardDialog_UpdatePlayerAvatar, S::CTFClientScoreBoardDialog_UpdatePlayerAvatar(), void,
 	void* rcx, int playerIndex, KeyValues* kv)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFClientScoreBoardDialog_UpdatePlayerAvatar[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, playerIndex, kv);
@@ -25,11 +26,13 @@ MAKE_HOOK(CTFClientScoreBoardDialog_UpdatePlayerAvatar, S::CTFClientScoreBoardDi
 	int iType = 0; F::PlayerUtils.GetPlayerName(playerIndex, nullptr, &iType);
 	if (iType != 1)
 		CALL_ORIGINAL(rcx, playerIndex, kv);
+    HOOK_CATCH("CTFClientScoreBoardDialog_UpdatePlayerAvatar", void)
 }
 
 MAKE_HOOK(CTFMatchSummary_UpdatePlayerAvatar, S::CTFMatchSummary_UpdatePlayerAvatar(), void,
 	void* rcx, int playerIndex, KeyValues* kv)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFClientScoreBoardDialog_UpdatePlayerAvatar[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, playerIndex, kv);
@@ -38,11 +41,13 @@ MAKE_HOOK(CTFMatchSummary_UpdatePlayerAvatar, S::CTFMatchSummary_UpdatePlayerAva
 	int iType = 0; F::PlayerUtils.GetPlayerName(playerIndex, nullptr, &iType);
 	if (iType != 1)
 		CALL_ORIGINAL(rcx, playerIndex, kv);
+    HOOK_CATCH("CTFMatchSummary_UpdatePlayerAvatar", void)
 }
 
 MAKE_HOOK(CTFHudMannVsMachineScoreboard_UpdatePlayerAvatar, S::CTFHudMannVsMachineScoreboard_UpdatePlayerAvatar(), void,
 	void* rcx, int playerIndex, KeyValues* kv)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFClientScoreBoardDialog_UpdatePlayerAvatar[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, playerIndex, kv);
@@ -51,11 +56,13 @@ MAKE_HOOK(CTFHudMannVsMachineScoreboard_UpdatePlayerAvatar, S::CTFHudMannVsMachi
 	int iType = 0; F::PlayerUtils.GetPlayerName(playerIndex, nullptr, &iType);
 	if (iType != 1)
 		CALL_ORIGINAL(rcx, playerIndex, kv);
+    HOOK_CATCH("CTFHudMannVsMachineScoreboard_UpdatePlayerAvatar", void)
 }
 
 MAKE_HOOK(CTFHudMatchStatus_UpdatePlayerAvatar, S::CTFHudMatchStatus_UpdatePlayerAvatar(), void,
 	void* rcx, int playerIndex, KeyValues* kv)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFClientScoreBoardDialog_UpdatePlayerAvatar[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, playerIndex, kv);
@@ -64,11 +71,13 @@ MAKE_HOOK(CTFHudMatchStatus_UpdatePlayerAvatar, S::CTFHudMatchStatus_UpdatePlaye
 	int iType = 0; F::PlayerUtils.GetPlayerName(playerIndex, nullptr, &iType);
 	if (iType != 1)
 		CALL_ORIGINAL(rcx, playerIndex, kv);
+    HOOK_CATCH("CTFHudMatchStatus_UpdatePlayerAvatar", void)
 }
 
 MAKE_HOOK(SectionedListPanel_SetItemFgColor, S::SectionedListPanel_SetItemFgColor(), void,
 	void* rcx, int itemID, Color_t color)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFClientScoreBoardDialog_UpdatePlayerAvatar[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, itemID, color);
@@ -91,4 +100,5 @@ MAKE_HOOK(SectionedListPanel_SetItemFgColor, S::SectionedListPanel_SetItemFgColo
 	}
 
 	CALL_ORIGINAL(rcx, itemID, color);
+    HOOK_CATCH("SectionedListPanel_SetItemFgColor", void)
 }

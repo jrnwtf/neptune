@@ -5,6 +5,7 @@
 MAKE_HOOK(CClientModeShared_OverrideView, U::Memory.GetVFunc(I::ClientModeShared, 16), void,
 	void* rcx, CViewSetup* pView)
 {
+    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CClientModeShared_OverrideView[DEFAULT_BIND])
@@ -22,4 +23,5 @@ MAKE_HOOK(CClientModeShared_OverrideView, U::Memory.GetVFunc(I::ClientModeShared
 		F::Visuals.ThirdPerson(pLocal, pView);
 	}
 #endif
+    HOOK_CATCH("CClientModeShared_OverrideView", void)
 }

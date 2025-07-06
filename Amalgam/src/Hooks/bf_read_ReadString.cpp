@@ -8,6 +8,7 @@ MAKE_SIGNATURE(CHudVote_MsgFunc_VoteStart_ReadString_Call, "client.dll", "8B 4B 
 MAKE_HOOK(bf_read_ReadString, S::bf_read_ReadString(), bool,
 	void* rcx, char* pStr, int maxLen, bool bLine, int* pOutNumChars)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::bf_read_ReadString[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pStr, maxLen, bLine, pOutNumChars);
@@ -54,4 +55,5 @@ MAKE_HOOK(bf_read_ReadString, S::bf_read_ReadString(), bool,
 	}
 
 	return bReturn;
+    HOOK_CATCH("bf_read_ReadString", bool)
 }

@@ -5,5 +5,7 @@ MAKE_SIGNATURE(CTFParty_BAnyMemberWithoutCompetitiveAccess, "client.dll", "48 63
 MAKE_HOOK(CTFParty_BAnyMemberWithoutCompetitiveAccess, S::CTFParty_BAnyMemberWithoutCompetitiveAccess(), bool,
 	void* rcx)
 {
+    HOOK_TRY
 	return false;
+    HOOK_CATCH("CTFParty_BAnyMemberWithoutCompetitiveAccess", bool)
 }

@@ -7,6 +7,7 @@ MAKE_SIGNATURE(CTFClientScoreBoardDialog_UpdatePlayerList_Jump, "client.dll", "8
 MAKE_HOOK(CTFPlayerShared_IsPlayerDominated, S::CTFPlayerShared_IsPlayerDominated(), bool,
 	void* rcx, int index)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFPlayerShared_IsPlayerDominated[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, index);
@@ -22,4 +23,5 @@ MAKE_HOOK(CTFPlayerShared_IsPlayerDominated, S::CTFPlayerShared_IsPlayerDominate
 		*static_cast<uintptr_t*>(_AddressOfReturnAddress()) = dwJump;
 
 	return bResult;
+    HOOK_CATCH("CTFPlayerShared_IsPlayerDominated", bool)
 }

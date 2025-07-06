@@ -20,6 +20,7 @@ class CSOTFPartyMember_activity
 MAKE_HOOK(CTFParty_GetMemberActivity, S::CTFParty_GetMemberActivity(), void*,
 	void* rcx, int idx)
 {
+    HOOK_TRY
 	void* pPartyMemberActivity = CALL_ORIGINAL( rcx, idx );
 	if ( reinterpret_cast< uintptr_t >( _ReturnAddress( ) ) != S::CTFPartyClient_GetPartyMemberStatus_call() )
 	{
@@ -34,4 +35,5 @@ MAKE_HOOK(CTFParty_GetMemberActivity, S::CTFParty_GetMemberActivity(), void*,
 		//return pPartyMemberActivity;
 	}
 	return pPartyMemberActivity;
+    HOOK_CATCH("CTFParty_GetMemberActivity", void*)
 }

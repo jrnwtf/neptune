@@ -12,6 +12,7 @@ static int iLastTickCount{ 0 };
 MAKE_HOOK(CBaseEntity_FireBullets, S::CBaseEntity_FireBullets(), void,
 		  void* rcx, CBaseCombatWeapon* pWeapon, const FireBulletsInfo_t& info, bool bDoEffects, int nDamageType, int nCustomDamageType)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CBaseEntity_FireBullets[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pWeapon, info, nDamageType, nDamageType, nCustomDamageType);
@@ -134,5 +135,6 @@ MAKE_HOOK(CBaseEntity_FireBullets, S::CBaseEntity_FireBullets(), void,
 	default:
 		H::Particles.ParticleTracer(sString.c_str(), trace.startpos, trace.endpos, pLocal->entindex(), iAttachment, true);
 	}
+    HOOK_CATCH("CBaseEntity_FireBullets", void)
 }
 #endif

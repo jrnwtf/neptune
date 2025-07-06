@@ -17,6 +17,7 @@
 MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVFunc(I::BaseClientDLL, 35), void,
 		  void* rcx, ClientFrameStage_t curStage)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IBaseClientDLL_FrameStageNotify[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, curStage);
@@ -129,4 +130,5 @@ MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVFunc(I::BaseClientDLL, 
 			tKey.m_bIsReleased = tKey.m_bIsReleased || bOldIsReleased;
 		}
 	}
+    HOOK_CATCH("IBaseClientDLL_FrameStageNotify", void)
 }

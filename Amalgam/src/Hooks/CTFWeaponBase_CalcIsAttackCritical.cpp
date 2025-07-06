@@ -7,6 +7,7 @@ MAKE_SIGNATURE(CTFWeaponBase_CalcIsAttackCritical, "client.dll", "48 89 74 24 ? 
 MAKE_HOOK(CTFWeaponBase_CalcIsAttackCritical, S::CTFWeaponBase_CalcIsAttackCritical(), void,
 	void* rcx)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFWeaponBase_CalcIsAttackCritical[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -32,4 +33,5 @@ MAKE_HOOK(CTFWeaponBase_CalcIsAttackCritical, S::CTFWeaponBase_CalcIsAttackCriti
 	CALL_ORIGINAL(rcx);
 	pWeapon->m_iWeaponMode() = nPreviousWeaponMode;
 	//I::GlobalVars->framecount = nPreviousFrameCount;
+    HOOK_CATCH("CTFWeaponBase_CalcIsAttackCritical", void)
 }

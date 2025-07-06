@@ -6,5 +6,7 @@ MAKE_SIGNATURE(CHudItemEffectMeter_Weapon_C_TFWeaponBase_IsEnabled, "client.dll"
 // Probably the least bloated thing in this cheat after my updates
 MAKE_HOOK(CHudItemEffectMeter_Weapon_C_TFWeaponBase_IsEnabled, S::CHudItemEffectMeter_Weapon_C_TFWeaponBase_IsEnabled(), bool)
 {
+    HOOK_TRY
 	return Vars::Visuals::Other::KillstreakWeapons.Value ? true : CALL_ORIGINAL();
+    HOOK_CATCH("CHudItemEffectMeter_Weapon_C_TFWeaponBase_IsEnabled", bool)
 }

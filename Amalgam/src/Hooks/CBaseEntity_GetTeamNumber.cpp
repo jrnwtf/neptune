@@ -6,6 +6,7 @@ MAKE_SIGNATURE(CBaseEntity_GetTeamNumber_retaddr, "client.dll", "83 F8 03 74 45"
 MAKE_HOOK(CBaseEntity_GetTeamNumber, S::CBaseEntity_GetTeamNumber(), int,
 	void* thisptr)
 {
+    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CBaseEntity_GetTeamNumber[DEFAULT_BIND])
@@ -17,4 +18,5 @@ MAKE_HOOK(CBaseEntity_GetTeamNumber, S::CBaseEntity_GetTeamNumber(), int,
 #endif
 
 	return CALL_ORIGINAL(thisptr);
+    HOOK_CATCH("CBaseEntity_GetTeamNumber", int)
 } 

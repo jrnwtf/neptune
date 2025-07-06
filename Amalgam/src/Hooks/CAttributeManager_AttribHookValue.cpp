@@ -11,6 +11,7 @@ static int ColorToInt(const Color_t& col)
 MAKE_HOOK(CAttributeManager_AttribHookInt, S::CAttributeManager_AttribHookInt(), int,
 	int value, const char* name, void* econent, void* buffer, bool isGlobalConstString)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CAttributeManager_AttribHookValue[DEFAULT_BIND])
 		return CALL_ORIGINAL(value, name, econent, buffer, isGlobalConstString);
@@ -33,4 +34,5 @@ MAKE_HOOK(CAttributeManager_AttribHookInt, S::CAttributeManager_AttribHookInt(),
 	}
 
 	return CALL_ORIGINAL(value, name, econent, buffer, isGlobalConstString);
+    HOOK_CATCH("CAttributeManager_AttribHookInt", int)
 }

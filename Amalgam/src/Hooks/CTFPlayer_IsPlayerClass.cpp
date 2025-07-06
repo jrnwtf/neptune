@@ -6,6 +6,7 @@ MAKE_SIGNATURE(CDamageAccountPanel_DisplayDamageFeedback_IsPlayerClass_Call, "cl
 MAKE_HOOK(CTFPlayer_IsPlayerClass, S::CTFPlayer_IsPlayerClass(), bool,
 	void* rcx, int iClass)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFPlayer_IsPlayerClass[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, iClass);
@@ -18,4 +19,5 @@ MAKE_HOOK(CTFPlayer_IsPlayerClass, S::CTFPlayer_IsPlayerClass(), bool,
 		return false;
 
 	return CALL_ORIGINAL(rcx, iClass);
+    HOOK_CATCH("CTFPlayer_IsPlayerClass", bool)
 }

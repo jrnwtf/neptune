@@ -7,6 +7,7 @@ MAKE_SIGNATURE(CBaseAnimating_UpdateClientSideAnimation, "client.dll", "48 89 5C
 MAKE_HOOK(CBaseAnimating_UpdateClientSideAnimation, S::CBaseAnimating_UpdateClientSideAnimation(), void,
 	void* rcx)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CBaseAnimating_UpdateClientSideAnimation[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -19,4 +20,5 @@ MAKE_HOOK(CBaseAnimating_UpdateClientSideAnimation, S::CBaseAnimating_UpdateClie
 		return;
 
 	CALL_ORIGINAL(rcx);
+    HOOK_CATCH("CBaseAnimating_UpdateClientSideAnimation", void)
 }

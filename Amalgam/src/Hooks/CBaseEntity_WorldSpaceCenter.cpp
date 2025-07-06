@@ -7,6 +7,7 @@ MAKE_SIGNATURE(MainViewOrigin, "client.dll", "48 8D 05 ? ? ? ? C3 CC CC CC CC CC
 MAKE_HOOK(CBaseEntity_WorldSpaceCenter, S::CBaseEntity_WorldSpaceCenter(), const Vec3&,
 	void* rcx)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CBaseEntity_WorldSpaceCenter[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -16,4 +17,5 @@ MAKE_HOOK(CBaseEntity_WorldSpaceCenter, S::CBaseEntity_WorldSpaceCenter(), const
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());
 
 	return dwRetAddr == dwDesired && Vars::Visuals::Effects::DrawDamageNumbersThroughWalls.Value ? S::MainViewOrigin.Call<const Vec3&>() : CALL_ORIGINAL(rcx);
+    HOOK_CATCH("CBaseEntity_WorldSpaceCenter", const Vec3&)
 }

@@ -7,6 +7,7 @@ MAKE_SIGNATURE(GetPlayerNameForSteamID_GetFriendPersonaName_Call, "client.dll", 
 MAKE_HOOK(ISteamFriends_GetFriendPersonaName, U::Memory.GetVFunc(I::SteamFriends, 7), const char*,
 	void* rcx, CSteamID steamIDFriend)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::ISteamFriends_GetFriendPersonaName[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, steamIDFriend);
@@ -35,4 +36,5 @@ MAKE_HOOK(ISteamFriends_GetFriendPersonaName, U::Memory.GetVFunc(I::SteamFriends
 	}
 
 	return CALL_ORIGINAL(rcx, steamIDFriend);
+    HOOK_CATCH("ISteamFriends_GetFriendPersonaName", const char*)
 }

@@ -19,6 +19,7 @@
 MAKE_HOOK(IBaseClientDLL_DispatchUserMessage, U::Memory.GetVFunc(I::BaseClientDLL, 36), bool,
 	void* rcx, UserMessageType type, bf_read& msgData)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IBaseClientDLL_DispatchUserMessage[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, type, msgData);
@@ -180,4 +181,5 @@ MAKE_HOOK(IBaseClientDLL_DispatchUserMessage, U::Memory.GetVFunc(I::BaseClientDL
 
 	msgData.Seek(0);
 	return CALL_ORIGINAL(rcx, type, msgData);
+    HOOK_CATCH("IBaseClientDLL_DispatchUserMessage", bool)
 }

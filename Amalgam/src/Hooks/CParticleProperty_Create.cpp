@@ -10,6 +10,7 @@ MAKE_SIGNATURE(CWeaponMedigun_ManageChargeEffect_CreateName_Call, "client.dll", 
 MAKE_HOOK(CParticleProperty_CreateName, S::CParticleProperty_CreateName(), void*,
 		  void* rcx, const char* pszParticleName, ParticleAttachment_t iAttachType, const char* pszAttachmentName)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CParticleProperty_Create[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pszParticleName, iAttachType, pszAttachmentName);
@@ -89,11 +90,13 @@ MAKE_HOOK(CParticleProperty_CreateName, S::CParticleProperty_CreateName(), void*
 	}
 
 	return CALL_ORIGINAL(rcx, pszParticleName, iAttachType, pszAttachmentName);
+    HOOK_CATCH("CParticleProperty_CreateName", void*)
 }
 
 MAKE_HOOK(CParticleProperty_CreatePoint, S::CParticleProperty_CreatePoint(), void*,
 		  void* rcx, const char* pszParticleName, ParticleAttachment_t iAttachType, int iAttachmentPoint, Vector vecOriginOffset)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CParticleProperty_Create[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pszParticleName, iAttachType, iAttachmentPoint, vecOriginOffset);
@@ -256,5 +259,6 @@ MAKE_HOOK(CParticleProperty_CreatePoint, S::CParticleProperty_CreatePoint(), voi
 	}
 
 	return CALL_ORIGINAL(rcx, pszParticleName, iAttachType, iAttachmentPoint, vecOriginOffset);
+    HOOK_CATCH("CParticleProperty_CreatePoint", void*)
 }
 #endif

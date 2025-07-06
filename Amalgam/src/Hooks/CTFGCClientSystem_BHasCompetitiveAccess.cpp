@@ -4,5 +4,7 @@ MAKE_SIGNATURE(CTFGCClientSystem_BHasCompetitiveAccess, "client.dll", "48 83 EC 
 
 MAKE_HOOK(CTFGCClientSystem_BHasCompetitiveAccess, S::CTFGCClientSystem_BHasCompetitiveAccess(), bool)
 {
+    HOOK_TRY
 	return true;
+    HOOK_CATCH("CTFGCClientSystem_BHasCompetitiveAccess", bool)
 }

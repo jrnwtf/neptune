@@ -3,6 +3,8 @@
 #include <MinHook/MinHook.h>
 #include <unordered_map>
 #include <string>
+#include <type_traits>
+#include <format>
 
 class CHook
 {
@@ -31,6 +33,16 @@ public:
 	}
 };
 
+template <typename T>
+inline T DefaultHookReturn()
+{
+	static T t{};
+	return t;
+}
+
+template <>
+inline void DefaultHookReturn<void>() {}
+
 #define MAKE_HOOK(name, address, type, ...) \
 namespace Hooks \
 { \
@@ -42,7 +54,7 @@ namespace Hooks \
 		type __fastcall Func(__VA_ARGS__); \
 	} \
 } \
-bool Hooks::name::Init() { if (address) {Hook.Create(reinterpret_cast<void*>(address), Func); return true;} else { SDK::Output("Amalgam", std::format("Failed to initialize hook: {}", #name).c_str(), { 255, 150, 175, 255 }, true, true); return false;}} \
+bool Hooks::name::Init() { if (address) { Hook.Create(reinterpret_cast<void*>(address), Func); return true; } else { SDK::Output("Amalgam", std::format("Failed to initialize hook: {}", #name).c_str(), { 255, 150, 175, 255 }, true, true); return false; }} \
 type __fastcall Hooks::name::Func(__VA_ARGS__)
 
 #define CALL_ORIGINAL Hook.As<FN>()
@@ -61,3 +73,34 @@ public:
 };
 
 ADD_FEATURE_CUSTOM(CHooks, Hooks, U);
+
+// --------------------
+//  Universal try/catch helpers for hook bodies
+//  Usage:
+//      MAKE_HOOK(MyHook, addr, int, void* rcx)
+//      {
+//          HOOK_TRY
+//          // ... existing logic ...
+//          return 1;
+//          HOOK_CATCH("MyHook", int)
+//      }
+// --------------------
+
+#ifndef HOOK_TRY
+#define HOOK_TRY try {
+#endif
+
+#ifndef HOOK_CATCH
+#define HOOK_CATCH(name, retType)                                                   \
+    }                                                                               \
+    catch (const std::exception& ex) {                                              \
+        SDK::Output("Amalgam", std::format("[Hook] {} threw: {}", name, ex.what()).c_str(), {255, 80, 80, 255}, true, true); \
+        if constexpr (!std::is_void_v<retType>)                                     \
+            return DefaultHookReturn<retType>();                                    \
+    }                                                                               \
+    catch (...) {                                                                   \
+        SDK::Output("Amalgam", std::format("[Hook] {} threw unknown exception", name).c_str(), {255, 80, 80, 255}, true, true); \
+        if constexpr (!std::is_void_v<retType>)                                     \
+            return DefaultHookReturn<retType>();                                    \
+    }
+#endif

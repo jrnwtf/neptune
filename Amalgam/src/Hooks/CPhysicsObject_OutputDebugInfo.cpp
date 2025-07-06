@@ -6,6 +6,7 @@ MAKE_SIGNATURE(CPhysicsObject_OutputDebugInfo, "vphysics.dll", "48 8B C4 55 53 5
 MAKE_HOOK(CPhysicsObject_OutputDebugInfo, S::CPhysicsObject_OutputDebugInfo(), void,
     void* rcx)
 {
+    HOOK_TRY
     //CALL_ORIGINAL(rcx);
 
 	/*
@@ -18,4 +19,5 @@ MAKE_HOOK(CPhysicsObject_OutputDebugInfo, S::CPhysicsObject_OutputDebugInfo(), v
 
 	SDK::Output("Linear drag", std::format("{:.6f}, {:.6f}, {:.6f} ({})", *reinterpret_cast<float*>(uintptr_t(rcx) + 10i64 * 4), *reinterpret_cast<float*>(uintptr_t(rcx) + 11i64 * 4), *reinterpret_cast<float*>(uintptr_t(rcx) + 12i64 * 4), *reinterpret_cast<float*>(uintptr_t(rcx) + 22i64 * 4)).c_str());
 	SDK::Output("Angular drag", std::format("{:.6f}, {:.6f}, {:.6f} ({})", *reinterpret_cast<float*>(uintptr_t(rcx) + 13i64 * 4), *reinterpret_cast<float*>(uintptr_t(rcx) + 14i64 * 4), *reinterpret_cast<float*>(uintptr_t(rcx) + 15i64 * 4), *reinterpret_cast<float*>(uintptr_t(rcx) + 23i64 * 4)).c_str());
+    HOOK_CATCH("CPhysicsObject_OutputDebugInfo", void)
 }

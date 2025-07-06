@@ -7,6 +7,7 @@ MAKE_SIGNATURE(ClientModeTFNormal_UpdateSteamRichPresence, "client.dll", "4C 8B 
 MAKE_HOOK(ClientModeTFNormal_UpdateSteamRichPresence, S::ClientModeTFNormal_UpdateSteamRichPresence(), void,
 	void* rcx)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::ClientModeTFNormal_UpdateSteamRichPresence[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -14,4 +15,5 @@ MAKE_HOOK(ClientModeTFNormal_UpdateSteamRichPresence, S::ClientModeTFNormal_Upda
 
 	if (!F::Misc.SteamRPC())
 		CALL_ORIGINAL(rcx);
+    HOOK_CATCH("ClientModeTFNormal_UpdateSteamRichPresence", void)
 }

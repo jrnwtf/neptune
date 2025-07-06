@@ -5,6 +5,7 @@ MAKE_SIGNATURE(CL_CheckForPureServerWhitelist, "engine.dll", "40 56 48 83 EC ? 8
 MAKE_HOOK(CL_CheckForPureServerWhitelist, S::CL_CheckForPureServerWhitelist(), void,
 	void **pFilesToReload)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CL_CheckForPureServerWhitelist[DEFAULT_BIND])
 		return CALL_ORIGINAL(pFilesToReload);
@@ -14,4 +15,5 @@ MAKE_HOOK(CL_CheckForPureServerWhitelist, S::CL_CheckForPureServerWhitelist(), v
 		return;
 
 	CALL_ORIGINAL(pFilesToReload);
+    HOOK_CATCH("CL_CheckForPureServerWhitelist", void)
 }

@@ -6,6 +6,7 @@ MAKE_SIGNATURE(CNetGraphPanel_DrawTextFields_GetClientInterpAmount_Call2, "clien
 
 MAKE_HOOK(GetClientInterpAmount, S::GetClientInterpAmount(), float)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::GetClientInterpAmount[DEFAULT_BIND])
 		return CALL_ORIGINAL();
@@ -16,4 +17,5 @@ MAKE_HOOK(GetClientInterpAmount, S::GetClientInterpAmount(), float)
 	const auto dwRetAddr = uintptr_t(_ReturnAddress());
 	
 	return dwRetAddr == dwDesired1 || dwRetAddr == dwDesired2 ? CALL_ORIGINAL() : 0.f;
+    HOOK_CATCH("GetClientInterpAmount", float)
 }

@@ -6,6 +6,7 @@ MAKE_SIGNATURE(CTFPlayer_FireEvent_UpdateStepSound_Call, "client.dll", "4D 85 F6
 MAKE_HOOK(CTFPlayer_UpdateStepSound, S::CTFPlayer_UpdateStepSound(), void,
 	void* rcx, void* psurface, const Vec3& vecOrigin, const Vec3& vecVelocity)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFPlayer_UpdateStepSound[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, psurface, vecOrigin, vecVelocity);
@@ -18,4 +19,5 @@ MAKE_HOOK(CTFPlayer_UpdateStepSound, S::CTFPlayer_UpdateStepSound(), void,
 		return;
 
 	CALL_ORIGINAL(rcx, psurface, vecOrigin, vecVelocity);
+    HOOK_CATCH("CTFPlayer_UpdateStepSound", void)
 }

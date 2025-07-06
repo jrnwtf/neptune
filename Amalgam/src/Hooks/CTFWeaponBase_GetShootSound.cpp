@@ -5,6 +5,7 @@ MAKE_SIGNATURE(CTFWeaponBase_GetShootSound, "client.dll", "40 55 56 41 56 48 83 
 MAKE_HOOK(CTFWeaponBase_GetShootSound, S::CTFWeaponBase_GetShootSound(), const char*,
 	void* rcx, int iIndex)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFWeaponBase_GetShootSound[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, iIndex);
@@ -36,4 +37,5 @@ MAKE_HOOK(CTFWeaponBase_GetShootSound, S::CTFWeaponBase_GetShootSound(), const c
 	}
 
 	return CALL_ORIGINAL(rcx, iIndex);
+    HOOK_CATCH("CTFWeaponBase_GetShootSound", const char*)
 }

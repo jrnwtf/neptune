@@ -18,6 +18,7 @@
 MAKE_HOOK(IEngineVGui_Paint, U::Memory.GetVFunc(I::EngineVGui, 14), void,
 	void* rcx, int iMode)
 {
+    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IEngineVGui_Paint[DEFAULT_BIND])
@@ -70,4 +71,5 @@ MAKE_HOOK(IEngineVGui_Paint, U::Memory.GetVFunc(I::EngineVGui, 14), void,
 		H::Draw.End();
 	}
 #endif
+    HOOK_CATCH("IEngineVGui_Paint", void)
 }

@@ -5,6 +5,7 @@ MAKE_SIGNATURE(R_DrawSkyBox, "engine.dll", "48 8B C4 55 53 41 54 41 55", 0x0);
 MAKE_HOOK(R_DrawSkyBox, S::R_DrawSkyBox(), void,
 	float zFar, int nDrawFlags)
 {
+    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::R_DrawSkyBox[DEFAULT_BIND])
@@ -20,4 +21,5 @@ MAKE_HOOK(R_DrawSkyBox, S::R_DrawSkyBox(), void,
 	CALL_ORIGINAL(zFar, nDrawFlags);
 	sv_skyname->SetValue(sOriginal.c_str());
 #endif
+    HOOK_CATCH("R_DrawSkyBox", void)
 }

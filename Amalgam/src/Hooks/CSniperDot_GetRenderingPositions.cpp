@@ -12,6 +12,7 @@ static Vec3 vEyeAngles;
 MAKE_HOOK(CSniperDot_GetRenderingPositions, S::CSniperDot_GetRenderingPositions(), bool,
 	void* rcx, CTFPlayer* pPlayer, Vec3& vecAttachment, Vec3& vecEndPos, float& flSize)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CSniperDot_GetRenderingPositions[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pPlayer, vecAttachment, vecEndPos, flSize);
@@ -26,11 +27,13 @@ MAKE_HOOK(CSniperDot_GetRenderingPositions, S::CSniperDot_GetRenderingPositions(
 	}
 
 	return CALL_ORIGINAL(rcx, pPlayer, vecAttachment, vecEndPos, flSize);
+    HOOK_CATCH("CSniperDot_GetRenderingPositions", bool)
 }
 
 MAKE_HOOK(CBasePlayer_EyePosition, S::CBasePlayer_EyePosition(), Vec3*,
 	void* rcx, void* rdx)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CSniperDot_GetRenderingPositions[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, rdx);
@@ -42,11 +45,13 @@ MAKE_HOOK(CBasePlayer_EyePosition, S::CBasePlayer_EyePosition(), Vec3*,
 		return &vEyePosition;
 
 	return CALL_ORIGINAL(rcx, rdx);
+    HOOK_CATCH("CBasePlayer_EyePosition", Vec3*)
 }
 
 MAKE_HOOK(CTFPlayer_EyeAngles, S::CTFPlayer_EyeAngles(), Vec3*,
 	void* rcx)
 {
+    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CSniperDot_GetRenderingPositions[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -58,4 +63,5 @@ MAKE_HOOK(CTFPlayer_EyeAngles, S::CTFPlayer_EyeAngles(), Vec3*,
 		return &vEyeAngles;
 
 	return CALL_ORIGINAL(rcx);
+    HOOK_CATCH("CTFPlayer_EyeAngles", Vec3*)
 }

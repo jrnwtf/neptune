@@ -73,6 +73,7 @@ struct ParticleRenderData_t
 MAKE_HOOK(COPRenderSprites_Render, S::COPRenderSprites_Render(), void,
 		  void* rcx, IMatRenderContext* pRenderContext, CParticleCollection* pParticles, void* pContext)
 {
+    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::COPRenderSprites_Render[DEFAULT_BIND])
@@ -163,11 +164,13 @@ MAKE_HOOK(COPRenderSprites_Render, S::COPRenderSprites_Render(), void,
 	CALL_ORIGINAL(rcx, pRenderContext, pParticles, pContext);
 	pRenderContext->DepthRange(0.f, 1.f);
 #endif
+    HOOK_CATCH("COPRenderSprites_Render", void)
 }
 
 MAKE_HOOK(COPRenderSprites_RenderSpriteCard, S::COPRenderSprites_RenderSpriteCard(), void,
     void* rcx, void* meshBuilder, void* pCtx, SpriteRenderInfo_t& info, int hParticle, ParticleRenderData_t* pSortList, void* pCamera)
 {
+    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
     if (!Vars::Hooks::COPRenderSprites_Render[DEFAULT_BIND])
@@ -184,11 +187,13 @@ MAKE_HOOK(COPRenderSprites_RenderSpriteCard, S::COPRenderSprites_RenderSpriteCar
         pSortList->m_nAlpha = Vars::Colors::ParticleModulation.Value.a;
     CALL_ORIGINAL(rcx, meshBuilder, pCtx, info, hParticle, pSortList, pCamera);
 #endif
+    HOOK_CATCH("COPRenderSprites_RenderSpriteCard", void)
 }
 
 MAKE_HOOK(COPRenderSprites_RenderTwoSequenceSpriteCard, S::COPRenderSprites_RenderTwoSequenceSpriteCard(), void,
     void* rcx, void* meshBuilder, void* pCtx, SpriteRenderInfo_t& info, int hParticle, ParticleRenderData_t* pSortList, void* pCamera)
 {
+    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
     if (!Vars::Hooks::COPRenderSprites_Render[DEFAULT_BIND])
@@ -205,4 +210,5 @@ MAKE_HOOK(COPRenderSprites_RenderTwoSequenceSpriteCard, S::COPRenderSprites_Rend
         pSortList->m_nAlpha = Vars::Colors::ParticleModulation.Value.a;
     CALL_ORIGINAL(rcx, meshBuilder, pCtx, info, hParticle, pSortList, pCamera);
 #endif
+    HOOK_CATCH("COPRenderSprites_RenderTwoSequenceSpriteCard", void)
 }
