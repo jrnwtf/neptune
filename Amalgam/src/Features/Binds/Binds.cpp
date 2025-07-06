@@ -4,8 +4,6 @@
 #include "../Configs/Configs.h"
 #include <functional>
 
-#ifndef TEXTMODE
-
 #define IsType(type) pVar->m_iType == typeid(type).hash_code()
 #define SetType(type, cond)\
 {\
@@ -296,4 +294,3 @@ bool CBinds::WillBeEnabled(int iBind)
 	}
 	return true;
 }
-#endif

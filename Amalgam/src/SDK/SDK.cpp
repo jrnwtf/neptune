@@ -41,10 +41,8 @@ void SDK::Output(const char* cFunction, const char* cLog, Color_t tColor,
 			OutputDebugString(std::format("{}{}{} {}\n", sLeft, cFunction, sRight, cLog).c_str());
 		if (bToast)
 			F::Notifications.Add(cLog, Vars::Logging::Lifetime.Value, 0.2f, tColor);
-#ifndef TEXTMODE
 		if (bMenu)
 			F::Menu.AddOutput(std::format("{}{}{}", sLeft, cFunction, sRight).c_str(), cLog, tColor);
-#endif
 		if (bChat)
 			I::ClientModeShared->m_pChatElement->ChatPrintf(0, std::format("{}{}{}{}\x1 {}", tColor.ToHex(), sLeft, cFunction, sRight, cLog).c_str());
 		if (bParty)
@@ -60,10 +58,8 @@ void SDK::Output(const char* cFunction, const char* cLog, Color_t tColor,
 			OutputDebugString(std::format("{}\n", cFunction).c_str());
 		if (bToast)
 			F::Notifications.Add(cFunction, Vars::Logging::Lifetime.Value, 0.2f, tColor);
-#ifndef TEXTMODE
 		if (bMenu)
 			F::Menu.AddOutput("", cFunction, tColor);
-#endif
 		if (bChat)
 			I::ClientModeShared->m_pChatElement->ChatPrintf(0, std::format("{}{}\x1", tColor.ToHex(), cFunction).c_str());
 		if (bParty)

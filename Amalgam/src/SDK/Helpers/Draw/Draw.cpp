@@ -8,8 +8,6 @@
 #include <array>
 #include <ranges>
 
-#ifndef TEXTMODE
-
 MAKE_SIGNATURE(CHudBaseDeathNotice_GetIcon, "client.dll", "40 53 48 81 EC ? ? ? ? 48 8B DA", 0x0);
 MAKE_SIGNATURE(RenderLine, "engine.dll", "48 89 5C 24 ? 48 89 74 24 ? 44 89 44 24", 0x0);
 MAKE_SIGNATURE(RenderBox, "engine.dll", "48 83 EC ? 8B 84 24 ? ? ? ? 4D 8B D8", 0x0);
@@ -754,5 +752,3 @@ void CDraw::RenderWireframeSphere(const Vector& vCenter, float flRadius, int nTh
 
 	RenderSphere(vCenter, flRadius, nTheta, nPhi, tColor, pMaterial);
 }
-
-#endif

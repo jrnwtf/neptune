@@ -5,8 +5,6 @@
 #include "../../Backtrack/Backtrack.h"
 #include "../../Players/PlayerUtils.h"
 
-#ifndef TEXTMODE
-
 static inline bool GetPlayerGlow(CBaseEntity* pPlayer, CBaseEntity* pEntity, CTFPlayer* pLocal, Glow_t* pGlow, Color_t* pColor, bool bEnemy, bool bTeam, const float flActualDistance = 0.f)
 {
 	if (Vars::Glow::Player::Local.Value && pPlayer == pLocal
@@ -781,4 +779,3 @@ void CGlow::Unload()
 		m_pRenderBuffer2 = nullptr;
 	}
 }
-#endif

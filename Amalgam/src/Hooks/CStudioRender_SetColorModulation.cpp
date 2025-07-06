@@ -1,10 +1,10 @@
 #include "../SDK/SDK.h"
-#ifndef TEXTMODE
+
 MAKE_HOOK(CStudioRender_SetColorModulation, U::Memory.GetVFunc(I::StudioRender, 27), void,
 	void* rcx, const float* pColor)
 {
     HOOK_TRY
-
+#ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CStudioRender_SetColorModulation[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pColor);
@@ -22,7 +22,6 @@ MAKE_HOOK(CStudioRender_SetColorModulation, U::Memory.GetVFunc(I::StudioRender, 
 	}
 
 	CALL_ORIGINAL(rcx, pColor);
-
+#endif
     HOOK_CATCH("CStudioRender_SetColorModulation", void)
 }
-#endif

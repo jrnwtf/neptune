@@ -3,8 +3,6 @@
 
 #include <boost/functional/hash.hpp>
 
-#ifndef TEXTMODE
-
 class CGlow
 {
 	bool GetGlow(CTFPlayer* pLocal, CBaseEntity* pEntity, Glow_t* pGlow, Color_t* pColor);
@@ -67,5 +65,3 @@ public:
 };
 
 ADD_FEATURE(CGlow, Glow)
-
-#endif

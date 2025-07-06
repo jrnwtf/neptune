@@ -3,8 +3,6 @@
 #include "../../Players/PlayerUtils.h"
 #include "../../ImGui/Menu/Menu.h"
 
-#ifndef TEXTMODE
-
 bool CRadar::GetDrawPosition(CTFPlayer* pLocal, CBaseEntity* pEntity, int& x, int& y, int& z)
 {
 	const float flRange = Vars::Radar::Main::Range.Value;
@@ -425,5 +423,3 @@ void CRadar::Run(CTFPlayer* pLocal)
 	DrawBackground();
 	DrawPoints(pLocal);
 }
-
-#endif

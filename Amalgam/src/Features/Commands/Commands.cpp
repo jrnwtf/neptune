@@ -99,13 +99,11 @@ void CCommands::Initialize()
 			SDK::Output(std::format("Value of {} is {}", sCVar, pCVar->GetString()).c_str());
 		});
 
-#ifndef TEXTMODE
 	Register("cat_menu", [](const std::deque<std::string>& vArgs)
 		{
-
 			I::MatSystemSurface->SetCursorAlwaysVisible(F::Menu.m_bIsOpen = !F::Menu.m_bIsOpen);
 		});
-#endif
+
 	Register("cat_path_to", [](std::deque<std::string> vArgs)
 		{
 			// Check if the user provided at least 3 args
@@ -135,10 +133,8 @@ void CCommands::Initialize()
 
 	Register("cat_detach", [](const std::deque<std::string>& vArgs)
 		{
-#ifndef TEXTMODE
 			if (F::Menu.m_bIsOpen)
 				I::MatSystemSurface->SetCursorAlwaysVisible(F::Menu.m_bIsOpen = false);
-#endif
 			U::Core.m_bUnload = true;
 		});
 
