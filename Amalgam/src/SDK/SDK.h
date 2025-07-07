@@ -17,6 +17,7 @@
 #include "../Utils/ConVars/ConVars.h"
 #include "../Utils/KeyHandler/KeyHandler.h"
 #include "../Utils/Hash/FNV1A.h"
+#include "../Utils/Math/Math.h"
 #include "../Utils/Timer/Timer.h"
 #include "../Utils/Feature/Feature.h"
 #include <intrin.h>
@@ -79,17 +80,15 @@ namespace SDK
 	std::string ConvertWideToUTF8(const std::wstring& source);
 
 	double PlatFloatTime();
-	int StdRandomInt(int min, int max);
-	float StdRandomFloat(float min, float max);
+	int StdRandomInt(int iMin, int iMax);
+	float StdRandomFloat(float flMin, float flMax);
 
-	int SeedFileLineHash(int seedvalue, const char* sharedname, int additionalSeed);
-	int SharedRandomInt(unsigned iseed, const char* sharedname, int iMinVal, int iMaxVal, int additionalSeed);
+	int SeedFileLineHash(int iSeed, const char* sName, int iAdditionalSeed);
+	int SharedRandomInt(unsigned iSeed, const char* sName, int iMinVal, int iMaxVal, int iAdditionalSeed);
 	void RandomSeed(int iSeed);
 	int RandomInt(int iMinVal = 0, int iMaxVal = 0x7FFF);
 	float RandomFloat(float flMinVal = 0.f, float flMaxVal = 1.f);
 	
-	int HandleToIDX(unsigned int pHandle);
-
 	bool W2S(const Vec3& vOrigin, Vec3& vScreen, bool bAlways = false);
 	bool IsOnScreen(CBaseEntity* pEntity, const matrix3x4& mTransform, float* pLeft = nullptr, float* pRight = nullptr, float* pTop = nullptr, float* pBottom = nullptr);
 	bool IsOnScreen(CBaseEntity* pEntity, Vec3 vOrigin);
@@ -99,16 +98,20 @@ namespace SDK
 	void TraceHull(const Vec3& vecStart, const Vec3& vecEnd, const Vec3& vecHullMin, const Vec3& vecHullMax, unsigned int nMask, ITraceFilter* pFilter, CGameTrace* pTrace);
 
 	bool VisPos(CBaseEntity* pSkip, const CBaseEntity* pEntity, const Vec3& vFrom, const Vec3& vTo, unsigned int nMask = MASK_SHOT | CONTENTS_GRATE);
-	bool VisPosProjectile(CBaseEntity* pSkip, const CBaseEntity* pEntity, const Vec3& vFrom, const Vec3& vTo, unsigned int nMask = MASK_SHOT | CONTENTS_GRATE);
+	bool VisPosCollideable(CBaseEntity* pSkip, const CBaseEntity* pEntity, const Vec3& vFrom, const Vec3& vTo, unsigned int nMask = MASK_SHOT | CONTENTS_GRATE);
 	bool VisPosWorld(CBaseEntity* pSkip, const CBaseEntity* pEntity, const Vec3& vFrom, const Vec3& vTo, unsigned int nMask = MASK_SHOT | CONTENTS_GRATE);
+
+	Vec3 PredictOrigin(Vec3& vOrigin, Vec3 vVelocity, float flLatency, bool bTrace = true, Vec3 vMins = {}, Vec3 vMaxs = {}, unsigned int nMask = MASK_SOLID, float flNormal = 0.f);
+	bool PredictOrigin(Vec3& vOut, Vec3& vOrigin, Vec3 vVelocity, float flLatency, bool bTrace = true, Vec3 vMins = {}, Vec3 vMaxs = {}, unsigned int nMask = MASK_SOLID, float flNormal = 0.f);
 
 	int GetRoundState();
 	int GetWinningTeam();
 	EWeaponType GetWeaponType(CTFWeaponBase* pWeapon, EWeaponType* pSecondaryType = nullptr);
-	const char* GetClassByIndex(const int nClass);
+	const char* GetClassByIndex(const int nClass, bool bLower = true);
 
 	int IsAttacking(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const CUserCmd* pCmd, bool bTickBase = false);
 	float MaxSpeed(CTFPlayer* pPlayer, bool bIncludeCrouch = false, bool bIgnoreSpecialAbility = false);
+	float AttribHookValue(float value, const char* name, void* econent, void* buffer = nullptr, bool isGlobalConstString = true);
 
 	void FixMovement(CUserCmd* pCmd, const Vec3& vCurAngle, const Vec3& vTargetAngle);
 	void FixMovement(CUserCmd* pCmd, const Vec3& vTargetAngle);
@@ -120,8 +123,6 @@ namespace SDK
 	void WalkToFixAntiAim(CUserCmd* pCmd, const Vec3& vTargetAngle);
 
 	void GetProjectileFireSetup(CTFPlayer* pPlayer, const Vec3& vAngIn, Vec3 vOffset, Vec3& vPosOut, Vec3& vAngOut, bool bPipes = false, bool bInterp = false, bool bAllowFlip = true);
-	void GetProjectileFireSetupAirblast(CTFPlayer* pPlayer, const Vec3& vAngIn, Vec3 vPosIn, Vec3& vAngOut, bool bInterp = false);
-
 	float CalculateSplashRadiusDamageFalloff(CTFWeaponBase* pWeapon, CTFPlayer* pAttacker, CTFWeaponBaseGrenadeProj* pProjectile, float flRadius);
 	float CalculateSplashRadiusDamage(CTFWeaponBase* pWeapon, CTFPlayer* pAttacker, CTFWeaponBaseGrenadeProj* pProjectile, float flRadius, float flDist, float& flDamageNoBuffs, bool bSelf = false );
 	bool WeaponDoesNotUseAmmo( CTFWeaponBase* pWeapon, bool bIncludeInfiniteAmmo = true );

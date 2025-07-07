@@ -35,4 +35,4 @@ public:
 
 };
 
-ADD_FEATURE(CFlagController, FlagController)
+ADD_FEATURE(CFlagController, FlagController);

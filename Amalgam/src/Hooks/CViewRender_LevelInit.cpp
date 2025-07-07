@@ -12,7 +12,7 @@
 #include "../Features/NavBot/NavEngine/NavEngine.h"
 #include "../Features/NavBot/NavBot.h"
 
-MAKE_HOOK(CViewRender_LevelInit, U::Memory.GetVFunc(I::ViewRender, 1), void,
+MAKE_HOOK(CViewRender_LevelInit, U::Memory.GetVirtual(I::ViewRender, 1), void,
 	void* rcx)
 {
 #ifdef DEBUG_HOOKS

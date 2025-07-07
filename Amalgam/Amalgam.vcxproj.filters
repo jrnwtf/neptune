@@ -108,7 +108,6 @@
     <ClCompile Include="src\Hooks\CBaseAnimating_SetSequence.cpp" />
     <ClCompile Include="src\Hooks\CBaseAnimating_SetupBones.cpp" />
     <ClCompile Include="src\Hooks\CBaseAnimating_UpdateClientSideAnimation.cpp" />
-    <ClCompile Include="src\Hooks\CBaseEntity_FireBullets.cpp" />
     <ClCompile Include="src\Hooks\CBaseEntity_ResetLatched.cpp" />
     <ClCompile Include="src\Hooks\CBaseEntity_SetAbsVelocity.cpp" />
     <ClCompile Include="src\Hooks\CBaseEntity_WorldSpaceCenter.cpp" />
@@ -168,7 +167,6 @@
     <ClCompile Include="src\Hooks\CTFWeaponBase_CalcIsAttackCritical.cpp" />
     <ClCompile Include="src\Hooks\CTFWeaponBase_GetShootSound.cpp" />
     <ClCompile Include="src\Hooks\CViewRender_DrawUnderwaterOverlay.cpp" />
-    <ClCompile Include="src\Hooks\IVEngineClient_ClientCmd_Unrestricted.cpp" />
     <ClCompile Include="src\Hooks\FX_FireBullets.cpp" />
     <ClCompile Include="src\Hooks\NotificationQueue_Add.cpp" />
     <ClCompile Include="src\Hooks\VGuiMenuBuilder_AddMenuItem.cpp" />
@@ -256,6 +254,16 @@
     <ClCompile Include="src\Hooks\IVModelRender_DrawModelExecute.cpp" />
     <ClCompile Include="src\Hooks\CViewRender_RenderView.cpp" />
     <ClCompile Include="src\Features\Misc\AutoItem\AutoItem.cpp" />
+    <ClCompile Include="src\Hooks\CTFGCClientSystem_SOCreated.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBaseCombatCharacter.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBaseAnimating.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBaseEntity.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBaseObject.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBasePlayer.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CBaseProjectile.cpp" />
+    <ClCompile Include="src\SDK\Definitions\Main\CTFPlayer.cpp" />
+    <ClCompile Include="src\Hooks\CTFPlayer_FireBullet.cpp" />
+    <ClCompile Include="src\Hooks\CTFRocketLauncher_CheckReloadMisfire.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Utils\UtlVector\UtlVector.h" />
@@ -665,6 +673,7 @@
     <ClInclude Include="src\Features\Visuals\Groups\Groups.h" />
     <ClInclude Include="src\Features\Misc\AutoItem\AutoItem.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\CTFInventoryManager.h" />
+    <ClInclude Include="src\SDK\Definitions\Main\CPlayerResource.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

@@ -58,7 +58,7 @@ MAKE_HOOK(CBasePlayer_CalcViewModelView, S::CBasePlayer_CalcViewModelView(), voi
 #endif
 }
 
-MAKE_HOOK(ClientModeTFNormal_GetViewModelFOV, U::Memory.GetVFunc(I::ClientModeShared, 32), float,
+MAKE_HOOK(ClientModeTFNormal_GetViewModelFOV, U::Memory.GetVirtual(I::ClientModeShared, 32), float,
 	/*void* rcx*/)
 {
 #ifdef DEBUG_HOOKS

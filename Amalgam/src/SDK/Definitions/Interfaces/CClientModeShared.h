@@ -1,7 +1,7 @@
 #pragma once
+#include "Interface.h"
 #include "../Misc/IClientMode.h"
 #include "../Misc/CGameEventListener.h"
-#include "../../../Utils/Memory/Memory.h"
 
 MAKE_SIGNATURE(ClientModeTFNormal_BIsFriendOrPartyMember, "client.dll", "48 89 5C 24 ? 57 48 81 EC ? ? ? ? 48 85 D2 0F 84", 0x0);
 
@@ -12,14 +12,13 @@ class CViewSetup;
 class CBaseHudChat
 {
 public:
-	void ChatPrintf(int pIndex, const char* fmt, ...)
-	{
-		reinterpret_cast<void(*)(void*, int, int, const char*, ...)>(U::Memory.GetVFunc(this, 19))(this, pIndex, 0, fmt);
-	}
+	VIRTUAL_ARGS(ChatPrintf, void, 19, (int pIndex, const char* fmt, ...), this, pIndex, 0, fmt);
+	VIRTUAL_ARGS(StartMessageMode, void, 20, (int iMessageModeType), this, iMessageModeType);
 
-	void StartMessageMode(int iMessageModeType)
+	inline void SetText(const char* text)
 	{
-		reinterpret_cast<void(*)(void*, int)>(U::Memory.GetVFunc(this, 20))(this, iMessageModeType);
+		if (auto pChatHistory = *reinterpret_cast<void**>(uintptr_t(this) + 688))
+			U::Memory.CallVirtual<239, void>(pChatHistory, text);
 	}
 };
 
@@ -83,10 +82,7 @@ public:
 	char szPad[24];
 	CBaseHudChat* m_pChatElement;
 
-	inline bool BIsFriendOrPartyMember(CBaseEntity* pEntity)
-	{
-		return S::ClientModeTFNormal_BIsFriendOrPartyMember.Call<bool>(this, pEntity);
-	}
+	SIGNATURE_ARGS(BIsFriendOrPartyMember, bool, ClientModeTFNormal, (CBaseEntity* pEntity), this, pEntity);
 };
 
 MAKE_INTERFACE_SIGNATURE(CClientModeShared, ClientModeShared, "client.dll", "48 8B 0D ? ? ? ? 48 8B 10 48 8B 19 48 8B C8 FF 92", 0x0, 1);

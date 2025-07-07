@@ -4,6 +4,7 @@
 #include "../../Spectate/Spectate.h"
 #include "../../Simulation/MovementSimulation/MovementSimulation.h"
 #include "../../PacketManip/AntiAim/AntiAim.h"
+#include "../../Simulation/ProjectileSimulation/ProjectileSimulation.h"
 #include <cmath>
 
 // void CESP::DrawYawArrow(const Vec3& vOrigin, float flYaw, float flArrowLength, float flHeadSize, float flHeightOffset, 
@@ -315,45 +316,22 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				tCache.m_flUber = std::clamp(pMediGun->As<CWeaponMedigun>()->m_flChargeLevel(), 0.f, 1.f);
 				tCache.m_bUberBar = Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::UberBar;
 				if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::UberText)
-					tCache.m_vText.emplace_back(ESPTextEnum::Uber, std::format("{:.0f}%%", tCache.m_flUber * 100.f), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+					tCache.m_vText.emplace_back(ESPTextEnum::Uber, std::format("{:.0f}%", tCache.m_flUber * 100.f), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 			}
 		}
 
 		if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::ClassIcon)
 			tCache.m_iClassIcon = iClassNum;
 		if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::ClassText)
-			tCache.m_vText.emplace_back(ESPTextEnum::Right, GetPlayerClass(iClassNum), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+			tCache.m_vText.emplace_back(ESPTextEnum::Right, SDK::GetClassByIndex(iClassNum, false), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 
 		if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::WeaponIcon && pWeapon)
 			tCache.m_pWeaponIcon = pWeapon->GetWeaponIcon();
 		if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::WeaponText && pWeapon)
 		{
-			int iWeaponSlot = pWeapon->GetSlot();
-			switch (pPlayer->m_iClass())
-			{
-			case TF_CLASS_SPY:
-			{
-				switch (iWeaponSlot)
-				{
-				case 0: iWeaponSlot = 1; break;
-				case 1: iWeaponSlot = 4; break;
-				case 3: iWeaponSlot = 5; break;
-				}
-				break;
-			}
-			case TF_CLASS_ENGINEER:
-			{
-				switch (iWeaponSlot)
-				{
-				case 3: iWeaponSlot = 5; break;
-				case 4: iWeaponSlot = 6; break;
-				}
-				break;
-			}
-			}
-
-			if (void* pCurItemData = S::CTFPlayerSharedUtils_GetEconItemViewByLoadoutSlot.Call<void*>(pPlayer, iWeaponSlot, nullptr))
-				tCache.m_vText.emplace_back(ESPTextEnum::Bottom, SDK::ConvertWideToUTF8(S::CEconItemView_GetItemName.Call<const wchar_t*>(pCurItemData)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+			auto pAttributeManager = U::Memory.CallVirtual<1, void*>(uintptr_t(pWeapon) + 3096);
+			auto pCurItemData = reinterpret_cast<void*>(uintptr_t(pAttributeManager) + 144);
+			tCache.m_vText.emplace_back(ESPTextEnum::Bottom, SDK::ConvertWideToUTF8(S::CEconItemView_GetItemName.Call<const wchar_t*>(pCurItemData)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 		}
 
 		if (Vars::Debug::Info.Value && !pPlayer->IsDormant() && !bLocal)
@@ -515,6 +493,65 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				if (pPlayer->InCond(TF_COND_POWERUPMODE_DOMINANT))
 					tCache.m_vText.emplace_back(ESPTextEnum::Right, "Dominant", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 
+				for (int i = 0; i < MAX_WEAPONS; i++)
+				{
+					auto pWeapon = pPlayer->GetWeaponFromSlot(i)->As<CTFSpellBook>();
+					if (!pWeapon || pWeapon->GetWeaponID() != TF_WEAPON_SPELLBOOK || !pWeapon->m_iSpellCharges())
+						continue;
+
+					switch (pWeapon->m_iSelectedSpellIndex())
+					{
+					case 0:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Fireball", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 1:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Bats", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 2:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Heal", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 3:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Pumpkins", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 4:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Jump", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 5:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Stealth", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 6:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Teleport", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 7:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Lightning", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 8:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Minify", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 9:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Meteors", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 10:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Monoculus", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 11:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Skeletons", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 12:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Glove", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 13:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Parachute", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 14:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Heal", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					case 15:
+						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Bomb", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+						break;
+					}
+				}
+
 				if (pPlayer->InCond(TF_COND_RADIUSHEAL) ||
 					pPlayer->InCond(TF_COND_HEALTH_BUFF) ||
 					pPlayer->InCond(TF_COND_RADIUSHEAL_ON_DAMAGE) ||
@@ -558,9 +595,9 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					tCache.m_vText.emplace_back(ESPTextEnum::Right, "DR", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 				else if (pPlayer->InCond(TF_COND_FEIGN_DEATH))
 					tCache.m_vText.emplace_back(ESPTextEnum::Right, "Feign", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
-
-				if (pPlayer->InCond(TF_COND_STEALTHED) || pPlayer->InCond(TF_COND_STEALTHED_BLINK) || pPlayer->InCond(TF_COND_STEALTHED_USER_BUFF) || pPlayer->InCond(TF_COND_STEALTHED_USER_BUFF_FADING))
-					tCache.m_vText.emplace_back(ESPTextEnum::Right, std::format("Invis {:.0f}%%", pPlayer->GetInvisPercentage()), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+				
+				if (pPlayer->m_flInvisibility())
+					tCache.m_vText.emplace_back(ESPTextEnum::Right, std::format("Invis {:.0f}%", pPlayer->m_flInvisibility() * 100), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 
 				if (pPlayer->InCond(TF_COND_DISGUISING) || pPlayer->InCond(TF_COND_DISGUISED))
 					tCache.m_vText.emplace_back(ESPTextEnum::Right, "Disguise", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
@@ -578,24 +615,24 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					{
 						if (bLocal)
 						{
-							tCache.m_vText.emplace_back(ESPTextEnum::Right, std::format("Charging {:.0f}%%", Math::RemapVal(pWeapon->As<CTFSniperRifle>()->m_flChargedDamage(), 0.f, 150.f, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+							tCache.m_vText.emplace_back(ESPTextEnum::Right, std::format("Charging {:.0f}%", Math::RemapVal(pWeapon->As<CTFSniperRifle>()->m_flChargedDamage(), 0.f, 150.f, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 							break;
 						}
 						else
 						{
-							CSniperDot* pPlayerDot = nullptr;
-							for (auto pDot : H::Entities.GetGroup(EGroupType::MISC_DOTS))
-							{
-								if (pDot->m_hOwnerEntity().Get() == pEntity)
+							auto GetSniperDot = [](CBaseEntity* pEntity) -> CSniperDot*
 								{
-									pPlayerDot = pDot->As<CSniperDot>();
-									break;
-								}
-							}
-							if (pPlayerDot)
+									for (auto pDot : H::Entities.GetGroup(EGroupType::MISC_DOTS))
+									{
+										if (pDot->m_hOwnerEntity().Get() == pEntity)
+											return pDot->As<CSniperDot>();
+									}
+									return nullptr;
+								};
+							if (CSniperDot* pPlayerDot = GetSniperDot(pEntity))
 							{
 								float flChargeTime = std::max(SDK::AttribHookValue(3.f, "mult_sniper_charge_per_sec", pWeapon), 1.5f);
-								tCache.m_vText.emplace_back(ESPTextEnum::Right, std::format("Charging {:.0f}%%", Math::RemapVal(TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick) - pPlayerDot->m_flChargeStartTime() - 0.3f, 0.f, flChargeTime, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+								tCache.m_vText.emplace_back(ESPTextEnum::Right, std::format("Charging {:.0f}%", Math::RemapVal(TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick) - pPlayerDot->m_flChargeStartTime() - 0.3f, 0.f, flChargeTime, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 								break;
 							}
 						}
@@ -605,7 +642,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					case TF_WEAPON_COMPOUND_BOW:
 						if (bLocal)
 						{
-							tCache.m_vText.emplace_back(ESPTextEnum::Right, std::format("Charging {:.0f}%%", Math::RemapVal(TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick) - pWeapon->As<CTFPipebombLauncher>()->m_flChargeBeginTime(), 0.f, 1.f, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+							tCache.m_vText.emplace_back(ESPTextEnum::Right, std::format("Charging {:.0f}%", Math::RemapVal(TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick) - pWeapon->As<CTFPipebombLauncher>()->m_flChargeBeginTime(), 0.f, 1.f, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 							break;
 						}
 						tCache.m_vText.emplace_back(ESPTextEnum::Right, "Charging", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
@@ -705,7 +742,7 @@ void CESP::StoreBuildings(CTFPlayer* pLocal)
 		{
 			float flConstructed = pBuilding->m_flPercentageConstructed();
 			if (flConstructed < 1.f)
-				tCache.m_vText.emplace_back(ESPTextEnum::Right, std::format("{:.0f}%%", flConstructed * 100.f), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
+				tCache.m_vText.emplace_back(ESPTextEnum::Right, std::format("{:.0f}%", flConstructed * 100.f), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 
 			if (pBuilding->IsSentrygun() && pBuilding->As<CObjectSentrygun>()->m_bPlayerControlled())
 				tCache.m_vText.emplace_back(ESPTextEnum::Right, "Wrangled", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value);
@@ -727,6 +764,45 @@ void CESP::StoreBuildings(CTFPlayer* pLocal)
 	}
 }
 
+static inline const char* GetProjectileName(CBaseEntity* pProjectile)
+{
+	const char* sReturn = "Projectile";
+	switch (pProjectile->GetClassID())
+	{
+	case ETFClassID::CTFWeaponBaseMerasmusGrenade: sReturn = "Bomb"; break;
+	case ETFClassID::CTFGrenadePipebombProjectile: sReturn = pProjectile->As<CTFGrenadePipebombProjectile>()->HasStickyEffects() ? "Sticky" : "Pipe"; break;
+	case ETFClassID::CTFStunBall: sReturn = "Baseball"; break;
+	case ETFClassID::CTFBall_Ornament: sReturn = "Bauble"; break;
+	case ETFClassID::CTFProjectile_Jar: sReturn = "Jarate"; break;
+	case ETFClassID::CTFProjectile_Cleaver: sReturn = "Cleaver"; break;
+	case ETFClassID::CTFProjectile_JarGas: sReturn = "Gas"; break;
+	case ETFClassID::CTFProjectile_JarMilk:
+	case ETFClassID::CTFProjectile_ThrowableBreadMonster: sReturn = "Milk"; break;
+	case ETFClassID::CTFProjectile_SpellBats:
+	case ETFClassID::CTFProjectile_SpellKartBats: sReturn = "Bats"; break;
+	case ETFClassID::CTFProjectile_SpellMeteorShower: sReturn = "Meteor shower"; break;
+	case ETFClassID::CTFProjectile_SpellMirv:
+	case ETFClassID::CTFProjectile_SpellPumpkin: sReturn = "Pumpkin"; break;
+	case ETFClassID::CTFProjectile_SpellSpawnBoss: sReturn = "Monoculus"; break;
+	case ETFClassID::CTFProjectile_SpellSpawnHorde:
+	case ETFClassID::CTFProjectile_SpellSpawnZombie: sReturn = "Skeleton"; break;
+	case ETFClassID::CTFProjectile_SpellTransposeTeleport: sReturn = "Teleport"; break;
+	case ETFClassID::CTFProjectile_Arrow: sReturn = pProjectile->As<CTFProjectile_Arrow>()->m_iProjectileType() == TF_PROJECTILE_BUILDING_REPAIR_BOLT ? "Repair" : "Arrow"; break;
+	case ETFClassID::CTFProjectile_GrapplingHook: sReturn = "Grapple"; break;
+	case ETFClassID::CTFProjectile_HealingBolt: sReturn = "Heal"; break;
+	case ETFClassID::CTFProjectile_Rocket:
+	case ETFClassID::CTFProjectile_EnergyBall:
+	case ETFClassID::CTFProjectile_SentryRocket: sReturn = "Rocket"; break;
+	case ETFClassID::CTFProjectile_BallOfFire: sReturn = "Fire"; break;
+	case ETFClassID::CTFProjectile_MechanicalArmOrb: sReturn = "Short circuit"; break;
+	case ETFClassID::CTFProjectile_SpellFireball: sReturn = "Fireball"; break;
+	case ETFClassID::CTFProjectile_SpellLightningOrb: sReturn = "Lightning"; break;
+	case ETFClassID::CTFProjectile_SpellKartOrb: sReturn = "Fist"; break;
+	case ETFClassID::CTFProjectile_Flare: sReturn = "Flare"; break;
+	case ETFClassID::CTFProjectile_EnergyRing: sReturn = "Energy"; break;
+	}
+	return sReturn;
+}
 void CESP::StoreProjectiles(CTFPlayer* pLocal)
 {
 	if (!(Vars::ESP::Draw.Value & Vars::ESP::DrawEnum::Projectiles) || !Vars::ESP::Projectile.Value)
@@ -734,66 +810,7 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::WORLD_PROJECTILES))
 	{
-		CBaseEntity* pOwner = nullptr;
-		switch (pEntity->GetClassID())
-		{
-		case ETFClassID::CBaseProjectile:
-		case ETFClassID::CBaseGrenade:
-		case ETFClassID::CTFWeaponBaseGrenadeProj:
-		case ETFClassID::CTFWeaponBaseMerasmusGrenade:
-		case ETFClassID::CTFGrenadePipebombProjectile:
-		case ETFClassID::CTFStunBall:
-		case ETFClassID::CTFBall_Ornament:
-		case ETFClassID::CTFProjectile_Jar:
-		case ETFClassID::CTFProjectile_Cleaver:
-		case ETFClassID::CTFProjectile_JarGas:
-		case ETFClassID::CTFProjectile_JarMilk:
-		case ETFClassID::CTFProjectile_SpellBats:
-		case ETFClassID::CTFProjectile_SpellKartBats:
-		case ETFClassID::CTFProjectile_SpellMeteorShower:
-		case ETFClassID::CTFProjectile_SpellMirv:
-		case ETFClassID::CTFProjectile_SpellPumpkin:
-		case ETFClassID::CTFProjectile_SpellSpawnBoss:
-		case ETFClassID::CTFProjectile_SpellSpawnHorde:
-		case ETFClassID::CTFProjectile_SpellSpawnZombie:
-		case ETFClassID::CTFProjectile_SpellTransposeTeleport:
-		case ETFClassID::CTFProjectile_Throwable:
-		case ETFClassID::CTFProjectile_ThrowableBreadMonster:
-		case ETFClassID::CTFProjectile_ThrowableBrick:
-		case ETFClassID::CTFProjectile_ThrowableRepel:
-		{
-			pOwner = pEntity->As<CTFWeaponBaseGrenadeProj>()->m_hThrower().Get();
-			break;
-		}
-		case ETFClassID::CTFBaseRocket:
-		case ETFClassID::CTFFlameRocket:
-		case ETFClassID::CTFProjectile_Arrow:
-		case ETFClassID::CTFProjectile_GrapplingHook:
-		case ETFClassID::CTFProjectile_HealingBolt:
-		case ETFClassID::CTFProjectile_Rocket:
-		case ETFClassID::CTFProjectile_BallOfFire:
-		case ETFClassID::CTFProjectile_MechanicalArmOrb:
-		case ETFClassID::CTFProjectile_SentryRocket:
-		case ETFClassID::CTFProjectile_SpellFireball:
-		case ETFClassID::CTFProjectile_SpellLightningOrb:
-		case ETFClassID::CTFProjectile_SpellKartOrb:
-		case ETFClassID::CTFProjectile_EnergyBall:
-		case ETFClassID::CTFProjectile_Flare:
-		{
-			auto pWeapon = pEntity->As<CTFBaseRocket>()->m_hLauncher().Get();
-			pOwner = pWeapon ? pWeapon->As<CTFWeaponBase>()->m_hOwner().Get() : nullptr;
-			break;
-		}
-		case ETFClassID::CTFBaseProjectile:
-		case ETFClassID::CTFProjectile_EnergyRing:
-			//case ETFClassID::CTFProjectile_Syringe:
-		{
-			auto pWeapon = pEntity->As<CTFBaseProjectile>()->m_hLauncher().Get();
-			pOwner = pWeapon ? pWeapon->As<CTFWeaponBase>()->m_hOwner().Get() : nullptr;
-			break;
-		}
-		}
-		
+		auto pOwner = F::ProjSim.GetEntities(pEntity).second;
 		int iIndex = pOwner ? pOwner->entindex() : -1;
 		if (pOwner)
 		{
@@ -832,54 +849,7 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			tCache.m_vText.emplace_back(ESPTextEnum::Bottom, std::format("[{:.0f}M]", vDelta.Length2D() / 41), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 
 		if (Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Name)
-		{
-			const char* szName = "Projectile";
-			switch (pEntity->GetClassID())
-			{
-				//case ETFClassID::CBaseProjectile:
-				//case ETFClassID::CBaseGrenade:
-				//case ETFClassID::CTFWeaponBaseGrenadeProj:
-			case ETFClassID::CTFWeaponBaseMerasmusGrenade: szName = "Bomb"; break;
-			case ETFClassID::CTFGrenadePipebombProjectile: szName = pEntity->As<CTFGrenadePipebombProjectile>()->HasStickyEffects() ? "Sticky" : "Pipe"; break;
-			case ETFClassID::CTFStunBall: szName = "Baseball"; break;
-			case ETFClassID::CTFBall_Ornament: szName = "Bauble"; break;
-			case ETFClassID::CTFProjectile_Jar: szName = "Jarate"; break;
-			case ETFClassID::CTFProjectile_Cleaver: szName = "Cleaver"; break;
-			case ETFClassID::CTFProjectile_JarGas: szName = "Gas"; break;
-			case ETFClassID::CTFProjectile_JarMilk:
-			case ETFClassID::CTFProjectile_ThrowableBreadMonster: szName = "Milk"; break;
-			case ETFClassID::CTFProjectile_SpellBats:
-			case ETFClassID::CTFProjectile_SpellKartBats: szName = "Bats"; break;
-			case ETFClassID::CTFProjectile_SpellMeteorShower: szName = "Meteor shower"; break;
-			case ETFClassID::CTFProjectile_SpellMirv:
-			case ETFClassID::CTFProjectile_SpellPumpkin: szName = "Pumpkin"; break;
-			case ETFClassID::CTFProjectile_SpellSpawnBoss: szName = "Monoculus"; break;
-			case ETFClassID::CTFProjectile_SpellSpawnHorde:
-			case ETFClassID::CTFProjectile_SpellSpawnZombie: szName = "Skeleton"; break;
-			case ETFClassID::CTFProjectile_SpellTransposeTeleport: szName = "Teleport"; break;
-			//case ETFClassID::CTFProjectile_Throwable:
-			//case ETFClassID::CTFProjectile_ThrowableBrick:
-			//case ETFClassID::CTFProjectile_ThrowableRepel: szName = "Throwable"; break;
-			case ETFClassID::CTFProjectile_Arrow: szName = pEntity->As<CTFProjectile_Arrow>()->m_iProjectileType() == TF_PROJECTILE_BUILDING_REPAIR_BOLT ? "Repair" : "Arrow"; break;
-			case ETFClassID::CTFProjectile_GrapplingHook: szName = "Grapple"; break;
-			case ETFClassID::CTFProjectile_HealingBolt: szName = "Heal"; break;
-			//case ETFClassID::CTFBaseRocket:
-			//case ETFClassID::CTFFlameRocket:
-			case ETFClassID::CTFProjectile_Rocket:
-			case ETFClassID::CTFProjectile_EnergyBall:
-			case ETFClassID::CTFProjectile_SentryRocket: szName = "Rocket"; break;
-			case ETFClassID::CTFProjectile_BallOfFire: szName = "Fire"; break;
-			case ETFClassID::CTFProjectile_MechanicalArmOrb: szName = "Short circuit"; break;
-			case ETFClassID::CTFProjectile_SpellFireball: szName = "Fireball"; break;
-			case ETFClassID::CTFProjectile_SpellLightningOrb: szName = "Lightning"; break;
-			case ETFClassID::CTFProjectile_SpellKartOrb: szName = "Fist"; break;
-			case ETFClassID::CTFProjectile_Flare: szName = "Flare"; break;
-			//case ETFClassID::CTFBaseProjectile:
-			case ETFClassID::CTFProjectile_EnergyRing: szName = "Energy"; break;
-			//case ETFClassID::CTFProjectile_Syringe: szName = "Syringe";
-			}
-			tCache.m_vText.emplace_back(ESPTextEnum::Top, szName, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
-		}
+			tCache.m_vText.emplace_back(ESPTextEnum::Top, GetProjectileName(pEntity), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value);
 
 		if (Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Owner && pOwner)
 		{
@@ -1482,15 +1452,6 @@ bool CESP::GetDrawBounds(CBaseEntity* pEntity, float& x, float& y, float& w, flo
 	}
 
 	return !(x > H::Draw.m_nScreenW || x + w < 0 || y > H::Draw.m_nScreenH || y + h < 0);
-}
-
-const char* CESP::GetPlayerClass(int iClassNum)
-{
-	static const char* szClasses[] = {
-		"Unknown", "Scout", "Sniper", "Soldier", "Demoman", "Medic", "Heavy", "Pyro", "Spy", "Engineer"
-	};
-
-	return iClassNum < 10 && iClassNum > 0 ? szClasses[iClassNum] : szClasses[0];
 }
 
 void CESP::DrawBones(CTFPlayer* pPlayer, matrix3x4* aBones, std::vector<int> vecBones, Color_t clr)

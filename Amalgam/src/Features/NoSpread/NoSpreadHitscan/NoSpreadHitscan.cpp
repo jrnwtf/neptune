@@ -21,10 +21,8 @@ void CNoSpreadHitscan::Reset()
 
 bool CNoSpreadHitscan::ShouldRun(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, bool bCreateMove)
 {
-	if (G::PrimaryWeaponType != EWeaponType::HITSCAN)
-		return false;
-
-	if ((bCreateMove ? pWeapon->GetWeaponSpread() : S::CTFWeaponBaseGun_GetWeaponSpread.Call<float>(pWeapon)) <= 0.f)
+	if (G::PrimaryWeaponType != EWeaponType::HITSCAN
+		|| (bCreateMove ? pWeapon->GetWeaponSpread() : S::CTFWeaponBaseGun_GetWeaponSpread.Call<float>(pWeapon)) <= 0.f)
 		return false;
 
 	return bCreateMove ? G::Attacking == 1 : true;
@@ -39,12 +37,12 @@ int CNoSpreadHitscan::GetSeed(CUserCmd* pCmd)
 
 float CNoSpreadHitscan::CalcMantissaStep(float flV)
 {
-	// Calculate the delta to the next representable value
-	float nextValue = std::nextafter(flV, std::numeric_limits<float>::infinity());
-	float mantissaStep = (nextValue - flV) * 1000;
+	// calculate the delta to the next representable value
+	float flNextValue = std::nextafter(flV, std::numeric_limits<float>::infinity());
+	float flMantissaStep = (flNextValue - flV) * 1000;
 
-	// Get the closest mantissa (next power of 2)
-	return powf(2, ceilf(logf(mantissaStep) / logf(2)));
+	// get the closest mantissa (next power of 2)
+	return powf(2, ceilf(logf(flMantissaStep) / logf(2)));
 }
 
 std::string CNoSpreadHitscan::GetFormat(int iServerTime)
@@ -188,14 +186,13 @@ void CNoSpreadHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* 
 	if (cFixedSpread == vBulletCorrections.end() && iBulletsPerShot > 1)
 		return;
 
-	Vec3 vFixedAngles{};
-	Math::VectorAngles((*cFixedSpread).second, vFixedAngles);
+	Vec3 vFixedAngles = Math::VectorAngles((*cFixedSpread).second);
+
 	pCmd->viewangles += pCmd->viewangles - vFixedAngles;
 	Math::ClampAngles(pCmd->viewangles);
 
-	m_iPredictionBullet = ( *cFixedSpread ).first;
-	//SDK::Output( "CNoSpreadHitscan::Run", std::format( "Predicted closest bullet({})", m_iPredictionBullet ).c_str( ), Vars::Menu::Theme::Accent.Value );
-
+	m_iPredictionBullet = (*cFixedSpread).first;
+	
 	G::SilentAngles = true;
 }
 

@@ -26,10 +26,7 @@ public:
 class CTFPlayerInventory
 {
 public:
-	inline CEconItemView* GetFirstItemOfItemDef(uint16 iItemDef)
-	{
-		return S::CTFPlayerInventory_GetFirstItemOfItemDef.Call<CEconItemView*>(iItemDef, this);
-	}
+	SIGNATURE_ARGS(GetFirstItemOfItemDef, CEconItemView*, CTFPlayerInventory, (uint16 iItemDef), iItemDef, this);
 
 	inline int GetItemCount() 
 	{
@@ -59,15 +56,8 @@ public:
 class CTFInventoryManager
 {
 public:
-	inline bool EquipItemInLoadout(int iClass, int iSlot, uint64_t uniqueid)
-	{
-		return reinterpret_cast<bool (*)(void*, int, int, uint64_t)>(U::Memory.GetVFunc(this, 19))(this, iClass, iSlot, uniqueid);
-	}
-
-	inline CTFPlayerInventory* GetLocalInventory()
-	{
-		return reinterpret_cast<CTFPlayerInventory* (*)(void*)>(U::Memory.GetVFunc(this, 23))(this);
-	}
+	VIRTUAL_ARGS(EquipItemInLoadout, bool, 19, (int iClass, int iSlot, uint64_t uniqueid), this, iClass, iSlot, uniqueid);
+	VIRTUAL(GetLocalInventory, CTFPlayerInventory*, 23, this);
 };
 
 namespace I

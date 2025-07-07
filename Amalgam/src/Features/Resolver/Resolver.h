@@ -29,13 +29,8 @@ class CResolver
 	void StoreSniperDots(CTFPlayerResource* pResource);
 	std::optional<float> GetPitchForSniperDot(CTFPlayer* pEntity, CTFPlayerResource* pResource);
 	
-	// Enhanced resolver methods
-	bool IsUsingAntiAim(CTFPlayer* pPlayer, CTFPlayerResource* pResource);
-	void UpdateConfidence(int iUserID, bool bHit, int iHitbox);
-	float GetSmartYawOffset(int iUserID, CTFPlayer* pPlayer);
-	
-	std::unordered_map<int, ResolveData> m_mResolverData;
-	std::unordered_map<int, Vec3> m_mSniperDots;
+	std::unordered_map<int, ResolveData> m_mResolverData = {};
+	std::unordered_map<int, Vec3> m_mSniperDots = {};
 
 	int m_iWaitingForTarget = -1;
 	float m_flWaitingForDamage = 0.f;
@@ -50,7 +45,7 @@ public:
 	void FrameStageNotify();
 	void CreateMove(CTFPlayer* pLocal);
 	void HitscanRan(CTFPlayer* pLocal, CTFPlayer* pTarget, CTFWeaponBase* pWeapon, int iHitbox = HITBOX_MAX);
-	void OnPlayerHurt(IGameEvent* pEvent);
+	void PlayerHurt(IGameEvent* pEvent);
 	void SetYaw(int iUserID, float flValue, bool bAuto = false);
 	void SetPitch(int iUserID, float flValue, bool bInverse = false, bool bAuto = false);
 	void SetMinwalk(int iUserID, bool bValue);
@@ -59,4 +54,4 @@ public:
 	void Reset();
 };
 
-ADD_FEATURE(CResolver, Resolver)
+ADD_FEATURE(CResolver, Resolver);

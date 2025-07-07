@@ -99,6 +99,11 @@ void CCommands::Initialize()
 			SDK::Output(std::format("Value of {} is {}", sCVar, pCVar->GetString()).c_str());
 		});
 
+	Register("cat_clearchat", [](const std::deque<std::string>& vArgs)
+		{
+			I::ClientModeShared->m_pChatElement->SetText("");
+		});
+
 	Register("cat_menu", [](const std::deque<std::string>& vArgs)
 		{
 			I::MatSystemSurface->SetCursorAlwaysVisible(F::Menu.m_bIsOpen = !F::Menu.m_bIsOpen);

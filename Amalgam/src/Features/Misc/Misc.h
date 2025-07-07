@@ -36,6 +36,7 @@ class CMisc
 	
 	bool m_bPeekPlaced = false;
 	Vec3 m_vPeekReturnPos = {};
+
 	//bool bSteamCleared = false;
 	std::vector<std::string> m_vChatSpamLines;
 	std::vector<std::string> m_vKillSayLines;

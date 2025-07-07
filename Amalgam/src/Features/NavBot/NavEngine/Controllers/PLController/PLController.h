@@ -15,4 +15,4 @@ public:
 	void Update();
 };
 
-ADD_FEATURE(CPLController, PLController)
+ADD_FEATURE(CPLController, PLController);

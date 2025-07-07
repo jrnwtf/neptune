@@ -42,7 +42,7 @@ class CCheaterDetection
 
 	void Infract(CTFPlayer* pEntity, std::string sReason);
 
-	std::unordered_map<CTFPlayer*, PlayerInfo> mData;
+	std::unordered_map<CTFPlayer*, PlayerInfo> mData = {};
 
 public:
 	void Run();
@@ -52,4 +52,4 @@ public:
 	void Reset();
 };
 
-ADD_FEATURE(CCheaterDetection, CheaterDetection)
+ADD_FEATURE(CCheaterDetection, CheaterDetection);

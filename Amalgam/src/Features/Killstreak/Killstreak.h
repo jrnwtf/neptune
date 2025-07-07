@@ -17,4 +17,4 @@ public:
 	void Reset();
 };
 
-ADD_FEATURE(CKillstreak, Killstreak)
+ADD_FEATURE(CKillstreak, Killstreak);

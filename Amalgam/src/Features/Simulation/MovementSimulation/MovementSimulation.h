@@ -88,7 +88,7 @@ struct PlayerStorage
 	bool m_bPredictNetworked = true;
 	Vec3 m_vPredictedOrigin = {};
 
-	std::vector<Vec3> m_vPath;
+	std::vector<Vec3> m_vPath = {};
 
 	bool m_bFailed = false;
 	bool m_bInitFailed = false;
@@ -120,8 +120,8 @@ private:
 	bool m_bOldFirstTimePredicted = false;
 	float m_flOldFrametime = 0.f;
 
-	std::unordered_map<int, std::deque<MoveData>> mRecords;
-	std::unordered_map<int, std::deque<float>> mSimTimes;
+	std::unordered_map<int, std::deque<MoveData>> m_mRecords = {};
+	std::unordered_map<int, std::deque<float>> m_mSimTimes = {};
 
 public:
 	void Store();
@@ -135,4 +135,4 @@ public:
 	float GetPredictedDelta(CBaseEntity* pEntity);
 };
 
-ADD_FEATURE(CMovementSimulation, MoveSim)
+ADD_FEATURE(CMovementSimulation, MoveSim);

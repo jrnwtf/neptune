@@ -120,7 +120,7 @@ void CMovementSimulation::Store()
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ALL))
 	{
 		auto pPlayer = pEntity->As<CTFPlayer>();
-		auto& vRecords = mRecords[pPlayer->entindex()];
+		auto& vRecords = m_mRecords[pPlayer->entindex()];
 
 		if (pPlayer->IsDormant() || !pPlayer->IsAlive() || pPlayer->IsAGhost() || pPlayer->m_vecVelocity().IsZero())
 		{
@@ -139,7 +139,7 @@ void CMovementSimulation::Store()
 		vRecords.emplace_front(
 			vDirection,
 			pPlayer->m_flSimulationTime(),
-			pPlayer->m_nWaterLevel() >= 2 ? 2 : pPlayer->IsOnGround() ? 0 : 1,
+			pPlayer->IsSwimming() ? 2 : pPlayer->IsOnGround() ? 0 : 1,
 			vVelocity,
 			vOrigin
 		);
@@ -191,7 +191,7 @@ void CMovementSimulation::Store()
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ALL))
 	{
 		auto pPlayer = pEntity->As<CTFPlayer>();
-		auto& vSimTimes = mSimTimes[pPlayer->entindex()];
+		auto& vSimTimes = m_mSimTimes[pPlayer->entindex()];
 
 		if (pEntity->entindex() == I::EngineClient->GetLocalPlayer() || pPlayer->IsDormant() || !pPlayer->IsAlive() || pPlayer->IsAGhost())
 		{
@@ -227,7 +227,7 @@ bool CMovementSimulation::Initialize(CBaseEntity* pEntity, PlayerStorage& tStora
 	tStorage.m_pPlayer = pPlayer;
 
 	I::MoveHelper->SetHost(pPlayer);
-	pPlayer->SetCurrentCmd(&DummyCmd);
+	pPlayer->m_pCurrentCommand() = &DummyCmd;
 
 	// store player restore data
 	Store(tStorage);
@@ -280,7 +280,7 @@ bool CMovementSimulation::Initialize(CBaseEntity* pEntity, PlayerStorage& tStora
 	// really hope this doesn't work like shit
 	if (bHitchance && bCalculated && !pPlayer->m_vecVelocity().IsZero() && Vars::Aimbot::Projectile::HitChance.Value)
 	{
-		const auto& vRecords = mRecords[pPlayer->entindex()];
+		const auto& vRecords = m_mRecords[pPlayer->entindex()];
 		const auto iSamples = vRecords.size();
 
 		float flCurrentChance = 1.f, flAverageYaw = 0.f;
@@ -328,8 +328,6 @@ bool CMovementSimulation::SetupMoveData(PlayerStorage& tStorage)
 	if (!tStorage.m_pPlayer)
 		return false;
 
-	const auto& vRecords = mRecords[tStorage.m_pPlayer->entindex()];
-
 	tStorage.m_MoveData.m_bFirstRunOfFunctions = false;
 	tStorage.m_MoveData.m_bGameCodeMovedPlayer = false;
 	tStorage.m_MoveData.m_nPlayerHandle = reinterpret_cast<IHandleEntity*>(tStorage.m_pPlayer)->GetRefEHandle();
@@ -346,7 +344,8 @@ bool CMovementSimulation::SetupMoveData(PlayerStorage& tStorage)
 			tStorage.m_MoveData.m_vecViewAngles = { 0.f, Math::VectorAngles(tStorage.m_MoveData.m_vecVelocity).y, 0.f };
 		else
 			tStorage.m_MoveData.m_vecViewAngles = iIndex == I::EngineClient->GetLocalPlayer() && G::CurrentUserCmd ? G::CurrentUserCmd->viewangles : H::Entities.GetEyeAngles(iIndex);
-
+		
+		const auto& vRecords = m_mRecords[tStorage.m_pPlayer->entindex()];
 		if (!vRecords.empty())
 		{
 			auto& tRecord = vRecords.front();
@@ -376,7 +375,7 @@ bool CMovementSimulation::SetupMoveData(PlayerStorage& tStorage)
 	tStorage.m_flSimTime = tStorage.m_pPlayer->m_flSimulationTime();
 	tStorage.m_flPredictedSimTime = tStorage.m_flSimTime + tStorage.m_flPredictedDelta;
 	tStorage.m_vPredictedOrigin = tStorage.m_MoveData.m_vecAbsOrigin;
-	tStorage.m_bDirectMove = tStorage.m_pPlayer->IsOnGround() || tStorage.m_pPlayer->m_nWaterLevel() >= 2;
+	tStorage.m_bDirectMove = tStorage.m_pPlayer->IsOnGround() || tStorage.m_pPlayer->IsSwimming();
 
 	return true;
 }
@@ -477,7 +476,7 @@ static bool GetYawDifference(MoveData& tRecord1, MoveData& tRecord2, bool bStart
 void CMovementSimulation::GetAverageYaw(PlayerStorage& tStorage, int iSamples)
 {
 	auto pPlayer = tStorage.m_pPlayer;
-	auto& vRecords = mRecords[pPlayer->entindex()];
+	auto& vRecords = m_mRecords[pPlayer->entindex()];
 	if (vRecords.empty())
 		return;
 
@@ -670,7 +669,7 @@ void CMovementSimulation::RunTick(PlayerStorage& tStorage, bool bPath, std::func
 		tStorage.m_MoveData.m_flForwardMove = tStorage.m_MoveData.m_flSideMove = 0.f;
 
 	float flOldSpeed = tStorage.m_MoveData.m_flClientMaxSpeed;
-	if (tStorage.m_pPlayer->m_bDucked() && tStorage.m_pPlayer->IsOnGround() && tStorage.m_pPlayer->m_nWaterLevel() < 2)
+	if (tStorage.m_pPlayer->m_bDucked() && tStorage.m_pPlayer->IsOnGround() && !tStorage.m_pPlayer->IsSwimming())
 		tStorage.m_MoveData.m_flClientMaxSpeed /= 3;
 
 	if (tStorage.m_bBunnyHop && tStorage.m_pPlayer->IsOnGround() && !tStorage.m_pPlayer->m_bDucked())
@@ -693,7 +692,7 @@ void CMovementSimulation::RunTick(PlayerStorage& tStorage, bool bPath, std::func
 		tStorage.m_flPredictedSimTime += tStorage.m_flPredictedDelta;
 	}
 	bool bLastbDirectMove = tStorage.m_bDirectMove;
-	tStorage.m_bDirectMove = tStorage.m_pPlayer->IsOnGround() || tStorage.m_pPlayer->m_nWaterLevel() >= 2;
+	tStorage.m_bDirectMove = tStorage.m_pPlayer->IsOnGround() || tStorage.m_pPlayer->IsSwimming();
 
 	if (tStorage.m_flAverageYaw)
 		tStorage.m_MoveData.m_vecViewAngles.y -= flCorrection;
@@ -721,7 +720,7 @@ void CMovementSimulation::Restore(PlayerStorage& tStorage)
 		return;
 
 	I::MoveHelper->SetHost(nullptr);
-	tStorage.m_pPlayer->SetCurrentCmd(nullptr);
+	tStorage.m_pPlayer->m_pCurrentCommand() = nullptr;
 
 	Reset(tStorage);
 
@@ -738,7 +737,7 @@ void CMovementSimulation::Restore(PlayerStorage& tStorage)
 
 float CMovementSimulation::GetPredictedDelta(CBaseEntity* pEntity)
 {
-	auto& vSimTimes = mSimTimes[pEntity->entindex()];
+	auto& vSimTimes = m_mSimTimes[pEntity->entindex()];
 	if (!vSimTimes.empty())
 	{
 		switch (Vars::Aimbot::Projectile::DeltaMode.Value)

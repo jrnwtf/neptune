@@ -1,7 +1,5 @@
 #include "CPController.h"
 
-//TODO: fix
-
 void CCPController::UpdateObjectiveResource()
 {
 	// Get ObjectiveResource

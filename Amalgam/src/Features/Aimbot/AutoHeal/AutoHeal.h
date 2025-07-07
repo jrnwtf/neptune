@@ -10,6 +10,8 @@ enum EVaccinatorResist
 	VACC_NONE
 };
 
+//#define DEBUG_VACCINATOR
+
 class CAutoHeal
 {
 	bool IsValidHealTarget(CTFPlayer* pLocal, CBaseEntity* pEntity);
@@ -47,4 +49,4 @@ public:
 	std::unordered_map<int, bool> m_mMedicCallers = {};
 };
 
-ADD_FEATURE(CAutoHeal, AutoHeal)
+ADD_FEATURE(CAutoHeal, AutoHeal);

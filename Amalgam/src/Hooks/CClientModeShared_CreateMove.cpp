@@ -49,8 +49,8 @@ struct CmdHistory_t
 
 MAKE_SIGNATURE(IHasGenericMeter_GetMeterMultiplier, "client.dll", "F3 0F 10 81 ? ? ? ? C3 CC CC CC CC CC CC CC 48 85 D2", 0x0);
 
-MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 21), bool,
-		  CClientModeShared* rcx, float flInputSampleTime, CUserCmd* pCmd)
+MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVirtual(I::ClientModeShared, 21), bool,
+	CClientModeShared* rcx, float flInputSampleTime, CUserCmd* pCmd)
 {
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CClientModeShared_CreateMove[DEFAULT_BIND])
@@ -85,12 +85,15 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	auto pWeapon = H::Entities.GetWeapon();
 	if (pLocal && pWeapon)
 	{	// update weapon info
+		G::CanPrimaryAttack = G::CanSecondaryAttack = G::Reloading = false;
+
+		bool bCanAttack = pLocal->CanAttack();
 		{
 			static int iStaticItemDefinitionIndex = 0;
 			int iOldItemDefinitionIndex = iStaticItemDefinitionIndex;
 			int iNewItemDefinitionIndex = iStaticItemDefinitionIndex = pWeapon->m_iItemDefinitionIndex();
 
-			if (iNewItemDefinitionIndex != iOldItemDefinitionIndex || !pWeapon->m_iClip1() || !pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->IsTaunting() || pLocal->InCond(TF_COND_PHASE) || pLocal->InCond(TF_COND_HALLOWEEN_KART))
+			if (iNewItemDefinitionIndex != iOldItemDefinitionIndex || !bCanAttack || !pWeapon->m_iClip1())
 				F::Ticks.m_iWait = 1;
 		}
 
@@ -106,25 +109,6 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 			}
 		}
 
-		G::CanPrimaryAttack = G::CanSecondaryAttack = G::Reloading = false;
-		bool bCanAttack = pLocal->CanAttack();
-		switch (SDK::GetRoundState())
-		{
-		case GR_STATE_TEAM_WIN:
-			if (pLocal->m_iTeamNum() != SDK::GetWinningTeam())
-				bCanAttack = false;
-			break;
-		case GR_STATE_BETWEEN_RNDS:
-			if (pLocal->m_fFlags() & FL_FROZEN)
-				bCanAttack = false;
-			break;
-		case GR_STATE_GAME_OVER:
-			if (pLocal->m_fFlags() & FL_FROZEN || pLocal->m_iTeamNum() != SDK::GetWinningTeam())
-				bCanAttack = false;
-			break;
-		}
-		if (pLocal->InCond(TF_COND_STUNNED) && pLocal->m_iStunFlags() & (TF_STUN_CONTROLS | TF_STUN_LOSER_STATE))
-			bCanAttack = false;
 		if (bCanAttack)
 		{
 			G::CanPrimaryAttack = pWeapon->CanPrimaryAttack();
@@ -191,11 +175,23 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 						G::Reloading = true;
 				}
 			}
+			if (G::CanPrimaryAttack)
+			{
+				switch (pWeapon->GetWeaponID())
+				{
+				case TF_WEAPON_FLAMETHROWER:
+				case TF_WEAPON_FLAME_BALL:
+				case TF_WEAPON_FLAREGUN:
+				case TF_WEAPON_FLAREGUN_REVENGE:
+					if (pLocal->IsUnderwater())
+						G::CanPrimaryAttack = G::CanSecondaryAttack = false;
+				}
+			}
 		}
 
 		G::Attacking = SDK::IsAttacking(pLocal, pWeapon, pCmd);
 		G::PrimaryWeaponType = SDK::GetWeaponType(pWeapon, &G::SecondaryWeaponType);
-		G::CanHeadshot = pWeapon->CanHeadShot() || pWeapon->AmbassadorCanHeadshot(TICKS_TO_TIME(pLocal->m_nTickBase()));
+		G::CanHeadshot = pWeapon->CanHeadshot() || pWeapon->AmbassadorCanHeadshot(TICKS_TO_TIME(pLocal->m_nTickBase()));
 	}
 
 	// run features
@@ -242,9 +238,9 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 #ifndef TEXTMODE
 	if (pLocal)
 	{
-		static std::vector<Vec3> vAngles;
+		static std::vector<Vec3> vAngles = {};
 		vAngles.push_back(pCmd->viewangles);
-		auto pAnimState = pLocal->GetAnimState();
+		auto pAnimState = pLocal->m_PlayerAnimState();
 		if (*pSendPacket && pAnimState)
 		{
 			float flOldFrametime = I::GlobalVars->frametime;
@@ -255,8 +251,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 			{
 				if (pLocal->IsTaunting() && pLocal->m_bAllowMoveDuringTaunt())
 					pLocal->m_flTauntYaw() = vAngle.y;
-				pAnimState->m_flEyeYaw = vAngle.y;
-				pAnimState->Update(vAngle.y, vAngle.x);
+				pAnimState->Update(pAnimState->m_flEyeYaw = vAngle.y, vAngle.x);
 				pLocal->FrameAdvance(TICK_INTERVAL);
 			}
 			I::GlobalVars->frametime = flOldFrametime;

@@ -384,7 +384,7 @@ void CNavParser::Map::updateIgnores()
 				if (sticky_origin.DistTo(area) <= 130.0f + HALF_PLAYER_WIDTH)
 				{
 					CGameTrace trace = {};
-					CTraceFilterProjectile filter = {};
+					CTraceFilterCollideable filter = {};
 					SDK::Trace(sticky_origin, area, MASK_SHOT, &filter, &trace);
 
 					// Check if Sticky can see the reason
@@ -695,7 +695,7 @@ void CNavEngine::vischeckPath()
 			// Mark as invalid for a while
 			map->vischeck_cache[key] = CNavParser::CachedConnection{ timestamp, -1 };
 			abandonPath();
-			return;
+			break;
 		}
 		// Else we can update the cache (if not marked bad before this)
 		else if (!map->vischeck_cache.count(key) || map->vischeck_cache[key].vischeck_state != -1)

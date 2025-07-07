@@ -5,6 +5,7 @@
 #include "../../../Features/Players/PlayerUtils.h"
 #include "../../../Features/Backtrack/Backtrack.h"
 #include "../../../Features/CheaterDetection/CheaterDetection.h"
+#include "../../../Features/Resolver/Resolver.h"
 
 void CEntities::Store()
 {
@@ -96,7 +97,7 @@ void CEntities::Store()
 		//case ETFClassID::CTFProjectile_Syringe:
 		{
 			if ((nClassID == ETFClassID::CTFProjectile_Cleaver || nClassID == ETFClassID::CTFStunBall) && pEntity->As<CTFGrenadePipebombProjectile>()->m_bTouched()
-				|| (nClassID == ETFClassID::CTFProjectile_Arrow || nClassID == ETFClassID::CTFProjectile_GrapplingHook) && pEntity->GetAbsVelocity().IsZero())
+				|| (nClassID == ETFClassID::CTFProjectile_Arrow || nClassID == ETFClassID::CTFProjectile_GrapplingHook) && !pEntity->m_MoveType())
 				break;
 
 			m_mGroups[EGroupType::WORLD_PROJECTILES].push_back(pEntity);
@@ -150,7 +151,7 @@ void CEntities::Store()
 	}
 
 	static Timer tTimer = {};
-	bool bShouldUpdateInfo = tTimer.Run(1.f);
+	bool bUpdateInfo = tTimer.Run(1.f);
 	int iLag;
 	{
 		static int iStaticTickcout = I::GlobalVars->tickcount;
@@ -160,7 +161,7 @@ void CEntities::Store()
 	std::unordered_map<uint32_t, uint64_t> mParties = {};
 	std::unordered_map<uint32_t, bool> mF2P = {};
 	std::unordered_map<uint32_t, int> mLevels = {};
-	if (bShouldUpdateInfo)
+	if (bUpdateInfo)
 	{
 		m_mIFriends.clear();
 		m_mUFriends.clear();
@@ -175,7 +176,8 @@ void CEntities::Store()
 
 		if (auto pLobby = I::TFGCClientSystem->GetLobby())
 		{
-			for (int i = 0; i < pLobby->GetNumMembers(); i++)
+			int iMembers = pLobby->GetNumMembers();
+			for (int i = 0; i < iMembers; i++)
 			{
 				auto cSteamID = CSteamID(); pLobby->GetMember(&cSteamID, i);
 				auto uFriendsID = cSteamID.GetAccountID();
@@ -191,7 +193,8 @@ void CEntities::Store()
 		}
 		if (auto pParty = I::TFGCClientSystem->GetParty())
 		{
-			for (int i = 0; i < pParty->GetNumMembers(); i++)
+			int iMembers = pParty->GetNumMembers();
+			for (int i = 0; i < iMembers; i++)
 			{
 				auto cSteamID = CSteamID(); pParty->GetMember(&cSteamID, i);
 				auto uFriendsID = cSteamID.GetAccountID();
@@ -201,19 +204,18 @@ void CEntities::Store()
 	}
 	for (int n = 1; n <= I::EngineClient->GetMaxClients(); n++)
 	{
-		if (bShouldUpdateInfo)
+		if (bUpdateInfo)
 		{
 			PlayerInfo_t pi{};
 			if (I::EngineClient->GetPlayerInfo(n, &pi) && !pi.fakeplayer)
 			{
 				bool bLocal = n == I::EngineClient->GetLocalPlayer();
+				if (bLocal) m_uFriendsID = pi.friendsID;
 				m_mIPriorities[n] = m_mUPriorities[pi.friendsID] = !bLocal ? F::PlayerUtils.GetPriority(pi.friendsID, false) : 0;
 				m_mIFriends[n] = m_mUFriends[pi.friendsID] = I::SteamFriends->HasFriend({ pi.friendsID, 1, k_EUniversePublic, k_EAccountTypeIndividual }, k_EFriendFlagImmediate);
 				m_mIParty[n] = m_mUParty[pi.friendsID] = mParties.contains(pi.friendsID) ? mParties[pi.friendsID] : 0;
 				m_mIF2P[n] = m_mUF2P[pi.friendsID] = mF2P.contains(pi.friendsID) ? mF2P[pi.friendsID] : false;
 				m_mILevels[n] = m_mULevels[pi.friendsID] = mLevels.contains(pi.friendsID) ? mLevels[pi.friendsID] : -2;
-				if (bLocal)
-					m_uFriendsID = pi.friendsID;
 			}
 		}
 
@@ -256,18 +258,18 @@ void CEntities::Store()
 		float flDeltaTime = m_mDeltaTimes[n] = TICKS_TO_TIME(std::clamp(TIME_TO_TICKS(flSimTime - flOldSimTime) - iLag, 0, 24));
 		if (flDeltaTime)
 		{
-			if (pPlayer->IsAlive() && !bDormant)
-				F::CheaterDetection.ReportChoke(pPlayer, m_mChokes[n]);
+			m_mLagTimes[n] = flDeltaTime;
 			m_mSetTicks[n] = I::GlobalVars->tickcount;
-
 			if (!bDormant)
 			{
-				m_mOrigins[n].emplace_front(pPlayer->m_vecOrigin() + Vec3(0, 0, pPlayer->m_vecMaxs().z - pPlayer->m_vecMins().z), flSimTime);
+				m_mOrigins[n].emplace_front(pPlayer->m_vecOrigin() + Vec3(0, 0, pPlayer->GetSize().z), flSimTime);
 				if (m_mOrigins[n].size() > Vars::Aimbot::Projectile::VelocityAverageCount.Value)
 					m_mOrigins[n].pop_back();
 			}
 			else
 				m_mOrigins[n].clear();
+			if (pPlayer->IsAlive() && !bDormant)
+				F::CheaterDetection.ReportChoke(pPlayer, m_mChokes[n]);
 		}
 		m_mChokes[n] = I::GlobalVars->tickcount - m_mSetTicks[n];
 
@@ -279,12 +281,52 @@ void CEntities::Store()
 			continue;
 		}
 
-		m_bSettingUpBones = true;
-		m_mBones[n].first = pPlayer->SetupBones(m_mBones[n].second, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, flSimTime);
-		m_bSettingUpBones = false;
-
 		m_mOldAngles[n] = m_mEyeAngles[n];
 		m_mEyeAngles[n] = pPlayer->As<CTFPlayer>()->GetEyeAngles();
+	}
+	F::Resolver.FrameStageNotify();
+	for (int n = 1; n <= I::EngineClient->GetMaxClients(); n++)
+	{
+		auto pPlayer = I::ClientEntityList->GetClientEntity(n)->As<CTFPlayer>();
+		if (!pPlayer || !pPlayer->IsPlayer()
+			|| n == I::EngineClient->GetLocalPlayer() && !I::EngineClient->IsPlayingDemo() // local player managed in CreateMove
+			|| pPlayer->IsDormant() || !pPlayer->IsAlive())
+			continue;
+
+		int iDeltaTicks = TIME_TO_TICKS(H::Entities.GetDeltaTime(n));
+		if (!iDeltaTicks)
+			continue;
+
+		bool bResolver = F::Resolver.GetAngles(pPlayer);
+		if (Vars::Visuals::Removals::Interpolation.Value || bResolver)
+		{
+			float flOldFrameTime = I::GlobalVars->frametime;
+			I::GlobalVars->frametime = I::Prediction->m_bEnginePaused ? 0.f : TICK_INTERVAL;
+			for (int i = 0; i < iDeltaTicks; i++)
+			{
+				G::UpdatingAnims = true;
+
+				if (bResolver)
+				{
+					float flYaw, flPitch;
+					F::Resolver.GetAngles(pPlayer, &flYaw, &flPitch, nullptr, i + 1 == iDeltaTicks);
+
+					float flOriginalYaw = pPlayer->m_angEyeAnglesY(), flOriginalPitch = pPlayer->m_angEyeAnglesX();
+					pPlayer->m_angEyeAnglesY() = flYaw, pPlayer->m_angEyeAnglesX() = flPitch;
+					pPlayer->UpdateClientSideAnimation();
+					pPlayer->m_angEyeAnglesY() = flOriginalYaw, pPlayer->m_angEyeAnglesX() = flOriginalPitch;
+				}
+				else
+					pPlayer->UpdateClientSideAnimation();
+
+				G::UpdatingAnims = false;
+			}
+			I::GlobalVars->frametime = flOldFrameTime;
+		}
+
+		m_bSettingUpBones = true;
+		m_mBones[n].first = pPlayer->SetupBones(m_mBones[n].second, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, m_mSimTimes[n]);
+		m_bSettingUpBones = false;
 	}
 }
 
@@ -406,70 +448,16 @@ bool CEntities::IsSpellbook(uint32_t uHash)
 	return false;
 }
 
-bool CEntities::IsProjectile(CBaseEntity* pEntity)
-{
-	if (!pEntity)
-		return false;
-
-	switch (pEntity->GetClassID())
-	{
-	case ETFClassID::CBaseProjectile:
-	case ETFClassID::CBaseGrenade:
-	case ETFClassID::CTFWeaponBaseGrenadeProj:
-	case ETFClassID::CTFWeaponBaseMerasmusGrenade:
-	case ETFClassID::CTFGrenadePipebombProjectile:
-	case ETFClassID::CTFStunBall:
-	case ETFClassID::CTFBall_Ornament:
-	case ETFClassID::CTFProjectile_Jar:
-	case ETFClassID::CTFProjectile_Cleaver:
-	case ETFClassID::CTFProjectile_JarGas:
-	case ETFClassID::CTFProjectile_JarMilk:
-	case ETFClassID::CTFProjectile_SpellBats:
-	case ETFClassID::CTFProjectile_SpellKartBats:
-	case ETFClassID::CTFProjectile_SpellMeteorShower:
-	case ETFClassID::CTFProjectile_SpellMirv:
-	case ETFClassID::CTFProjectile_SpellPumpkin:
-	case ETFClassID::CTFProjectile_SpellSpawnBoss:
-	case ETFClassID::CTFProjectile_SpellSpawnHorde:
-	case ETFClassID::CTFProjectile_SpellSpawnZombie:
-	case ETFClassID::CTFProjectile_SpellTransposeTeleport:
-	case ETFClassID::CTFProjectile_Throwable:
-	case ETFClassID::CTFProjectile_ThrowableBreadMonster:
-	case ETFClassID::CTFProjectile_ThrowableBrick:
-	case ETFClassID::CTFProjectile_ThrowableRepel:
-	case ETFClassID::CTFBaseRocket:
-	case ETFClassID::CTFFlameRocket:
-	case ETFClassID::CTFProjectile_Arrow:
-	case ETFClassID::CTFProjectile_GrapplingHook:
-	case ETFClassID::CTFProjectile_HealingBolt:
-	case ETFClassID::CTFProjectile_Rocket:
-	case ETFClassID::CTFProjectile_BallOfFire:
-	case ETFClassID::CTFProjectile_MechanicalArmOrb:
-	case ETFClassID::CTFProjectile_SentryRocket:
-	case ETFClassID::CTFProjectile_SpellFireball:
-	case ETFClassID::CTFProjectile_SpellLightningOrb:
-	case ETFClassID::CTFProjectile_SpellKartOrb:
-	case ETFClassID::CTFProjectile_EnergyBall:
-	case ETFClassID::CTFProjectile_Flare:
-	case ETFClassID::CTFBaseProjectile:
-	case ETFClassID::CTFProjectile_EnergyRing:
-	//case ETFClassID::CTFProjectile_Syringe:
-		return true;
-	}
-	return false;
-}
-
 CTFPlayer* CEntities::GetLocal()
 {
-	//if (auto pLocal = I::ClientEntityList->GetClientEntity(I::EngineClient->GetLocalPlayer()))
-	//	return pLocal->As<CTFPlayer>();
-	return m_pLocal;
+	return I::ClientEntityList->GetClientEntity(I::EngineClient->GetLocalPlayer())->As<CTFPlayer>();
+	//return m_pLocal;
 }
 CTFWeaponBase* CEntities::GetWeapon()
 {
-	//if (auto pLocal = I::ClientEntityList->GetClientEntity(I::EngineClient->GetLocalPlayer()))
-	//	return pLocal->As<CTFPlayer>()->m_hActiveWeapon().Get()->As<CTFWeaponBase>();
-	return m_pLocalWeapon;
+	auto pLocal = GetLocal();
+	return pLocal ? pLocal->m_hActiveWeapon().Get()->As<CTFWeaponBase>() : nullptr;
+	//return m_pLocalWeapon;
 }
 CTFPlayerResource* CEntities::GetPR()
 {
@@ -479,14 +467,15 @@ CBaseTeamObjectiveResource* CEntities::GetOR( ) { return m_pObjectiveResource; }
 
 const std::vector<CBaseEntity*>& CEntities::GetGroup(const EGroupType& Group) { return m_mGroups[Group]; }
 
-float CEntities::GetSimTime(CBaseEntity* pEntity) { int iIndex = pEntity->entindex(); return m_mSimTimes.contains(iIndex) ? m_mSimTimes[iIndex] : pEntity->m_flSimulationTime(); }
-float CEntities::GetOldSimTime(CBaseEntity* pEntity) { int iIndex = pEntity->entindex(); return m_mOldSimTimes.contains(iIndex) ? m_mOldSimTimes[iIndex] : pEntity->m_flOldSimulationTime(); }
+float CEntities::GetSimTime(int iIndex) { if (m_mSimTimes.contains(iIndex)) return m_mSimTimes[iIndex]; auto pEntity = I::ClientEntityList->GetClientEntity(iIndex)->As<CTFPlayer>(); if (pEntity) return pEntity->m_flSimulationTime(); return 0.f; }
+float CEntities::GetOldSimTime(int iIndex) { if (m_mOldSimTimes.contains(iIndex)) return m_mOldSimTimes[iIndex]; auto pEntity = I::ClientEntityList->GetClientEntity(iIndex)->As<CTFPlayer>(); if (pEntity) return pEntity->m_flOldSimulationTime(); return 0.f; }
 float CEntities::GetDeltaTime(int iIndex) { return m_mDeltaTimes.contains(iIndex) ? m_mDeltaTimes[iIndex] : TICK_INTERVAL; }
+float CEntities::GetLagTime(int iIndex) { return m_mLagTimes.contains(iIndex) ? m_mLagTimes[iIndex] : TICK_INTERVAL; }
 int CEntities::GetChoke(int iIndex) { return m_mChokes.contains(iIndex) ? m_mChokes[iIndex] : 0; }
 bool CEntities::GetDormancy(int iIndex) { return m_mDormancy.contains(iIndex); }
 matrix3x4* CEntities::GetBones(int iIndex) { return m_mBones[iIndex].first ? m_mBones[iIndex].second : nullptr; }
 Vec3 CEntities::GetEyeAngles(int iIndex) { return m_mEyeAngles.contains(iIndex) ? m_mEyeAngles[iIndex] : Vec3(); }
-Vec3 CEntities::GetPingAngles(int iIndex) { return m_mOldAngles.contains(iIndex) ? (m_mEyeAngles[iIndex] - m_mOldAngles[iIndex]) / GetDeltaTime(iIndex) * (F::Backtrack.GetReal() + TICKS_TO_TIME(F::Backtrack.GetAnticipatedChoke())) : Vec3(); }
+Vec3 CEntities::GetPingAngles(int iIndex) { return m_mOldAngles.contains(iIndex) ? (m_mEyeAngles[iIndex] - m_mOldAngles[iIndex]) / GetLagTime(iIndex) * (F::Backtrack.GetReal() + TICKS_TO_TIME(F::Backtrack.GetAnticipatedChoke())) : Vec3(); }
 bool CEntities::GetLagCompensation(int iIndex) { return m_mLagCompensation[iIndex]; }
 void CEntities::SetLagCompensation(int iIndex, bool bLagComp) { m_mLagCompensation[iIndex] = bLagComp; }
 Vec3* CEntities::GetAvgVelocity(int iIndex) { return iIndex != I::EngineClient->GetLocalPlayer() ? &m_mAvgVelocities[iIndex] : nullptr; }

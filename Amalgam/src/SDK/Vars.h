@@ -58,7 +58,7 @@ class ConfigVar : public BaseVar
 public:
 	T Default;
 	T Value;
-	std::unordered_map<int, T> Map;
+	std::unordered_map<int, T> Map = {};
 	ConfigVar(T tValue, std::string sName, const char* sSection, std::vector<const char*> vTitle, int iFlags = 0, std::vector<const char*> vValues = {}, const char* sNone = nullptr)
 	{
 		Default = tValue;
@@ -254,6 +254,8 @@ namespace Vars
 		CVar(ShotPathClipped, "Shot path clipped color", Color_t(255, 255, 255, 0), VISUAL);
 		CVar(SplashRadius, "Splash radius color", Color_t(255, 255, 255, 255), VISUAL);
 		CVar(SplashRadiusClipped, "Splash radius clipped color", Color_t(255, 255, 255, 0), VISUAL);
+		CVar(RealPath, "Real path color", Color_t(255, 255, 255, 255), NOSAVE | DEBUGVAR);
+		CVar(RealPathClipped, "Real path clipped color", Color_t(255, 255, 255, 0), NOSAVE | DEBUGVAR);
 
 		CVar(BoneHitboxEdge, "Bone hitbox edge color", Color_t(255, 255, 255, 0), VISUAL);
 		CVar(BoneHitboxEdgeClipped, "Bone hitbox edge clipped color", Color_t(255, 255, 255, 255), VISUAL);
@@ -347,8 +349,8 @@ namespace Vars
 				VA_LIST("Enabled", "##Divider", "Redirect", "Ignore FOV"),
 				Enabled = 1 << 0, Redirect = 1 << 1, IgnoreFOV = 1 << 2);
 			CVarEnum(Hitboxes, VA_LIST("Hitboxes", "Projectile hitboxes"), 0b001111, DROPDOWN_MULTI, nullptr,
-				VA_LIST("Auto", "##Divider", "Head", "Body", "Feet", "##Divider", "Bodyaim if lethal", "Aim blast at feet"),
-				Auto = 1 << 0, Head = 1 << 1, Body = 1 << 2, Feet = 1 << 3, BodyaimIfLethal = 1 << 4, AimBlastAtFeet = 1 << 5);
+				VA_LIST("Auto", "##Divider", "Head", "Body", "Feet", "##Divider", "Bodyaim if lethal", "Prioritize feet"),
+				Auto = 1 << 0, Head = 1 << 1, Body = 1 << 2, Feet = 1 << 3, BodyaimIfLethal = 1 << 4, PrioritizeFeet = 1 << 5);
 			CVarEnum(Modifiers, VA_LIST("Modifiers", "Projectile modifiers"), 0b1010, DROPDOWN_MULTI, nullptr,
 				VA_LIST("Charge shot", "Cancel charge", "Use prime time"),
 				ChargeWeapon = 1 << 0, CancelCharge = 1 << 1, UsePrimeTime = 1 << 2);
@@ -476,7 +478,7 @@ namespace Vars
 	NAMESPACE_BEGIN(Backtrack)
 		CVar(Latency, "Fake latency", 0, SLIDER_CLAMP, 0, 1000, 5);
 		CVar(Interp, "Fake interp", 0, SLIDER_CLAMP | SLIDER_PRECISION, 0, 1000, 5);
-		CVar(Window, VA_LIST("Window", "Backtrack window"), 185, SLIDER_CLAMP | SLIDER_PRECISION, 1, 200, 5);
+		CVar(Window, VA_LIST("Window", "Backtrack window"), 185, SLIDER_CLAMP | SLIDER_PRECISION, 0, 200, 5);
 		CVar(PreferOnShot, "Prefer on shot", false);
 
 		CVar(Offset, "Offset", 0, NOSAVE | DEBUGVAR, -1, 1);
@@ -489,8 +491,8 @@ namespace Vars
 		CVar(AntiWarp, "Anti-warp", true);
 		CVar(TickLimit, "Tick limit", 22, SLIDER_CLAMP, 2, 22);
 		CVar(WarpRate, "Warp rate", 22, SLIDER_CLAMP, 2, 22);
+		CVar(RechargeLimit, "Recharge limit", 24, SLIDER_MIN, 1, 24);
 		CVar(PassiveRecharge, "Passive recharge", 0, SLIDER_CLAMP, 0, 67);
-		CVar(RechargeLimit, "Recharge limit", 24, SLIDER_CLAMP, 1, 24);
 	NAMESPACE_END(DoubleTap);
 
 	NAMESPACE_BEGIN(Fakelag)
@@ -537,8 +539,8 @@ namespace Vars
 			"View", "Target", "Freestanding");
 		CVar(RealYawOffset, "Real offset", 0.f, SLIDER_CLAMP | SLIDER_PRECISION, -180.f, 180.f, 5.f, "%i");
 		CVar(FakeYawOffset, "Fake offset", 0.f, SLIDER_CLAMP | SLIDER_PRECISION, -180.f, 180.f, 5.f, "%i");
-		CVar(RealYawValue, "Real value", 0.f, SLIDER_CLAMP | SLIDER_PRECISION, -180.f, 180.f, 5.f, "%g");
-		CVar(FakeYawValue, "Fake value", 0.f, SLIDER_CLAMP | SLIDER_PRECISION, -180.f, 180.f, 5.f, "%g");
+		CVar(RealYawValue, "Real value", 90.f, SLIDER_CLAMP | SLIDER_PRECISION, -180.f, 180.f, 5.f);
+		CVar(FakeYawValue, "Fake value", -90.f, SLIDER_CLAMP | SLIDER_PRECISION, -180.f, 180.f, 5.f);
 		CVar(SpinSpeed, "Spin speed", 15.f, SLIDER_PRECISION, -30.f, 30.f);
 		CVar(SineWaveSpeed, "Sine wave speed", 2.f, SLIDER_PRECISION, 0.1f, 10.f);
 		CVar(RandomRange, "Random range", 60.f, SLIDER_CLAMP | SLIDER_PRECISION, 10.f, 180.f, 5.f);
@@ -793,18 +795,19 @@ namespace Vars
 		SUBNAMESPACE_END(ThirdPerson);
 
 		SUBNAMESPACE_BEGIN(Removals)
-			CVar(Scope, VA_LIST("Scope", "Scope removal"), false, VISUAL);
-			CVar(Interpolation, VA_LIST("Interpolation", "Interpolation removal"), false);
-			CVar(Disguises, VA_LIST("Disguises", "Disguises removal"), false, VISUAL);
-			CVar(ScreenOverlays, VA_LIST("Screen overlays", "Screen overlays removal"), false, VISUAL);
-			CVar(Taunts, VA_LIST("Taunts", "Taunts removal"), false, VISUAL);
-			CVar(ScreenEffects, VA_LIST("Screen effects", "Screen effects removal"), false, VISUAL);
-			CVar(ViewPunch, VA_LIST("View punch", "View punch removal"), false, VISUAL);
-			CVar(AngleForcing, VA_LIST("Angle forcing", "Angle forcing removal"), false, VISUAL);
-			CVar(PostProcessing, VA_LIST("Post processing", "Post processing removal"), false, VISUAL);
-			CVar(MOTD, VA_LIST("MOTD", "MOTD removal"), false, VISUAL);
-			CVar(Ragdolls, VA_LIST("Ragdolls", "Ragdoll removal"), false, VISUAL);
-			CVar(Gibs, VA_LIST("Gibs", "Gib removal"), false, VISUAL);
+			CVar(Interpolation, VA_LIST("Interpolation", "Remove interpolation"), false);
+			CVar(NoLerp, VA_LIST("0 lerp", "Remove 0 lerp"), false);
+			CVar(Disguises, VA_LIST("Disguises", "Remove disguises"), false, VISUAL);
+			CVar(Taunts, VA_LIST("Taunts", "Remove taunts"), false, VISUAL);
+			CVar(Scope, VA_LIST("Scope", "Remove scope"), false, VISUAL);
+			CVar(PostProcessing, VA_LIST("Post processing", "Remove post processing"), false, VISUAL);
+			CVar(ScreenOverlays, VA_LIST("Screen overlays", "Remove screen overlays"), false, VISUAL);
+			CVar(ScreenEffects, VA_LIST("Screen effects", "Remove screen effects"), false, VISUAL);
+			CVar(ViewPunch, VA_LIST("View punch", "Remove view punch"), false, VISUAL);
+			CVar(AngleForcing, VA_LIST("Angle forcing", "Remove angle forcing"), false, VISUAL);
+			CVar(Ragdolls, VA_LIST("Ragdolls", "Remove ragdoll"), false, VISUAL);
+			CVar(Gibs, VA_LIST("Gibs", "Remove gibs"), false, VISUAL);
+			CVar(MOTD, VA_LIST("MOTD", "Remove MOTD"), false, VISUAL);
 		SUBNAMESPACE_END(Removals);
 
 		SUBNAMESPACE_BEGIN(Effects)
@@ -895,7 +898,7 @@ namespace Vars
 				"Off", "Line", "Separators", "Spaced", "Arrows", "Boxes");
 			CVarValues(ShotPath, "Shot path", 0, VISUAL, nullptr,
 				"Off", "Line", "Separators", "Spaced", "Arrows", "Boxes");
-			CVarEnum(SplashRadius, "Splash path", 0b0, VISUAL | DROPDOWN_MULTI, "Off",
+			CVarEnum(SplashRadius, "Splash radius", 0b0, VISUAL | DROPDOWN_MULTI, "Off",
 				VA_LIST("Simulation", "##Divider", "Priority", "Enemy", "Team", "Local", "Friends", "Party", "##Divider", "Rockets", "Stickies", "Pipes", "Scorch shot", "##Divider", "Trace"),
 				Simulation = 1 << 0, Priority = 1 << 1, Enemy = 1 << 2, Team = 1 << 3, Local = 1 << 4, Friends = 1 << 5, Party = 1 << 6, Rockets = 1 << 7, Stickies = 1 << 8, Pipes = 1 << 9, ScorchShot = 1 << 10, Trace = 1 << 11);
 			CVar(Timed, VA_LIST("Timed", "Timed path"), false, VISUAL);
@@ -905,6 +908,8 @@ namespace Vars
 			CVar(SwingLines, "Swing lines", false, VISUAL);
 			CVar(DrawDuration, VA_LIST("Draw duration", "Simulation draw duration"), 5.f, VISUAL | SLIDER_MIN | SLIDER_PRECISION, 0.f, 10.f);
 
+			CVarValues(RealPath, "Real path", 0, NOSAVE | DEBUGVAR, nullptr,
+				"Off", "Line", "Separators", "Spaced", "Arrows", "Boxes");
 			CVar(SeparatorSpacing, "Separator spacing", 4, NOSAVE | DEBUGVAR, 1, 16);
 			CVar(SeparatorLength, "Separator length", 12.f, NOSAVE | DEBUGVAR, 2.f, 16.f);
 		SUBNAMESPACE_END(Simulation);
@@ -942,7 +947,6 @@ namespace Vars
 			CVar(Hull, "Hull", 5.f, NOSAVE | DEBUGVAR | SLIDER_MIN | SLIDER_PRECISION, 0.f, 10.f, 0.5f);
 			CVar(Speed, "Speed", 1200.f, NOSAVE | DEBUGVAR | SLIDER_MIN | SLIDER_PRECISION, 0.f, 5000.f, 50.f);
 			CVar(Gravity, "Gravity", 1.f, NOSAVE | DEBUGVAR | SLIDER_PRECISION, 0.f, 1.f, 0.1f);
-			CVar(NoSpin, "No spin", false, NOSAVE | DEBUGVAR);
 			CVar(LifeTime, "Life time", 2.2f, NOSAVE | DEBUGVAR | SLIDER_MIN | SLIDER_PRECISION, 0.f, 10.f, 0.1f);
 			CVar(UpVelocity, "Up velocity", 200.f, NOSAVE | DEBUGVAR | SLIDER_PRECISION, 0.f, 1000.f, 50.f);
 			CVar(AngularVelocityX, "Angular velocity X", 600.f, NOSAVE | DEBUGVAR | SLIDER_PRECISION, -1000.f, 1000.f, 50.f);
@@ -1032,10 +1036,11 @@ namespace Vars
 		SUBNAMESPACE_END(Movement);
 
 		SUBNAMESPACE_BEGIN(Exploits)
-			CVar(CheatsBypass, "Cheats bypass", false);
 			CVar(PureBypass, "Pure bypass", false);
+			CVar(CheatsBypass, "Cheats bypass", false);
 			CVar(EquipRegionUnlock, "Equip region unlock", false);
 			CVar(BreakShootSound, "Break shoot sound", false);
+			CVar(BackpackExpander, "Backpack expander", false);
 			CVar(PingReducer, "Ping reducer", false);
 			CVar(PingTarget, "Ping", 1, SLIDER_CLAMP, 1, 100, 1);
 		SUBNAMESPACE_END(Exploits);
@@ -1123,12 +1128,12 @@ namespace Vars
 		SUBNAMESPACE_END(Sound);
 
 		SUBNAMESPACE_BEGIN(Game)
-			CVar(NetworkFix, "Network fix", false);
-			CVar(PredictionErrorJitterFix, "Prediction error jitter fix", false);
-			CVar(SetupBonesOptimization, "Bones optimization", false);
+			CVar(AntiCheatCompatibility, "Anti-cheat compatibility", false);
 			CVar(F2PChatBypass, "F2P chat bypass", false);
 			CVar(VACBypass, "Valve allows cheats", false);
-			CVar(AntiCheatCompatibility, "Anti-cheat compatibility", false);
+			CVar(NetworkFix, "Network fix", false);
+			CVar(SetupBonesOptimization, "Bones optimization", false);
+
 			CVar(AntiCheatCritHack, "Anti-cheat crit hack", false, NOSAVE | DEBUGVAR);
 			CVar(BotNetworking, "Bot networking", true);
 		SUBNAMESPACE_END(Game);
@@ -1177,6 +1182,7 @@ namespace Vars
 			);
 			CVar(FreezeQueue, "Freeze queue", false);
 			CVar(AutoCasualQueue, "Auto casual queue", false);
+			CVar(AutoCasualJoin, "Auto casual join", false);
 			CVar(QueueDelay, "Queue delay", 5, SLIDER_MIN, 0, 10, 1, "%im");
 			CVar(RQif, "Requeue if...", false); // Dropdown?
 			CVar(RQplt, "Players LT", 12, SLIDER_MIN, 0, 100, 1, "%i");
@@ -1339,7 +1345,7 @@ namespace Vars
 		CVar(Info, "Debug info", false, NOSAVE);
 		CVar(Logging, "Debug logging", false, NOSAVE);
 		CVar(Options, "Debug options", false, NOSAVE);
-		CVar(DrawServerHitboxes, "Show server hitboxes", false, NOSAVE);
+		CVar(DrawHitboxes, "Show hitboxes", false, NOSAVE);
 		CVar(AntiAimLines, "Anti-aim lines", false);
 		CVar(CrashLogging, "Crash logging", true);
 #ifdef DEBUG_TRACES
@@ -1360,8 +1366,6 @@ namespace Vars
 		CVar(CBaseAnimating_UpdateClientSideAnimation, "CBaseAnimating_UpdateClientSideAnimation", true, NOSAVE | DEBUGVAR);
 		CVar(CBaseEntity_BaseInterpolatePart1, "CBaseEntity_BaseInterpolatePart1", true, NOSAVE | DEBUGVAR);
 		CVar(CBaseEntity_EstimateAbsVelocity, "CBaseEntity_EstimateAbsVelocity", true, NOSAVE | DEBUGVAR);
-		CVar(CBaseEntity_FireBullets, "CBaseEntity_FireBullets", true, NOSAVE | DEBUGVAR);
-		CVar(CBaseEntity_GetTeamNumber, "CBaseEntity_GetTeamNumber", true, NOSAVE | DEBUGVAR);
 		CVar(CBaseEntity_ResetLatched, "CBaseEntity_ResetLatched", true, NOSAVE | DEBUGVAR);
 		CVar(CBaseEntity_SetAbsVelocity, "CBaseEntity_SetAbsVelocity", true, NOSAVE | DEBUGVAR);
 		CVar(CBaseEntity_WorldSpaceCenter, "CBaseEntity_WorldSpaceCenter", true, NOSAVE | DEBUGVAR);
@@ -1411,6 +1415,7 @@ namespace Vars
 		CVar(CTFPlayer_BRenderAsZombie, "CTFPlayer_BRenderAsZombie", true, NOSAVE | DEBUGVAR);
 		CVar(CTFPlayer_BuildTransformations, "CTFPlayer_BuildTransformations", true, NOSAVE | DEBUGVAR);
 		CVar(CTFPlayer_DoAnimationEvent, "CTFPlayer_DoAnimationEvent", true, NOSAVE | DEBUGVAR);
+		CVar(CTFPlayer_FireBullet, "CTFPlayer_FireBullet", true, NOSAVE | DEBUGVAR);
 		CVar(CTFPlayer_IsPlayerClass, "CTFPlayer_IsPlayerClass", true, NOSAVE | DEBUGVAR);
 		CVar(CTFPlayer_ShouldDraw, "CTFPlayer_ShouldDraw", true, NOSAVE | DEBUGVAR);
 		CVar(CTFPlayer_UpdateStepSound, "CTFPlayer_UpdateStepSound", true, NOSAVE | DEBUGVAR);

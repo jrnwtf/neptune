@@ -1,5 +1,6 @@
 #include "../SDK/SDK.h"
 
+#include "../Features/Commands/Commands.h"
 #include <functional>
 #include <regex>
 
@@ -13,7 +14,7 @@ enum cmd_source_t
 
 static std::string sCmdString;
 
-#define PRE_STR "\x07\x07\x07\x07\x07\x07\x07"
+#define PRE_STR "\x7\x7\x7\x7\x7\x7\x7"
 static std::vector<std::pair<std::string, std::string>> vStatic = {
     { "\\x1", "\x1" },
     { "\\x01", "\x1" },
@@ -43,6 +44,7 @@ static std::vector<std::pair<std::string, std::string>> vStatic = {
     { "\\{orange}", PRE_STR"\x7""ff7000" },
     { "\\{purple}", PRE_STR"\x7""7f00ff" },
     { "\\{brown}", PRE_STR"\x7""583927" },
+    { "\\{gold}", PRE_STR"\x7""c8a900" },
     { "\\{gray}", PRE_STR"\x7""cccccc" },
     { "\\{black}", PRE_STR"\x7""000000" },
     { "\\{bluteam}", PRE_STR"\x7""99ccff" },
@@ -222,6 +224,9 @@ MAKE_HOOK(Cbuf_ExecuteCommand, S::Cbuf_ExecuteCommand(), void,
 		std::deque<std::string> vArgs;
 		for (int i = 1; i < args.ArgC(); i++)
 			vArgs.push_back(args[i]);
+
+        if (F::Commands.Run(sCommand, vArgs))
+            return;
 
 		switch (FNV1A::Hash32(sCommand.c_str()))
 		{

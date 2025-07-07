@@ -32,4 +32,4 @@ public:
 	int m_iPredictionBullet = -1;
 };
 
-ADD_FEATURE(CNoSpreadHitscan, NoSpreadHitscan)
+ADD_FEATURE(CNoSpreadHitscan, NoSpreadHitscan);

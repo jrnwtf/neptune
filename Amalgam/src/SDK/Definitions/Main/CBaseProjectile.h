@@ -52,8 +52,8 @@ public:
 	NETVAR(m_angRotation, Vec3, "CTFWeaponBaseGrenadeProj", "m_angRotation");
 	NETVAR(m_hDeflectOwner, EHANDLE, "CTFWeaponBaseGrenadeProj", "m_hDeflectOwner");
 
-	VIRTUAL(GetDamageRadius, float, void*, this, 220);
-	VIRTUAL(GetDamageType, int, void*, this, 229);
+	VIRTUAL(GetDamageRadius, float, 220, this);
+	VIRTUAL(GetDamageType, int, 229, this);
 };
 
 class CTFProjectile_Rocket : public CTFBaseRocket
@@ -82,6 +82,8 @@ public:
 	NETVAR(m_bArrowAlight, bool, "CTFProjectile_Arrow", "m_bArrowAlight");
 	NETVAR(m_bCritical, bool, "CTFProjectile_Arrow", "m_bCritical");
 	NETVAR(m_iProjectileType, int, "CTFProjectile_Arrow", "m_iProjectileType");
+
+	bool CanHeadshot();
 };
 
 class CTFGrenadePipebombProjectile : public CTFWeaponBaseGrenadeProj
@@ -95,8 +97,5 @@ public:
 	NETVAR_OFF(m_flCreationTime, float, "CTFGrenadePipebombProjectile", "m_iType", 4);
 	NETVAR_OFF(m_bPulsed, bool, "CTFGrenadePipebombProjectile", "m_iType", 12);
 
-	inline bool HasStickyEffects()
-	{
-		return m_iType() == TF_GL_MODE_REMOTE_DETONATE || m_iType() == TF_GL_MODE_REMOTE_DETONATE_PRACTICE;
-	}
+	bool HasStickyEffects();
 };

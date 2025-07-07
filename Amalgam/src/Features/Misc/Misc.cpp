@@ -137,6 +137,9 @@ void CMisc::AutoJump(CTFPlayer* pLocal, CUserCmd* pCmd)
 	if (!Vars::Misc::Movement::Bunnyhop.Value)
 		return;
 
+	if (auto pWeapon = H::Entities.GetWeapon(); pWeapon && pWeapon->GetWeaponID() == TF_WEAPON_GRAPPLINGHOOK && pWeapon->As<CTFGrapplingHook>()->m_hProjectile())
+		return;
+
 	static bool bStaticJump = false, bStaticGrounded = false, bLastAttempted = false;
 	const bool bLastJump = bStaticJump, bLastGrounded = bStaticGrounded;
 	const bool bCurJump = bStaticJump = pCmd->buttons & IN_JUMP, bCurGrounded = bStaticGrounded = pLocal->m_hGroundEntity();
@@ -217,8 +220,8 @@ void CMisc::AutoStrafe(CTFPlayer* pLocal, CUserCmd* pCmd)
 		Vec3 vForward, vRight; Math::AngleVectors(pCmd->viewangles, &vForward, &vRight, nullptr);
 		vForward.Normalize2D(), vRight.Normalize2D();
 
-		Vec3 vWishDir = {}; Math::VectorAngles({ vForward.x * flForward + vRight.x * flSide, vForward.y * flForward + vRight.y * flSide, 0.f }, vWishDir);
-		Vec3 vCurDir = {}; Math::VectorAngles(pLocal->m_vecVelocity(), vCurDir);
+		Vec3 vWishDir = Math::VectorAngles({ vForward.x * flForward + vRight.x * flSide, vForward.y * flForward + vRight.y * flSide, 0.f });
+		Vec3 vCurDir = Math::VectorAngles(pLocal->m_vecVelocity());
 		float flDirDelta = Math::NormalizeAngle(vWishDir.y - vCurDir.y);
 		if (fabsf(flDirDelta) > Vars::Misc::Movement::AutoStrafeMaxDelta.Value)
 			break;
@@ -286,10 +289,6 @@ void CMisc::BreakJump(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 void CMisc::BreakShootSound(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
-	// TODO:
-	// Find a way to properly check whenever we have switched weapons or not 
-	// (current method is too slow and other methods i've tried are not reliable)
-
 	static int iOriginalWeaponSlot = -1;
 	auto pWeapon = H::Entities.GetWeapon();
 	if (!Vars::Misc::Exploits::BreakShootSound.Value || F::Ticks.m_bDoubletap || pLocal->m_iClass() != TF_CLASS_SOLDIER || !pWeapon)
@@ -297,42 +296,30 @@ void CMisc::BreakShootSound(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 	static bool bLastWasInAttack = false;
 	static int iLastWeaponSelect = -1;
-	//static bool bSwitching = false;
 	const int iCurrSlot = pWeapon->GetSlot();
 	if (pCmd->weaponselect && pCmd->weaponselect != iLastWeaponSelect)
-	{
 		iOriginalWeaponSlot = -1;
-	}
+
 	auto pSwap = iCurrSlot == SLOT_SECONDARY ? pLocal->GetWeaponFromSlot(SLOT_PRIMARY) : iCurrSlot == SLOT_PRIMARY ? pLocal->GetWeaponFromSlot(SLOT_SECONDARY) : pLocal->GetWeaponFromSlot(iOriginalWeaponSlot);
-	if (pSwap && !pCmd->weaponselect)
+	if (pSwap && pSwap->CanBeSelected() && !pCmd->weaponselect)
 	{
-		const int iItemDefIdx = pSwap->m_iItemDefinitionIndex();
-		if (iItemDefIdx == Soldier_s_TheBASEJumper || iItemDefIdx == Soldier_s_Gunboats || iItemDefIdx == Soldier_s_TheMantreads)
+		if (bLastWasInAttack)
 		{
-			pSwap = pLocal->GetWeaponFromSlot(SLOT_MELEE);
-		}
-		if (pSwap)
-		{
-			if (bLastWasInAttack)
+			if (iOriginalWeaponSlot < 0)
 			{
-				if (iOriginalWeaponSlot < 0)
-				{
-					iOriginalWeaponSlot = iCurrSlot;
-					pCmd->weaponselect = pSwap->entindex();
-					iLastWeaponSelect = pCmd->weaponselect;
-				}
+				iOriginalWeaponSlot = iCurrSlot;
+				pCmd->weaponselect = pSwap->entindex();
+				iLastWeaponSelect = pCmd->weaponselect;
 			}
-			else/* if ( true )*/
+		}
+		else
+		{
+			if (iOriginalWeaponSlot == iCurrSlot && G::CanPrimaryAttack)
+				iOriginalWeaponSlot = -1;
+			else if (iOriginalWeaponSlot >= 0 && iOriginalWeaponSlot != iCurrSlot)
 			{
-				if (iOriginalWeaponSlot == iCurrSlot && G::CanPrimaryAttack/*&& !G::Choking*/)
-				{
-					iOriginalWeaponSlot = -1;
-				}
-				else if (iOriginalWeaponSlot >= 0 && iOriginalWeaponSlot != iCurrSlot)
-				{
-					pCmd->weaponselect = pSwap->entindex();
-					iLastWeaponSelect = pCmd->weaponselect;
-				}
+				pCmd->weaponselect = pSwap->entindex();
+				iLastWeaponSelect = pCmd->weaponselect;
 			}
 		}
 	}
@@ -508,13 +495,11 @@ void CMisc::TauntKartControl(CTFPlayer* pLocal, CUserCmd* pCmd)
 		{
 			if (flipVar || !F::Ticks.CanChoke())
 			{	// you could just do this if you didn't care about viewangles
-				const Vec3 vecMove(pCmd->forwardmove, pCmd->sidemove, 0.f);
-				const float flLength = vecMove.Length();
-				Vec3 angMoveReverse;
-				Math::VectorAngles(vecMove * -1.f, angMoveReverse);
-				pCmd->forwardmove = -flLength;
+				Vec3 vMove = { pCmd->forwardmove, pCmd->sidemove, 0.f };
+				Vec3 vAngMoveReverse = Math::VectorAngles(vMove * -1.f);
+				pCmd->forwardmove = -vMove.Length();
 				pCmd->sidemove = 0.f;
-				pCmd->viewangles.y = fmodf(pCmd->viewangles.y - angMoveReverse.y, 360.f);
+				pCmd->viewangles.y = fmodf(pCmd->viewangles.y - vAngMoveReverse.y, 360.f);
 				pCmd->viewangles.z = 270.f;
 				G::PSilentAngles = true;
 			}
@@ -561,9 +546,8 @@ void CMisc::FastMovement(CTFPlayer* pLocal, CUserCmd* pCmd)
 			return;
 
 		Vec3 vMove = { pCmd->forwardmove, pCmd->sidemove, 0.f };
-		float flLength = vMove.Length();
-		Vec3 vAngMoveReverse; Math::VectorAngles(vMove * -1.f, vAngMoveReverse);
-		pCmd->forwardmove = -flLength;
+		Vec3 vAngMoveReverse = Math::VectorAngles(vMove * -1.f);
+		pCmd->forwardmove = -vMove.Length();
 		pCmd->sidemove = 0.f;
 		pCmd->viewangles.y = fmodf(pCmd->viewangles.y - vAngMoveReverse.y, 360.f);
 		pCmd->viewangles.z = 270.f;
@@ -586,7 +570,7 @@ void CMisc::AutoPeek(CTFPlayer* pLocal, CUserCmd* pCmd, bool bPost)
 
 			if (bReturning)
 			{
-				if (vLocalPos.DistTo(m_vPeekReturnPos) < 8.f)
+				if (vLocalPos.DistTo2D(m_vPeekReturnPos) < 8.f)
 				{
 					bReturning = false;
 					return;

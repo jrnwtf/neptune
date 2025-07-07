@@ -15,12 +15,12 @@ private:
 		int m_iIndex;
 	};
 
-	std::vector<Spectator_t> m_vSpectators;
-	std::unordered_map<int, float> m_mRespawnCache;
+	std::vector<Spectator_t> m_vSpectators = {};
+	std::unordered_map<int, float> m_mRespawnCache = {};
 
 public:
 	bool GetSpectators(CTFPlayer* pTarget);
 	void Draw(CTFPlayer* pLocal);
 };
 
-ADD_FEATURE(CSpectatorList, SpectatorList)
+ADD_FEATURE(CSpectatorList, SpectatorList);

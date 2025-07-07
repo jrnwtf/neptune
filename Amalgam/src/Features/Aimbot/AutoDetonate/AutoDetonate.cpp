@@ -10,22 +10,6 @@ enum
 #define SHIELD_NORMAL_VALUE		0.33f
 #define SHIELD_MAX_VALUE		0.10f
 
-static inline Vec3 PredictOrigin(Vec3& vOrigin, Vec3 vVelocity, float flLatency, bool bTrace = true, Vec3 vMins = {}, Vec3 vMaxs = {}, unsigned int nMask = MASK_SOLID)
-{
-	if (vVelocity.IsZero() || flLatency <= 0.f)
-		return vOrigin;
-
-	Vec3 vTo = vOrigin + vVelocity * flLatency;
-	if (!bTrace)
-		return vTo;
-
-	CGameTrace trace = {};
-	CTraceFilterWorldAndPropsOnly filter = {};
-
-	SDK::TraceHull(vOrigin, vTo, vMins, vMaxs, nMask, &filter, &trace);
-	return vOrigin + (vTo - vOrigin) * trace.fraction;
-}
-
 void CAutoDetonate::PredictPlayer(CBaseEntity* pLocal, CBaseEntity* pTarget, float flLatency)
 {
 	m_vRestore = std::nullopt;
@@ -34,7 +18,7 @@ void CAutoDetonate::PredictPlayer(CBaseEntity* pLocal, CBaseEntity* pTarget, flo
 
 	m_vRestore = pTarget->GetAbsOrigin();
 
-	pTarget->SetAbsOrigin(PredictOrigin(pTarget->m_vecOrigin(), pTarget->GetAbsVelocity(), flLatency, true, pTarget->m_vecMins() + 0.125f, pTarget->m_vecMaxs() - 0.125f, pTarget->SolidMask()));
+	pTarget->SetAbsOrigin(SDK::PredictOrigin(pTarget->m_vecOrigin(), pTarget->GetAbsVelocity(), flLatency, true, pTarget->m_vecMins() + 0.125f, pTarget->m_vecMaxs() - 0.125f, pTarget->SolidMask()));
 }
 
 void CAutoDetonate::RestorePlayer(CBaseEntity* pTarget)
@@ -236,7 +220,7 @@ bool CAutoDetonate::CanSee(CBaseEntity* pTarget, CBaseEntity* pProjectile, const
 			return false;
 	}
 
-	return SDK::VisPosProjectile(pProjectile, pTarget, vProjectileOrigin, vTargetCenter, MASK_SOLID & ~CONTENTS_GRATE);
+	return SDK::VisPosCollideable(pProjectile, pTarget, vProjectileOrigin, vTargetCenter, MASK_SOLID & ~CONTENTS_GRATE);
 }
 
 bool CAutoDetonate::SkipTarget(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CBaseEntity* pTarget)
@@ -291,7 +275,7 @@ bool CAutoDetonate::FlareCheck(CTFPlayer* pLocal)
 		float flRadius = Vars::Aimbot::Projectile::AutodetRadius.Value * 110.f / 100;
 		flRadius = SDK::AttribHookValue(flRadius, "mult_explosion_radius", pWeapon) - 1;
 
-		Vec3 vOrigin = PredictOrigin(pProjectile->m_vecOrigin(), pProjectile->GetAbsVelocity(), flLatency);
+		Vec3 vOrigin = SDK::PredictOrigin(pProjectile->m_vecOrigin(), pProjectile->GetAbsVelocity(), flLatency);
 
 		CBaseEntity* pEntity;
 		for (CEntitySphereQuery sphere(vOrigin, flRadius);
@@ -350,7 +334,7 @@ bool CAutoDetonate::StickyCheck(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 		vStickies.push_back(pPipebomb);
 		vRadiuses[pPipebomb->entindex()] = (pPipebomb->GetDamageRadius() * Vars::Aimbot::Projectile::AutodetRadius.Value / 100) - 1;
-		vPredictedStickyOrigins[pPipebomb->entindex()] = PredictOrigin(pPipebomb->m_vecOrigin(), pPipebomb->GetAbsVelocity(), flLatency);
+		vPredictedStickyOrigins[pPipebomb->entindex()] = SDK::PredictOrigin(pPipebomb->m_vecOrigin(), pPipebomb->GetAbsVelocity(), flLatency);
 	}
 
 	if (!pWeapon)

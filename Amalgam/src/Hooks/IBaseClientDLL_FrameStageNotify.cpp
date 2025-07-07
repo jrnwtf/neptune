@@ -1,5 +1,6 @@
 #include "../SDK/SDK.h"
 
+#include "../Features/Aimbot/Aimbot.h"
 #include "../Features/Backtrack/Backtrack.h"
 #include "../Features/CheaterDetection/CheaterDetection.h"
 #include "../Features/CritHack/CritHack.h"
@@ -13,9 +14,8 @@
 #include "../Features/Spectate/Spectate.h"
 #include "../Features/Binds/Binds.h"
 
-
-MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVFunc(I::BaseClientDLL, 35), void,
-		  void* rcx, ClientFrameStage_t curStage)
+MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVirtual(I::BaseClientDLL, 35), void,
+	void* rcx, ClientFrameStage_t curStage)
 {
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IBaseClientDLL_FrameStageNotify[DEFAULT_BIND])
@@ -42,7 +42,7 @@ MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVFunc(I::BaseClientDLL, 
 	{
 		H::Entities.Store();
 		F::PlayerUtils.UpdatePlayers();
-	
+
 		try {
 			F::Resolver.FrameStageNotify();
 		}
@@ -92,6 +92,7 @@ MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVFunc(I::BaseClientDLL, 
 		F::MoveSim.Store();
 		F::CritHack.Store();
 #ifndef TEXTMODE
+		F::Aimbot.Store();
 		auto pLocal = H::Entities.GetLocal();
 		F::ESP.Store(pLocal);
 		F::Chams.Store(pLocal);
@@ -104,6 +105,7 @@ MAKE_HOOK(IBaseClientDLL_FrameStageNotify, U::Memory.GetVFunc(I::BaseClientDLL, 
 		F::Spectate.NetUpdateEnd(pLocal);
 
 		F::Visuals.Modulate();
+		F::Visuals.DrawHitboxes(1);
 #endif
 		break;
 	}

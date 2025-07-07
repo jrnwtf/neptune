@@ -38,7 +38,7 @@ std::optional<float> CResolver::GetPitchForSniperDot(CTFPlayer* pEntity, CTFPlay
 		const Vec3 vOrigin = m_mSniperDots[iUserID];
 		const Vec3 vEyeOrigin = pEntity->m_vecOrigin() + pEntity->GetViewOffset();
 		const Vec3 vDelta = vOrigin - vEyeOrigin;
-		Vec3 vAngles; Math::VectorAngles(vDelta, vAngles);
+		Vec3 vAngles = Math::VectorAngles(vDelta);
 		return vAngles.x;
 	}
 
@@ -188,7 +188,7 @@ void CResolver::CreateMove(CTFPlayer* pLocal)
 	if (!pLocal)
 		return;
 
-	if (m_iWaitingForTarget != -1 && TICKS_TO_TIME(pLocal->m_nTickBase()) > m_flWaitingForDamage)
+	if (m_iWaitingForTarget != -1 && m_flWaitingForDamage < TICKS_TO_TIME(pLocal->m_nTickBase()))
 	{
 		if (auto pTarget = I::ClientEntityList->GetClientEntity(I::EngineClient->GetPlayerForUserID(m_iWaitingForTarget))->As<CTFPlayer>())
 		{
@@ -399,7 +399,7 @@ void CResolver::HitscanRan(CTFPlayer* pLocal, CTFPlayer* pTarget, CTFWeaponBase*
 	}
 }
 
-void CResolver::OnPlayerHurt(IGameEvent* pEvent)
+void CResolver::PlayerHurt(IGameEvent* pEvent)
 {
 	if (m_iWaitingForTarget == -1
 		|| I::EngineClient->GetPlayerForUserID(pEvent->GetInt("attacker")) != I::EngineClient->GetLocalPlayer()

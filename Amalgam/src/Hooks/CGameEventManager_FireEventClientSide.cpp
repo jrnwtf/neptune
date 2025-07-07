@@ -2,7 +2,7 @@
 #include "../Features/Killstreak/Killstreak.h"
 
 #ifndef TEXTMODE
-MAKE_HOOK(CGameEventManager_FireEventClientSide, U::Memory.GetVFunc(I::GameEventManager, 8), bool,
+MAKE_HOOK(CGameEventManager_FireEventClientSide, U::Memory.GetVirtual(I::GameEventManager, 8), bool,
 	IGameEventManager2* rcx, IGameEvent* event)
 {
 	// We have to do it here because our own event listener runs after game event manager

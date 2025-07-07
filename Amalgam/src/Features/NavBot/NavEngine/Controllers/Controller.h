@@ -11,4 +11,4 @@ public:
 	void Reset();
 };
 
-ADD_FEATURE(CGameObjectiveController, GameObjectiveController)
+ADD_FEATURE(CGameObjectiveController, GameObjectiveController);
