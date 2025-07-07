@@ -2,6 +2,10 @@
 
 #include "../../Players/PlayerUtils.h"
 #include "../../NavBot/FollowBot.h"
+#include "../../Backtrack/Backtrack.h"
+#include "../../CritHack/CritHack.h"
+#include "../../Simulation/ProjectileSimulation/ProjectileSimulation.h"
+#include "../AimbotProjectile/AimbotProjectile.h"
 
 bool CAutoHeal::IsValidHealTarget(CTFPlayer* pLocal, CBaseEntity* pEntity)
 {
@@ -31,17 +35,22 @@ bool CAutoHeal::IsValidHealTarget(CTFPlayer* pLocal, CBaseEntity* pEntity)
 	return true;
 }
 
-void CAutoHeal::ActivateOnVoice(CTFPlayer* pLocal, CWeaponMedigun* pWeapon, CUserCmd* pCmd)
+bool CAutoHeal::ActivateOnVoice(CTFPlayer* pLocal, CWeaponMedigun* pWeapon, CUserCmd* pCmd)
 {
 	if (!Vars::Aimbot::Healing::ActivateOnVoice.Value)
-		return;
+		return false;
 
 	auto pTarget = pWeapon->m_hHealingTarget().Get();
 	if (!IsValidHealTarget(pLocal, pTarget))
 		return false;
 
 	if (m_mMedicCallers.contains(pTarget->entindex()))
+	{
 		pCmd->buttons |= IN_ATTACK2;
+		return true;
+	}
+	
+	return false;
 }
 
 static inline Vec3 PredictOrigin(Vec3& vOrigin, Vec3 vVelocity, float flLatency, bool bTrace = true, Vec3 vMins = {}, Vec3 vMaxs = {}, unsigned int nMask = MASK_SOLID, float flNormal = 0.f)
@@ -350,9 +359,9 @@ void CAutoHeal::GetDangers(CTFPlayer* pTarget, bool bVaccinator, float& flBullet
 		}
 		case EWeaponType::PROJECTILE:
 		{
-			ProjectileInfo tProjInfo = {};
-			if (!F::ProjSim.GetInfo(pPlayer, pWeapon, {}, tProjInfo, ProjSimEnum::NoRandomAngles | ProjSimEnum::MaxSpeed))
-				continue;
+					ProjectileInfo tProjInfo = {};
+		if (!F::ProjSim.GetInfo(pPlayer, pWeapon, Vec3(), tProjInfo, ProjSimEnum::NoRandomAngles | ProjSimEnum::MaxSpeed))
+			continue;
 
 			int iType = MEDIGUN_BLAST_RESIST;
 			switch (nWeaponID)
@@ -512,7 +521,8 @@ void CAutoHeal::GetDangers(CTFPlayer* pTarget, bool bVaccinator, float& flBullet
 			m_flDamagedDPS = 8.f;
 		}
 	}
-	if (m_flDamagedTime = std::max(m_flDamagedTime - TICK_INTERVAL, 0.f))
+	m_flDamagedTime = std::max(m_flDamagedTime - TICK_INTERVAL, 0.f);
+	if (m_flDamagedTime > 0.f)
 	{
 		switch (m_iDamagedType)
 		{
@@ -862,6 +872,7 @@ bool CAutoHeal::RunVaccinator(CTFPlayer* pLocal, CWeaponMedigun* pWeapon, CUserC
 	
 	return false;
 }
+
 void CAutoHeal::Event(IGameEvent* pEvent, uint32_t uHash, CTFPlayer* pLocal)
 {
     if (!pEvent || !pLocal || !I::EngineClient || !I::GlobalVars)
@@ -1137,110 +1148,6 @@ void CAutoHeal::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 	m_mMedicCallers.clear();
 	if (bActivated)
 		return;
-	}
-
-	ActivateOnVoice(pLocal, pWeapon->As<CWeaponMedigun>(), pCmd);
-	m_mMedicCallers.clear();
-	
-	AutoVaccinator(pLocal, pWeapon->As<CWeaponMedigun>(), pCmd);
-}
-
-void CAutoHeal::Event(IGameEvent* pEvent, uint32_t uHash)
-{
-	switch (uHash)
-	{
-	case FNV1A::Hash32Const("player_hurt"):
-	{
-		if (!Vars::Aimbot::Healing::AutoVaccinator.Value)
-			return;
-
-		auto pWeapon = H::Entities.GetWeapon()->As<CWeaponMedigun>();
-		if (!pWeapon
-			|| pWeapon->GetWeaponID() != TF_WEAPON_MEDIGUN || pWeapon->GetMedigunType() != MEDIGUN_RESIST)
-			return;
-
-		int iVictim = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("userid"));
-		int iAttacker = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("attacker"));
-		int iDamage = pEvent->GetInt("damageamount");
-		int iWeaponID = pEvent->GetInt("weaponid");
-		bool bCrit = pEvent->GetBool("crit");
-		bool bMinicrit = pEvent->GetBool("minicrit");
-
-		int iTarget = pWeapon->m_hHealingTarget().GetEntryIndex();
-		if (iVictim == iAttacker || iVictim != I::EngineClient->GetLocalPlayer() && (iVictim != iTarget || Vars::Aimbot::Healing::FriendsOnly.Value && !H::Entities.IsFriend(iTarget) && !H::Entities.InParty(iTarget)))
-			return;
-
-		auto pEntity = I::ClientEntityList->GetClientEntity(iAttacker)->As<CTFPlayer>();
-		if (!pEntity || !pEntity->IsPlayer())
-			return;
-
-		auto pWeapon2 = pEntity->m_hActiveWeapon().Get()->As<CTFWeaponBase>();
-		if (!pWeapon2 || pWeapon2->GetWeaponID() != iWeaponID || pWeapon2->GetFireRate() > 1.f)
-			return;
-
-		float flFireRate = pWeapon2->GetFireRate();
-		float flMult = SDK::AttribHookValue(1, "mult_dmg", pWeapon2);
-		switch (SDK::GetWeaponType(pWeapon2))
-		{
-		case EWeaponType::HITSCAN:
-			m_iDamagedType = MEDIGUN_BULLET_RESIST;
-			m_flDamagedDPS = iDamage / flFireRate;
-			break;
-		case EWeaponType::PROJECTILE:
-			switch (iWeaponID)
-			{
-			case TF_WEAPON_FLAMETHROWER:
-				if (!bCrit && !bMinicrit || iDamage / flMult < (bCrit ? 48 : 22))
-				{
-					m_iDamagedType = MEDIGUN_FIRE_RESIST;
-					float flBurnMult = SDK::AttribHookValue(1, "mult_wpn_burndmg", pWeapon2);
-					if (!bCrit && !bMinicrit && iDamage <= 4 * flBurnMult)
-						m_flDamagedDPS = Vars::Aimbot::Healing::AutoVaccinatorFlamethrowerDamageOnly.Value ? 0.f : 8.f * flBurnMult;
-					else
-						m_flDamagedDPS = 80.f * flMult * (bCrit ? 3.f : bMinicrit ? 1.36f : 1.f);
-				}
-				else // better way to assume reflect?
-				{
-					m_iDamagedType = MEDIGUN_BLAST_RESIST;
-					m_flDamagedDPS = iDamage;
-				}
-				break;
-			case TF_WEAPON_COMPOUND_BOW:
-			case TF_WEAPON_CROSSBOW:
-			case TF_WEAPON_SHOTGUN_BUILDING_RESCUE:
-			case TF_WEAPON_SYRINGEGUN_MEDIC:
-			case TF_WEAPON_RAYGUN:
-				m_iDamagedType = MEDIGUN_BULLET_RESIST;
-				m_flDamagedDPS = iDamage / flFireRate;
-				break;
-			case TF_WEAPON_FLAME_BALL:
-			case TF_WEAPON_FLAREGUN:
-			case TF_WEAPON_FLAREGUN_REVENGE:
-				m_iDamagedType = MEDIGUN_FIRE_RESIST;
-				m_flDamagedDPS = iDamage / flFireRate;
-				break;
-			default:
-				m_iDamagedType = MEDIGUN_BLAST_RESIST;
-				m_flDamagedDPS = iDamage / flFireRate;
-			}
-			break;
-		case EWeaponType::MELEE:
-			return;
-		}
-		if (Vars::Aimbot::Healing::AutoVaccinatorFlamethrowerDamageOnly.Value && (iWeaponID != TF_WEAPON_FLAMETHROWER || m_iDamagedType != MEDIGUN_FIRE_RESIST))
-			m_flDamagedDPS = 0.f;
-		if (!m_flDamagedDPS)
-			return;
-
-		m_flDamagedTime = 1.f;
-#ifdef DEBUG_VACCINATOR
-		SDK::Output("Hurt", std::format("{}, {}", m_iDamagedType, m_flDamagedDPS).c_str(), { 255, 100, 100 });
-#endif
-		break;
-	}
-	case FNV1A::Hash32Const("player_spawn"):
-		m_flDamagedTime = 0.f;
-	}
 }
 
 #ifdef DEBUG_VACCINATOR

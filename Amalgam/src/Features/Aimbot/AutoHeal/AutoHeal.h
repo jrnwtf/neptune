@@ -43,6 +43,20 @@ class CAutoHeal
 	int m_iCurrentResistIndex = 0;
 	float m_flLastCycleTime = 0.0f;
 
+	float m_flDamagedTime = 0.0f;
+	int m_iDamagedType = 0;
+	float m_flDamagedDPS = 0.0f;
+	int m_iResistType = -1;
+	float m_flChargeLevel = 0.0f;
+	float m_flSwapTime = 0.0f;
+	bool m_bPreventResistSwap = false;
+	bool m_bPreventResistCharge = false;
+
+	void GetDangers(CTFPlayer* pTarget, bool bVaccinator, float& flBulletOut, float& flBlastOut, float& flFireOut);
+	void SwapResistType(CUserCmd* pCmd, int iType);
+	void ActivateResistType(CUserCmd* pCmd, int iType);
+	void AutoVaccinator(CTFPlayer* pLocal, CWeaponMedigun* pWeapon, CUserCmd* pCmd);
+
 public:
 	void Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd);
 	void Event(IGameEvent* pEvent, uint32_t uHash, CTFPlayer* pLocal);

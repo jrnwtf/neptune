@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <unordered_map>
 #include <typeinfo>
+#include <type_traits>
 
 #define VA_LIST(...) __VA_ARGS__
 
@@ -122,6 +123,31 @@ public:
 	{
 		return Map.contains(i);
 	}
+	
+	// Implicit conversion operators
+	inline operator T&() { return Value; }
+	inline operator const T&() const { return Value; }
+	
+	// Comparison operators
+	inline bool operator==(const T& other) const { return Value == other; }
+	inline bool operator!=(const T& other) const { return Value != other; }
+	inline bool operator<(const T& other) const { return Value < other; }
+	inline bool operator>(const T& other) const { return Value > other; }
+	inline bool operator<=(const T& other) const { return Value <= other; }
+	inline bool operator>=(const T& other) const { return Value >= other; }
+	
+	// Logical operators
+	inline bool operator&&(const T& other) const { return Value && other; }
+	inline bool operator||(const T& other) const { return Value || other; }
+	inline bool operator!() const { return !Value; }
+	
+	// Bitwise operators for integer types
+	template<typename U = T>
+	inline typename std::enable_if_t<std::is_integral_v<U>, U> operator&(const U& other) const { return Value & other; }
+	template<typename U = T>
+	inline typename std::enable_if_t<std::is_integral_v<U>, U> operator|(const U& other) const { return Value | other; }
+	template<typename U = T>
+	inline typename std::enable_if_t<std::is_integral_v<U>, U> operator^(const U& other) const { return Value ^ other; }
 };
 
 #define NAMESPACE_BEGIN(name, ...)\
@@ -466,6 +492,11 @@ namespace Vars
 			CVar(VaccinatorMultiResist, "Cycle between multiple resistances", false);
 			CVar(VaccinatorDelay, "Resistance switch delay", 0.5f, SLIDER_MIN | SLIDER_PRECISION, 0.1f, 2.0f, 0.1f);
 			CVar(VaccinatorRange, "Enemy detection range", 1000.0f, SLIDER_CLAMP, 500.0f, 2000.0f, 100.0f);
+
+			CVar(AutoVaccinatorBulletScale, "Auto vaccinator bullet scale", 1.0f, NOSAVE | DEBUGVAR, 0.0f, 5.0f, 0.1f);
+			CVar(AutoVaccinatorBlastScale, "Auto vaccinator blast scale", 1.0f, NOSAVE | DEBUGVAR, 0.0f, 5.0f, 0.1f);
+			CVar(AutoVaccinatorFireScale, "Auto vaccinator fire scale", 1.0f, NOSAVE | DEBUGVAR, 0.0f, 5.0f, 0.1f);
+			CVar(AutoVaccinatorFlamethrowerDamageOnly, "Auto vaccinator flamethrower damage only", false, NOSAVE | DEBUGVAR);
 		SUBNAMESPACE_END(Healing);
 	NAMESPACE_END(Aimbot);
 	

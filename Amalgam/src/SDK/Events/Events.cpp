@@ -52,7 +52,6 @@ void CEventListener::FireGameEvent(IGameEvent* pEvent)
 		return;
 
 	F::CritHack.Event(pEvent, uHash, pLocal);
-	F::AutoHeal.Event(pEvent, uHash);
 	F::Misc.Event(pEvent, uHash);
 	// F::AutoHeal.Event(pEvent, uHash, pLocal);
 #ifndef TEXTMODE

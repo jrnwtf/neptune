@@ -645,3 +645,4 @@ void CProjectileSimulation::SetupTrace(CTraceFilterCollideable& filter, int& nMa
 		nMask |= CONTENTS_WATER;
 	}
 }
+#endif

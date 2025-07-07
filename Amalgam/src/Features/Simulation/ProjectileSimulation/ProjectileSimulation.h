@@ -2,7 +2,6 @@
 #include "../../../SDK/SDK.h"
 #include "../MovementSimulation/MovementSimulation.h"
 
-#ifndef TEXTMODE
 
 Enum(ProjSim,
 	None = 0,

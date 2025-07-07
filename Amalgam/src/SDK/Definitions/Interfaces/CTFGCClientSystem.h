@@ -135,11 +135,6 @@ public:
 		return reinterpret_cast<CTFLobbyShared*>(uintptr_t(pLobby) - 8); // i assume from the dynamic_cast?
 	}
 
-	inline CTFParty* GetParty()
-	{
-		return S::CTFGCClientSystem_GetParty.Call<CTFParty*>(this);
-	}
-
 	inline void SetPendingPingRefresh(bool bValue)
 	{
 		*reinterpret_cast<bool*>(uintptr_t(this) + 1116) = bValue;
@@ -148,11 +143,6 @@ public:
 	inline void SetNonPremiumAccount(bool bValue)
 	{
 		*reinterpret_cast<bool*>(uintptr_t(this) + 1888) = bValue;
-	}
-	
-	inline void AbandonCurrentMatch()
-	{
-		S::CTFGCClientSystem_AbandonCurrentMatch.Call<void>(this);
 	}
 };
 

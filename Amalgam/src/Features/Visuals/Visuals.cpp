@@ -1118,3 +1118,5 @@ void CVisuals::CreateMove(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 
 	DrawHitboxes(2);
 }
+
+#endif
