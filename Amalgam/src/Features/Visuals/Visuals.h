@@ -43,6 +43,11 @@ public:
 	void FOV(CTFPlayer* pLocal, CViewSetup* pView);
 	void ThirdPerson(CTFPlayer* pLocal, CViewSetup* pView);
 
+	void RestoreLines();
+	void RestorePaths();
+	void RestoreBoxes();
+	void DrawServerHitboxes(CTFPlayer* pLocal);
+
 	void OverrideWorldTextures();
 	void Modulate();
 	void RestoreWorldModulation();

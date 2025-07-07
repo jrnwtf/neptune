@@ -729,12 +729,9 @@ void CVisuals::RestoreBoxes()
 		tBox.m_flTime = I::GlobalVars->curtime + 60.f;
 }
 
-void CVisuals::DrawServerHitboxes(CTFPlayer* pLocal)
+void CVisuals::DrawServerHitboxes(CTFPlayer* /*pLocal*/)
 {
-	if (bBoxesHeadOnly)
-		monocolor = false;
-
-	CALL_ORIGINAL(rcx, duration, monocolor);
+	// Stub implementation: server hitbox drawing handled via hook elsewhere.
 }
 
 MAKE_HOOK(NDebugOverlay_BoxAngles, S::NDebugOverlay_BoxAngles(), void,
