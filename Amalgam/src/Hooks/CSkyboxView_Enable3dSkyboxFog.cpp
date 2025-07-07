@@ -5,7 +5,6 @@ MAKE_SIGNATURE(CSkyboxView_Enable3dSkyboxFog, "client.dll", "40 57 48 83 EC ? E8
 MAKE_HOOK(CSkyboxView_Enable3dSkyboxFog, S::CSkyboxView_Enable3dSkyboxFog(), void,
 	void* rcx)
 {
-    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CSkyboxView_Enable3dSkyboxFog[DEFAULT_BIND])
@@ -27,5 +26,4 @@ MAKE_HOOK(CSkyboxView_Enable3dSkyboxFog, S::CSkyboxView_Enable3dSkyboxFog(), voi
 #else
 	CALL_ORIGINAL(rcx);
 #endif
-    HOOK_CATCH("CSkyboxView_Enable3dSkyboxFog", void)
 }

@@ -33,7 +33,6 @@ struct CriticalStorage_t
 MAKE_HOOK(CL_ProcessPacketEntities, S::CL_ProcessPacketEntities(), bool,
 	SVC_PacketEntities* entmsg)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CL_ProcessPacketEntities[DEFAULT_BIND])
 		return CALL_ORIGINAL(entmsg);
@@ -115,5 +114,4 @@ MAKE_HOOK(CL_ProcessPacketEntities, S::CL_ProcessPacketEntities(), bool,
 	}
 
 	return bReturn;
-    HOOK_CATCH("CL_ProcessPacketEntities", bool)
 }

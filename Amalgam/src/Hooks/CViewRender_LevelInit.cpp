@@ -15,7 +15,6 @@
 MAKE_HOOK(CViewRender_LevelInit, U::Memory.GetVFunc(I::ViewRender, 1), void,
 	void* rcx)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CViewRender_LevelInit[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -37,5 +36,4 @@ MAKE_HOOK(CViewRender_LevelInit, U::Memory.GetVFunc(I::ViewRender, 1), void,
 	F::Spectate.m_iIntendedTarget = -1;
 
 	CALL_ORIGINAL(rcx);
-    HOOK_CATCH("CViewRender_LevelInit", void)
 }

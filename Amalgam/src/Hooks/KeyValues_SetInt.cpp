@@ -7,7 +7,6 @@ MAKE_SIGNATURE(CTFClientScoreBoardDialog_UpdatePlayerList_Jump, "client.dll", "8
 MAKE_HOOK(KeyValues_SetInt, S::KeyValues_SetInt(), void,
 	void* rcx, const char* keyName, int value)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::KeyValues_SetInt[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, keyName, value);
@@ -21,5 +20,4 @@ MAKE_HOOK(KeyValues_SetInt, S::KeyValues_SetInt(), void,
 
 	if (Vars::Visuals::UI::RevealScoreboard.Value && dwRetAddr == dwDesired && keyName && FNV1A::Hash32(keyName) == FNV1A::Hash32Const("nemesis"))
 		*static_cast<uintptr_t*>(_AddressOfReturnAddress()) = dwJump;
-    HOOK_CATCH("KeyValues_SetInt", void)
 }

@@ -6,7 +6,6 @@ MAKE_SIGNATURE(CTFRagdoll_CreateTFRagdoll_BRenderAsZombie_Call, "client.dll", "E
 MAKE_HOOK(CTFPlayer_BRenderAsZombie, S::CTFPlayer_BRenderAsZombie(), bool,
 	void* rcx, bool bWeaponsCheck)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFPlayer_BRenderAsZombie[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, bWeaponsCheck);
@@ -19,5 +18,4 @@ MAKE_HOOK(CTFPlayer_BRenderAsZombie, S::CTFPlayer_BRenderAsZombie(), bool,
 		return true;
 
 	return CALL_ORIGINAL(rcx, bWeaponsCheck);
-    HOOK_CATCH("CTFPlayer_BRenderAsZombie", bool)
 }

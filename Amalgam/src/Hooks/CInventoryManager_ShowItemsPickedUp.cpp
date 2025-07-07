@@ -5,7 +5,6 @@ MAKE_SIGNATURE(CInventoryManager_ShowItemsPickedUp, "client.dll", "44 88 4C 24 ?
 MAKE_HOOK(CInventoryManager_ShowItemsPickedUp, S::CInventoryManager_ShowItemsPickedUp(), bool,
 	void* rcx, bool bForce, bool bReturnToGame, bool bNoPanel)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CInventoryManager_ShowItemsPickedUp[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, bForce, bReturnToGame, bNoPanel);
@@ -17,5 +16,4 @@ MAKE_HOOK(CInventoryManager_ShowItemsPickedUp, S::CInventoryManager_ShowItemsPic
 		return false;
 	}
 	return CALL_ORIGINAL(rcx, bForce, bReturnToGame, bNoPanel);
-    HOOK_CATCH("CInventoryManager_ShowItemsPickedUp", bool)
 }

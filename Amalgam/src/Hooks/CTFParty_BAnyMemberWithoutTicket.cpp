@@ -5,7 +5,5 @@ MAKE_SIGNATURE(CTFParty_BAnyMemberWithoutTicket, "client.dll", "48 63 51 ? 33 C0
 MAKE_HOOK(CTFParty_BAnyMemberWithoutTicket, S::CTFParty_BAnyMemberWithoutTicket(), bool,
 	void* rcx)
 {
-    HOOK_TRY
 	return false;
-    HOOK_CATCH("CTFParty_BAnyMemberWithoutTicket", bool)
 }

@@ -5,7 +5,6 @@ MAKE_SIGNATURE(CClientState_GetClientInterpAmount, "engine.dll", "48 83 EC ? 48 
 MAKE_HOOK(CClientState_GetClientInterpAmount, S::CClientState_GetClientInterpAmount(), float,
 	CClientState* rcx)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CClientState_GetClientInterpAmount[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -13,5 +12,4 @@ MAKE_HOOK(CClientState_GetClientInterpAmount, S::CClientState_GetClientInterpAmo
 
 	G::Lerp = CALL_ORIGINAL(rcx);
 	return 0.f;
-    HOOK_CATCH("CClientState_GetClientInterpAmount", float)
 }

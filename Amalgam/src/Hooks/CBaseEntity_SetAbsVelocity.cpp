@@ -57,7 +57,6 @@ MAKE_SIGNATURE(CBasePlayer_PostDataUpdate_SetAbsVelocity_Call, "client.dll", "0F
 MAKE_HOOK(CBaseEntity_SetAbsVelocity, S::CBaseEntity_SetAbsVelocity(), void,
 	void* rcx, const Vec3& vecAbsVelocity)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CBaseEntity_SetAbsVelocity[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, vecAbsVelocity);
@@ -137,5 +136,4 @@ MAKE_HOOK(CBaseEntity_SetAbsVelocity, S::CBaseEntity_SetAbsVelocity(), void,
 
 	H::Entities.SetAvgVelocity(pPlayer->entindex(), tAxisInfo.Get(bGrounded));
 	CALL_ORIGINAL(rcx, (tNewRecord.m_vecOrigin - tOldRecord.m_vecOrigin) / flDeltaTime);
-    HOOK_CATCH("CBaseEntity_SetAbsVelocity", void)
 }

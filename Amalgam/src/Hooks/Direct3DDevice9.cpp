@@ -10,23 +10,19 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 MAKE_HOOK(Direct3DDevice9_Present, U::Memory.GetVFunc(I::DirectXDevice, 17), HRESULT,
 	IDirect3DDevice9* pDevice, const RECT* pSource, const RECT* pDestination, const RGNDATA* pDirtyRegion)
 {
-    HOOK_TRY
 	if (!G::Unload)
 		F::Render.Render(pDevice);
 
 	return CALL_ORIGINAL(pDevice, pSource, pDestination, pDirtyRegion);
-    HOOK_CATCH("Direct3DDevice9_Present", HRESULT)
 }
 
 MAKE_HOOK(Direct3DDevice9_Reset, U::Memory.GetVFunc(I::DirectXDevice, 16), HRESULT,
 	LPDIRECT3DDEVICE9 pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters)
 {
-    HOOK_TRY
 	ImGui_ImplDX9_InvalidateDeviceObjects();
 	const HRESULT Original = CALL_ORIGINAL(pDevice, pPresentationParameters);
 	ImGui_ImplDX9_CreateDeviceObjects();
 	return Original;
-    HOOK_CATCH("Direct3DDevice9_Reset", HRESULT)
 }
 
 LONG __stdcall WndProc::Func(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -50,18 +46,15 @@ LONG __stdcall WndProc::Func(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 MAKE_HOOK(VGuiSurface_LockCursor, U::Memory.GetVFunc(I::MatSystemSurface, 62), void,
 	void* rcx)
 {
-    HOOK_TRY
 	if (F::Menu.m_bIsOpen)
 		return I::MatSystemSurface->UnlockCursor();
 
 	CALL_ORIGINAL(rcx);
-    HOOK_CATCH("VGuiSurface_LockCursor", void)
 }
 
 MAKE_HOOK(VGuiSurface_SetCursor, U::Memory.GetVFunc(I::MatSystemSurface, 51), void,
 	void* rcx, HCursor cursor)
 {
-    HOOK_TRY
 	if (F::Menu.m_bIsOpen)
 	{
 		switch (F::Render.Cursor)
@@ -79,7 +72,6 @@ MAKE_HOOK(VGuiSurface_SetCursor, U::Memory.GetVFunc(I::MatSystemSurface, 51), vo
 	}
 
 	CALL_ORIGINAL(rcx, cursor);
-    HOOK_CATCH("VGuiSurface_SetCursor", void)
 }
 
 void WndProc::Initialize()

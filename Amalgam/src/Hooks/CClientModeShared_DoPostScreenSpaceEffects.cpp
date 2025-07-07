@@ -11,7 +11,6 @@
 MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::ClientModeShared, 39), bool,
 	void* rcx, const CViewSetup* pSetup)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CClientModeShared_DoPostScreenSpaceEffects[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pSetup);
@@ -45,6 +44,5 @@ MAKE_HOOK(CClientModeShared_DoPostScreenSpaceEffects, U::Memory.GetVFunc(I::Clie
 	}
 
 	return CALL_ORIGINAL(rcx, pSetup);
-    HOOK_CATCH("CClientModeShared_DoPostScreenSpaceEffects", bool)
 }
 #endif

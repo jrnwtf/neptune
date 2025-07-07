@@ -6,13 +6,11 @@ MAKE_SIGNATURE(Host_IsSecureServerAllowed, "engine.dll", "48 83 EC ? FF 15 ? ? ?
 
 MAKE_HOOK(Host_IsSecureServerAllowed, S::Host_IsSecureServerAllowed(), bool)
 {
-    HOOK_TRY
 	if (Vars::Misc::Game::VACBypass.Value)
 	{
 		*reinterpret_cast<bool*>(U::Memory.RelToAbs(S::g_bAllowSecureServers())) = true;
 		return true;
 	}
 	return CALL_ORIGINAL();
-    HOOK_CATCH("Host_IsSecureServerAllowed", bool)
 }
 #endif 

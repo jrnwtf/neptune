@@ -11,7 +11,6 @@ MAKE_SIGNATURE(CTFTeamStatusPlayerPanel_Update_SetBgColor_Call, "client.dll", "4
 MAKE_HOOK(CTFPlayerPanel_GetTeam, S::CTFPlayerPanel_GetTeam(), int,
 	void* rcx)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFPlayerPanel_GetTeam[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -27,7 +26,6 @@ MAKE_HOOK(CTFPlayerPanel_GetTeam, S::CTFPlayerPanel_GetTeam(), int,
 	}
 
 	return CALL_ORIGINAL(rcx);
-    HOOK_CATCH("CTFPlayerPanel_GetTeam", int)
 }
 
 static int CTFTeamStatusPlayerPanel_Update_PlayerIndex;
@@ -35,7 +33,6 @@ static int CTFTeamStatusPlayerPanel_Update_PlayerIndex;
 MAKE_HOOK(CTFTeamStatusPlayerPanel_Update, S::CTFTeamStatusPlayerPanel_Update(), bool,
 	void* rcx)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFPlayerPanel_GetTeam[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -43,13 +40,11 @@ MAKE_HOOK(CTFTeamStatusPlayerPanel_Update, S::CTFTeamStatusPlayerPanel_Update(),
 
 	CTFTeamStatusPlayerPanel_Update_PlayerIndex = *reinterpret_cast<int*>(uintptr_t(rcx) + 580);
 	return CALL_ORIGINAL(rcx);
-    HOOK_CATCH("CTFTeamStatusPlayerPanel_Update", bool)
 }
 
 MAKE_HOOK(vgui_Panel_SetBgColor, S::vgui_Panel_SetBgColor(), void,
 	void* rcx, Color_t color)
 {
-    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFPlayerPanel_GetTeam[DEFAULT_BIND])
@@ -74,5 +69,4 @@ MAKE_HOOK(vgui_Panel_SetBgColor, S::vgui_Panel_SetBgColor(), void,
 
 	CALL_ORIGINAL(rcx, color);
 #endif
-    HOOK_CATCH("vgui_Panel_SetBgColor", void)
 }

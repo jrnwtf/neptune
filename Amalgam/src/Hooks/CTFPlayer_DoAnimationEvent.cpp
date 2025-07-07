@@ -5,7 +5,6 @@ MAKE_SIGNATURE(CTFPlayer_DoAnimationEvent, "client.dll", "48 89 6C 24 ? 48 89 74
 MAKE_HOOK(CTFPlayer_DoAnimationEvent, S::CTFPlayer_DoAnimationEvent(), void,
 	void* rcx, PlayerAnimEvent_t event, int nData)
 {
-    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFPlayer_DoAnimationEvent[DEFAULT_BIND])
@@ -18,5 +17,4 @@ MAKE_HOOK(CTFPlayer_DoAnimationEvent, S::CTFPlayer_DoAnimationEvent(), void,
 
 	CALL_ORIGINAL(rcx, event, nData);
 #endif
-    HOOK_CATCH("CTFPlayer_DoAnimationEvent", void)
 }

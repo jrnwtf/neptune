@@ -5,7 +5,6 @@ MAKE_SIGNATURE(CBaseAnimating_SetSequence, "client.dll", "40 53 48 83 EC ? 48 8B
 MAKE_HOOK(CBaseAnimating_SetSequence, S::CBaseAnimating_SetSequence(), void,
 	void* rcx, int nSequence)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CBaseAnimating_SetSequence[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, nSequence);
@@ -16,5 +15,4 @@ MAKE_HOOK(CBaseAnimating_SetSequence, S::CBaseAnimating_SetSequence(), void,
 		pEntity->m_flCycle() = 0.f; // set on the server but not client
 
 	CALL_ORIGINAL(rcx, nSequence);
-    HOOK_CATCH("CBaseAnimating_SetSequence", void)
 }

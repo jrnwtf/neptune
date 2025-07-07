@@ -69,7 +69,6 @@ typedef enum
 MAKE_HOOK(CBasePlayer_ItemPostFrame, S::CBasePlayer_ItemPostFrame(), void,
 	void* rcx)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CBasePlayer_ItemPostFrame[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -123,5 +122,4 @@ MAKE_HOOK(CBasePlayer_ItemPostFrame, S::CBasePlayer_ItemPostFrame(), void,
 	CALL_ORIGINAL(rcx);
 	pWeapon->IncrementAmmo();
 	pWeapon->m_bReloadedThroughAnimEvent() = true;
-    HOOK_CATCH("CBasePlayer_ItemPostFrame", void)
 }

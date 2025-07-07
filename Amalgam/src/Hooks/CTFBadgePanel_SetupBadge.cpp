@@ -7,7 +7,6 @@ MAKE_SIGNATURE(vgui_Panel_GetBounds, "client.dll", "48 89 5C 24 ? 48 89 6C 24 ? 
 MAKE_HOOK(CTFBadgePanel_SetupBadge, S::CTFBadgePanel_SetupBadge(), void,
 	void* rcx, const IMatchGroupDescription* pMatchDesc, /*const*/ LevelInfo_t& levelInfo, const CSteamID& steamID)
 {
-    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFBadgePanel_SetupBadge[DEFAULT_BIND])
@@ -40,5 +39,4 @@ MAKE_HOOK(CTFBadgePanel_SetupBadge, S::CTFBadgePanel_SetupBadge(), void,
 	CALL_ORIGINAL(rcx, pMatchDesc, levelInfo, steamID);
 	levelInfo.m_nLevelNum = nOldLevelNum;
 #endif
-    HOOK_CATCH("CTFBadgePanel_SetupBadge", void)
 }

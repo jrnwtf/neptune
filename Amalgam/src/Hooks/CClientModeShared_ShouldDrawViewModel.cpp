@@ -5,7 +5,6 @@
 MAKE_HOOK(CClientModeShared_ShouldDrawViewModel, U::Memory.GetVFunc(I::ClientModeShared, 24), bool,
 	void* rcx)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CClientModeShared_ShouldDrawViewModel[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -16,5 +15,4 @@ MAKE_HOOK(CClientModeShared_ShouldDrawViewModel, U::Memory.GetVFunc(I::ClientMod
 		return true;
 
 	return CALL_ORIGINAL(rcx);
-    HOOK_CATCH("CClientModeShared_ShouldDrawViewModel", bool)
 }

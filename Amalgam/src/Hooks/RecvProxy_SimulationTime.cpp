@@ -12,7 +12,6 @@ static int GetNetworkBase(int nTick, int nEntity)
 MAKE_HOOK(RecvProxy_SimulationTime, S::RecvProxy_SimulationTime(), void,
 	const CRecvProxyData* pData, void* pStruct, void* pOut)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::RecvProxy_SimulationTime[DEFAULT_BIND])
 		return CALL_ORIGINAL(pData, pStruct, pOut);
@@ -35,5 +34,4 @@ MAKE_HOOK(RecvProxy_SimulationTime, S::RecvProxy_SimulationTime(), void,
 		t -= 256;
 
 	pEntity->m_flSimulationTime() = TICKS_TO_TIME(t);
-    HOOK_CATCH("RecvProxy_SimulationTime", void)
 }

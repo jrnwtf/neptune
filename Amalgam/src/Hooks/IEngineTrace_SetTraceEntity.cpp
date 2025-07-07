@@ -41,7 +41,6 @@ static bool bOriginalStartSolid = false;
 MAKE_HOOK(IEngineTrace_SetTraceEntity, U::Memory.GetVFunc(I::EngineTrace, 20), void,
 	void* rcx, ICollideable* pCollideable, trace_t* pTrace)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IEngineTrace_SetTraceEntity[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, pCollideable, pTrace);
@@ -54,13 +53,11 @@ MAKE_HOOK(IEngineTrace_SetTraceEntity, U::Memory.GetVFunc(I::EngineTrace, 20), v
 
 	if (dwRetAddr && dwDesired && iOriginalMask & CONTENTS_NOSTARTSOLID)
 		pTrace->startsolid = false;
-    HOOK_CATCH("IEngineTrace_SetTraceEntity", void)
 }
 
 MAKE_HOOK(CM_BoxTrace, S::CM_BoxTrace(), void,
 	const Ray_t& ray, int headnode, int brushmask, bool computeEndpt, trace_t& tr)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IEngineTrace_SetTraceEntity[DEFAULT_BIND])
 		return CALL_ORIGINAL(ray, headnode, brushmask, computeEndpt, tr);
@@ -69,13 +66,11 @@ MAKE_HOOK(CM_BoxTrace, S::CM_BoxTrace(), void,
 	CALL_ORIGINAL(ray, headnode, brushmask, computeEndpt, tr);
 
 	iOriginalMask = brushmask;
-    HOOK_CATCH("CM_BoxTrace", void)
 }
 
 MAKE_HOOK(CM_TraceToLeaf_True, S::CM_TraceToLeaf_True(), void,
 	TraceInfo_t* pTraceInfo, int ndxLeaf, float startFrac, float endFrac)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IEngineTrace_SetTraceEntity[DEFAULT_BIND])
 		return CALL_ORIGINAL(pTraceInfo, ndxLeaf, startFrac, endFrac);
@@ -91,13 +86,11 @@ MAKE_HOOK(CM_TraceToLeaf_True, S::CM_TraceToLeaf_True(), void,
 	}
 
 	CALL_ORIGINAL(pTraceInfo, ndxLeaf, startFrac, endFrac);
-    HOOK_CATCH("CM_TraceToLeaf_True", void)
 }
 
 MAKE_HOOK(CM_TraceToLeaf_False, S::CM_TraceToLeaf_False(), void,
 	TraceInfo_t* pTraceInfo, int ndxLeaf, float startFrac, float endFrac)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IEngineTrace_SetTraceEntity[DEFAULT_BIND])
 		return CALL_ORIGINAL(pTraceInfo, ndxLeaf, startFrac, endFrac);
@@ -113,13 +106,11 @@ MAKE_HOOK(CM_TraceToLeaf_False, S::CM_TraceToLeaf_False(), void,
 	}
 
 	CALL_ORIGINAL(pTraceInfo, ndxLeaf, startFrac, endFrac);
-    HOOK_CATCH("CM_TraceToLeaf_False", void)
 }
 
 MAKE_HOOK(CM_ClipBoxToBrush_True, S::CM_ClipBoxToBrush_True(), void,
 	TraceInfo_t* pTraceInfo, void* brush)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IEngineTrace_SetTraceEntity[DEFAULT_BIND])
 		return CALL_ORIGINAL(pTraceInfo, brush);
@@ -132,13 +123,11 @@ MAKE_HOOK(CM_ClipBoxToBrush_True, S::CM_ClipBoxToBrush_True(), void,
 		bOriginalStartSolid = true;
 		pTraceInfo->m_trace.startsolid = false;
 	}
-    HOOK_CATCH("CM_ClipBoxToBrush_True", void)
 }
 
 MAKE_HOOK(CM_ClipBoxToBrush_False, S::CM_ClipBoxToBrush_False(), void,
 	TraceInfo_t* pTraceInfo, void* brush)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IEngineTrace_SetTraceEntity[DEFAULT_BIND])
 		return CALL_ORIGINAL(pTraceInfo, brush);
@@ -151,5 +140,4 @@ MAKE_HOOK(CM_ClipBoxToBrush_False, S::CM_ClipBoxToBrush_False(), void,
 		bOriginalStartSolid = true;
 		pTraceInfo->m_trace.startsolid = false;
 	}
-    HOOK_CATCH("CM_ClipBoxToBrush_False", void)
 }

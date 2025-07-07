@@ -7,7 +7,6 @@ MAKE_SIGNATURE(CTFPlayerShared_CalculateChargeCap, "client.dll", "48 83 EC ? 4C 
 MAKE_HOOK(CTFInput_ApplyMouse, S::CTFInput_ApplyMouse(), void,
 	void* rcx, QAngle& viewangles, CUserCmd* cmd, float mouse_x, float mouse_y)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFInput_ApplyMouse[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, viewangles, cmd, mouse_x, mouse_y);
@@ -40,13 +39,11 @@ MAKE_HOOK(CTFInput_ApplyMouse, S::CTFInput_ApplyMouse(), void,
 		else
 			flNewYaw = flOldYaw - flCap;
 	}
-    HOOK_CATCH("CTFInput_ApplyMouse", void)
 }
 
 MAKE_HOOK(CTFInput_CAM_CapYaw, S::CTFInput_CAM_CapYaw(), float,
 	void* rcx, float fVal)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFInput_ApplyMouse[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, fVal);
@@ -56,5 +53,4 @@ MAKE_HOOK(CTFInput_CAM_CapYaw, S::CTFInput_CAM_CapYaw(), float,
 		return CALL_ORIGINAL(rcx, fVal);
 
 	return fVal;
-    HOOK_CATCH("CTFInput_CAM_CapYaw", float)
 }

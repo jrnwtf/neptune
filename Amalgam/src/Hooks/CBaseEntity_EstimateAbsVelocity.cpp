@@ -6,7 +6,6 @@
 MAKE_HOOK(CBaseEntity_EstimateAbsVelocity, S::CBaseEntity_EstimateAbsVelocity(), void,
 	void* rcx, Vector& vel)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CBaseEntity_EstimateAbsVelocity[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, vel);
@@ -32,5 +31,4 @@ MAKE_HOOK(CBaseEntity_EstimateAbsVelocity, S::CBaseEntity_EstimateAbsVelocity(),
 			}
 		}
 	}
-    HOOK_CATCH("CBaseEntity_EstimateAbsVelocity", void)
 }

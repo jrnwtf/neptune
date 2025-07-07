@@ -12,7 +12,7 @@ class BytePatch
 	LPVOID m_pAddress = 0;
 	bool m_bIsPatched = false;
 
-	void Write(std::vector<byte>& vBytes);
+	void Write(std::vector<byte>& bytes);
 
 public:
 	BytePatch(const char* sModule, const char* sSignature, int iOffset, const char* sPatch);

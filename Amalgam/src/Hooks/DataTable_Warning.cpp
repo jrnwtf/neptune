@@ -5,7 +5,5 @@ MAKE_SIGNATURE(DataTable_Warning, "engine.dll", "48 89 4C 24 ? 48 89 54 24 ? 4C 
 MAKE_HOOK(DataTable_Warning, S::DataTable_Warning(), void,
 	const char* pInMessage, ...)
 {
-    HOOK_TRY
 	// dont send datatable warnings
-    HOOK_CATCH("DataTable_Warning", void)
 }

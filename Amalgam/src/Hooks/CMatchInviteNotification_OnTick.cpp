@@ -5,7 +5,6 @@ MAKE_SIGNATURE(CMatchInviteNotification_OnTick, "client.dll", "40 53 48 83 EC ? 
 MAKE_HOOK(CMatchInviteNotification_OnTick, S::CMatchInviteNotification_OnTick(), void,
 	void* rcx)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CMatchInviteNotification_OnTick[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -15,5 +14,4 @@ MAKE_HOOK(CMatchInviteNotification_OnTick, S::CMatchInviteNotification_OnTick(),
 		*reinterpret_cast<double*>(uintptr_t(rcx) + 616) = 0.0;
 
 	CALL_ORIGINAL(rcx);
-    HOOK_CATCH("CMatchInviteNotification_OnTick", void)
 }

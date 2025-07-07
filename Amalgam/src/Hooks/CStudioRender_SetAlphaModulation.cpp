@@ -3,7 +3,6 @@
 MAKE_HOOK(CStudioRender_SetAlphaModulation, U::Memory.GetVFunc(I::StudioRender, 28), void,
 	void* rcx, float flAlpha)
 {
-    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CStudioRender_SetAlphaModulation[DEFAULT_BIND])
@@ -15,5 +14,4 @@ MAKE_HOOK(CStudioRender_SetAlphaModulation, U::Memory.GetVFunc(I::StudioRender, 
 
 	CALL_ORIGINAL(rcx, flAlpha);
 #endif
-    HOOK_CATCH("CStudioRender_SetAlphaModulation", void)
 }

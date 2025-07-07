@@ -5,7 +5,6 @@ MAKE_SIGNATURE(CBasePlayer_CalcPlayerView, "client.dll", "48 89 5C 24 ? 56 57 41
 MAKE_HOOK(CBasePlayer_CalcPlayerView, S::CBasePlayer_CalcPlayerView(), void,
 	void* rcx, Vector& eyeOrigin, QAngle& eyeAngles, float& fov)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CBasePlayer_CalcPlayerView[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, eyeOrigin, eyeAngles, fov);
@@ -23,5 +22,4 @@ MAKE_HOOK(CBasePlayer_CalcPlayerView, S::CBasePlayer_CalcPlayerView(), void,
 	}
 
 	CALL_ORIGINAL(rcx, eyeOrigin, eyeAngles, fov);
-    HOOK_CATCH("CBasePlayer_CalcPlayerView", void)
 }

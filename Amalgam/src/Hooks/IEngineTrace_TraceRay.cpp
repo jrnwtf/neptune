@@ -4,7 +4,6 @@
 MAKE_HOOK(IEngineTrace_TraceRay, U::Memory.GetVFunc(I::EngineTrace, 4), void,
 	void* rcx, const Ray_t& ray, unsigned int fMask, ITraceFilter* pTraceFilter, trace_t* pTrace)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IEngineTrace_TraceRay[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, ray, fMask, pTraceFilter, pTrace);
@@ -22,6 +21,5 @@ MAKE_HOOK(IEngineTrace_TraceRay, U::Memory.GetVFunc(I::EngineTrace, 4), void,
 			G::BoxStorage.emplace_back(vEnd - ray.m_StartOffset, ray.m_Extents * -1, ray.m_Extents, Vec3(), I::GlobalVars->curtime + 0.015f, Color_t(0, 0, 255), Color_t(0, 0, 0, 0), bool(GetAsyncKeyState(VK_MENU) & 0x8000));
 		}
 	}
-    HOOK_CATCH("IEngineTrace_TraceRay", void)
 }
 #endif

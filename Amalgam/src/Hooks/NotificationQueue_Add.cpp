@@ -5,7 +5,6 @@ MAKE_SIGNATURE(NotificationQueue_Add, "client.dll", "48 89 5C 24 ? 57 48 83 EC ?
 MAKE_HOOK(NotificationQueue_Add, S::NotificationQueue_Add(), int,
 	CEconNotification* pNotification)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::NotificationQueue_Add[DEFAULT_BIND])
 		return CALL_ORIGINAL(pNotification);
@@ -20,5 +19,4 @@ MAKE_HOOK(NotificationQueue_Add, S::NotificationQueue_Add(), int,
 	}
 
 	return CALL_ORIGINAL(pNotification);
-    HOOK_CATCH("NotificationQueue_Add", int)
 }

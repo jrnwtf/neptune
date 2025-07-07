@@ -4,7 +4,6 @@ MAKE_SIGNATURE(CRendering3dView_EnableWorldFog, "client.dll", "40 53 48 83 EC ? 
 
 MAKE_HOOK(CRendering3dView_EnableWorldFog, S::CRendering3dView_EnableWorldFog(), void)
 {
-    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CRendering3dView_EnableWorldFog[DEFAULT_BIND])
@@ -26,5 +25,4 @@ MAKE_HOOK(CRendering3dView_EnableWorldFog, S::CRendering3dView_EnableWorldFog(),
 #else
 	CALL_ORIGINAL();
 #endif
-    HOOK_CATCH("CRendering3dView_EnableWorldFog", void)
 }

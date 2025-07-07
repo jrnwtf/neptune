@@ -5,7 +5,6 @@
 MAKE_HOOK(CGameEventManager_FireEventClientSide, U::Memory.GetVFunc(I::GameEventManager, 8), bool,
 	IGameEventManager2* rcx, IGameEvent* event)
 {
-    HOOK_TRY
 	// We have to do it here because our own event listener runs after game event manager
 	if (Vars::Visuals::Other::KillstreakWeapons.Value)
 	{
@@ -15,6 +14,5 @@ MAKE_HOOK(CGameEventManager_FireEventClientSide, U::Memory.GetVFunc(I::GameEvent
 	}
 
 	return CALL_ORIGINAL(rcx, event);
-    HOOK_CATCH("CGameEventManager_FireEventClientSide", bool)
 }
 #endif

@@ -12,7 +12,6 @@ MAKE_SIGNATURE(CBasePlayer_BuildFirstPersonMeathookTransformations_ShouldDrawThi
 MAKE_HOOK(CTFPlayer_ShouldDraw, S::CTFPlayer_ShouldDraw(), bool,
 	void* rcx)
 {
-    HOOK_TRY
 #ifdef TEXTMODE
 	return false;
 #else
@@ -33,13 +32,11 @@ MAKE_HOOK(CTFPlayer_ShouldDraw, S::CTFPlayer_ShouldDraw(), bool,
 
 	return CALL_ORIGINAL(rcx);
 #endif
-    HOOK_CATCH("CTFPlayer_ShouldDraw", bool)
 }
 
 MAKE_HOOK(CBasePlayer_ShouldDrawThisPlayer, S::CBasePlayer_ShouldDrawThisPlayer(), bool,
 	void* rcx)
 {
-    HOOK_TRY
 #ifdef TEXTMODE
 	return false;
 #else
@@ -66,13 +63,11 @@ MAKE_HOOK(CBasePlayer_ShouldDrawThisPlayer, S::CBasePlayer_ShouldDrawThisPlayer(
 
 	return CALL_ORIGINAL(rcx);
 #endif
-    HOOK_CATCH("CBasePlayer_ShouldDrawThisPlayer", bool)
 }
 
 MAKE_HOOK(CBasePlayer_ShouldDrawLocalPlayer, S::CBasePlayer_ShouldDrawLocalPlayer(), bool,
 	/*void* rcx*/)
 {
-    HOOK_TRY
 #ifdef TEXTMODE
 	return false;
 #else
@@ -90,13 +85,11 @@ MAKE_HOOK(CBasePlayer_ShouldDrawLocalPlayer, S::CBasePlayer_ShouldDrawLocalPlaye
 
 	return CALL_ORIGINAL(/*rcx*/);
 #endif
-    HOOK_CATCH("CBasePlayer_ShouldDrawLocalPlayer", bool)
 }
 
 MAKE_HOOK(CBaseCombatWeapon_ShouldDraw, S::CBaseCombatWeapon_ShouldDraw(), bool,
 	void* rcx)
 {
-    HOOK_TRY
 #ifdef TEXTMODE
 	return false;
 #else
@@ -114,13 +107,11 @@ MAKE_HOOK(CBaseCombatWeapon_ShouldDraw, S::CBaseCombatWeapon_ShouldDraw(), bool,
 
 	return CALL_ORIGINAL(rcx);
 #endif
-    HOOK_CATCH("CBaseCombatWeapon_ShouldDraw", bool)
 }
 
 MAKE_HOOK(CViewRender_DrawViewModels, S::CViewRender_DrawViewModels(), void,
 	void* rcx, const CViewSetup& viewRender, bool drawViewmodel)
 {
-    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFPlayer_ShouldDraw[DEFAULT_BIND])
@@ -129,5 +120,4 @@ MAKE_HOOK(CViewRender_DrawViewModels, S::CViewRender_DrawViewModels(), void,
 
 	CALL_ORIGINAL(rcx, viewRender, F::Spectate.m_iTarget != -1 ? false : drawViewmodel);
 #endif
-    HOOK_CATCH("CViewRender_DrawViewModels", void)
 }

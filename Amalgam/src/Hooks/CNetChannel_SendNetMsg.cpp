@@ -9,7 +9,6 @@ MAKE_SIGNATURE(CNetChannel_SendNetMsg, "engine.dll", "48 89 5C 24 ? 48 89 74 24 
 MAKE_HOOK(CNetChannel_SendNetMsg, S::CNetChannel_SendNetMsg(), bool,
 	CNetChannel* pNetChan, INetMessage& msg, bool bForceReliable, bool bVoice)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CNetChannel_SendNetMsg[DEFAULT_BIND])
 		return CALL_ORIGINAL(pNetChan, msg, bForceReliable, bVoice);
@@ -171,5 +170,4 @@ MAKE_HOOK(CNetChannel_SendNetMsg, S::CNetChannel_SendNetMsg(), bool,
 	}
 
 	return CALL_ORIGINAL(pNetChan, msg, bForceReliable, bVoice);
-    HOOK_CATCH("CNetChannel_SendNetMsg", bool)
 }

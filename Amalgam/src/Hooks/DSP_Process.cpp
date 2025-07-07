@@ -5,7 +5,6 @@ MAKE_SIGNATURE(DSP_Process, "engine.dll", "48 89 5C 24 ? 55 41 54 41 57 48 83 EC
 MAKE_HOOK(DSP_Process, S::DSP_Process(), void,
 	unsigned int idsp, int* pbfront, int* pbrear, int* pbcenter, int sampleCount)
 {
-    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::DSP_Process[DEFAULT_BIND])
@@ -15,5 +14,4 @@ MAKE_HOOK(DSP_Process, S::DSP_Process(), void,
 	if (!Vars::Misc::Sound::RemoveDSP.Value)
 		CALL_ORIGINAL(idsp, pbfront, pbrear, pbcenter, sampleCount);
 #endif
-    HOOK_CATCH("DSP_Process", void)
 }

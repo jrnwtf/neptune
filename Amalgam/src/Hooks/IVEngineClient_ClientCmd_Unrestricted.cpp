@@ -24,7 +24,6 @@ private:
 MAKE_HOOK(IVEngineClient_ClientCmd_Unrestricted, U::Memory.GetVFunc(I::EngineClient, 106), void,
 	void* rcx, const char* szCmdString)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IVEngineClient_ClientCmd_Unrestricted[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, szCmdString);
@@ -55,5 +54,4 @@ MAKE_HOOK(IVEngineClient_ClientCmd_Unrestricted, U::Memory.GetVFunc(I::EngineCli
 	}
 
 	CALL_ORIGINAL(rcx, szCmdString);
-    HOOK_CATCH("IVEngineClient_ClientCmd_Unrestricted", void)
 }

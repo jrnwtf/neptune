@@ -8,7 +8,6 @@ MAKE_SIGNATURE(CClientState_ProcessFixAngle, "engine.dll", "40 53 48 83 EC ? F3 
 MAKE_HOOK(CClientState_ProcessFixAngle, S::CClientState_ProcessFixAngle(), bool,
 	CClientState* rcx, SVC_FixAngle* msg)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CClientState_ProcessFixAngle[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, msg);
@@ -20,5 +19,4 @@ MAKE_HOOK(CClientState_ProcessFixAngle, S::CClientState_ProcessFixAngle(), bool,
 	if (F::Spectate.m_iTarget != -1)
 		F::Spectate.m_vOldView = msg->m_Angle;
 	return CALL_ORIGINAL(rcx, msg);
-    HOOK_CATCH("CClientState_ProcessFixAngle", bool)
 }

@@ -5,7 +5,6 @@ MAKE_SIGNATURE(CStaticPropMgr_DrawStaticProps, "engine.dll", "4C 8B DC 49 89 5B 
 MAKE_HOOK(CStaticPropMgr_DrawStaticProps, S::CStaticPropMgr_DrawStaticProps(), void,
 	void* rcx, IClientRenderable** pProps, int count, bool bShadowDepth, bool drawVCollideWireframe)
 {
-    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CStaticPropMgr_DrawStaticProps[DEFAULT_BIND])
@@ -16,5 +15,4 @@ MAKE_HOOK(CStaticPropMgr_DrawStaticProps, S::CStaticPropMgr_DrawStaticProps(), v
 	CALL_ORIGINAL(rcx, pProps, count, bShadowDepth, drawVCollideWireframe);
 	G::DrawingProps = false;
 #endif
-    HOOK_CATCH("CStaticPropMgr_DrawStaticProps", void)
 }

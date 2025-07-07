@@ -5,7 +5,6 @@
 MAKE_HOOK(IMatSystemSurface_OnScreenSizeChanged, U::Memory.GetVFunc(I::MatSystemSurface, 111), void,
 	void* rcx, int nOldWidth, int nOldHeight)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::IMatSystemSurface_OnScreenSizeChanged[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, nOldWidth, nOldHeight);
@@ -15,5 +14,4 @@ MAKE_HOOK(IMatSystemSurface_OnScreenSizeChanged, U::Memory.GetVFunc(I::MatSystem
 
 	H::Fonts.Reload(Vars::Menu::Scale[DEFAULT_BIND]);
 	F::Materials.ReloadMaterials();
-    HOOK_CATCH("IMatSystemSurface_OnScreenSizeChanged", void)
 }

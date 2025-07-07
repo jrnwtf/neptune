@@ -141,7 +141,6 @@ static bool ShouldBlockSound(const char* pSound)
 MAKE_HOOK(CSoundEmitterSystem_EmitSound, S::CSoundEmitterSystem_EmitSound(), void,
 	void* rcx, IRecipientFilter& filter, int entindex, const EmitSound_t& ep)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CSoundEmitterSystem_EmitSound[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, filter, entindex, ep);
@@ -151,14 +150,12 @@ MAKE_HOOK(CSoundEmitterSystem_EmitSound, S::CSoundEmitterSystem_EmitSound(), voi
 		return;
 
 	return CALL_ORIGINAL(rcx, filter, entindex, ep);
-    HOOK_CATCH("CSoundEmitterSystem_EmitSound", void)
 }
 
 /*
 MAKE_HOOK(S_StartDynamicSound, S::S_StartDynamicSound(), int,
 	StartSoundParams_t& params)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CSoundEmitterSystem_EmitSound[DEFAULT_BIND])
 		return CALL_ORIGINAL(params);
@@ -169,14 +166,12 @@ MAKE_HOOK(S_StartDynamicSound, S::S_StartDynamicSound(), int,
 		return 0;
 
 	return CALL_ORIGINAL(params);
-    HOOK_CATCH("S_StartDynamicSound", int)
 }
 */
 
 MAKE_HOOK(S_StartSound, S::S_StartSound(), int,
 	StartSoundParams_t& params)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CSoundEmitterSystem_EmitSound[DEFAULT_BIND])
 		return CALL_ORIGINAL(params);
@@ -188,5 +183,4 @@ MAKE_HOOK(S_StartSound, S::S_StartSound(), int,
 		return 0;
 
 	return CALL_ORIGINAL(params);
-    HOOK_CATCH("S_StartSound", int)
 }

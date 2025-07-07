@@ -3,7 +3,6 @@
 MAKE_HOOK(CTFGCClientSystem_UpdateAssignedLobby, S::CTFGCClientSystem_UpdateAssignedLobby(), bool,
 	void* rcx)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CTFGCClientSystem_UpdateAssignedLobby[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx);
@@ -15,5 +14,4 @@ MAKE_HOOK(CTFGCClientSystem_UpdateAssignedLobby, S::CTFGCClientSystem_UpdateAssi
 		I::TFGCClientSystem->SetNonPremiumAccount(false);
 
 	return bReturn;
-    HOOK_CATCH("CTFGCClientSystem_UpdateAssignedLobby", bool)
 }

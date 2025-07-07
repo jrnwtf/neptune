@@ -8,7 +8,6 @@ MAKE_SIGNATURE(CBaseAnimating_Interpolate, "client.dll", "48 8B C4 48 89 70 ? F3
 MAKE_HOOK(CBaseAnimating_Interpolate, S::CBaseAnimating_Interpolate(), bool,
 	void* rcx, float currentTime)
 {
-    HOOK_TRY
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CBaseAnimating_Interpolate[DEFAULT_BIND])
 		return CALL_ORIGINAL(rcx, currentTime);
@@ -23,5 +22,4 @@ MAKE_HOOK(CBaseAnimating_Interpolate, S::CBaseAnimating_Interpolate(), bool,
 	//	return true;
 
 	return CALL_ORIGINAL(rcx, currentTime);
-    HOOK_CATCH("CBaseAnimating_Interpolate", bool)
 }

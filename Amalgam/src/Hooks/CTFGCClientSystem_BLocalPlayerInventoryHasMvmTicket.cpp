@@ -4,7 +4,5 @@ MAKE_SIGNATURE(CTFGCClientSystem_BLocalPlayerInventoryHasMvmTicket, "client.dll"
 
 MAKE_HOOK(CTFGCClientSystem_BLocalPlayerInventoryHasMvmTicket, S::CTFGCClientSystem_BLocalPlayerInventoryHasMvmTicket(), bool)
 {
-    HOOK_TRY
 	return true;
-    HOOK_CATCH("CTFGCClientSystem_BLocalPlayerInventoryHasMvmTicket", bool)
 }

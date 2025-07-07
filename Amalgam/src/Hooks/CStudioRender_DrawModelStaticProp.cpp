@@ -3,7 +3,6 @@
 MAKE_HOOK(CStudioRender_DrawModelStaticProp, U::Memory.GetVFunc(I::StudioRender, 30), void,
 	void* rcx, const DrawModelState_t& pState, const matrix3x4& modelToWorld, int flags)
 {
-    HOOK_TRY
 #ifndef TEXTMODE
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CStudioRender_DrawModelStaticProp[DEFAULT_BIND])
@@ -27,5 +26,4 @@ MAKE_HOOK(CStudioRender_DrawModelStaticProp, U::Memory.GetVFunc(I::StudioRender,
 
 	CALL_ORIGINAL(rcx, pState, modelToWorld, flags);
 #endif
-    HOOK_CATCH("CStudioRender_DrawModelStaticProp", void)
 }
