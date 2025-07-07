@@ -4,6 +4,7 @@
 #include "Features/Aimbot/AutoRocketJump/AutoRocketJump.h"
 #include "Features/Simulation/MovementSimulation/MovementSimulation.h"
 #include "Features/ImGui/Render.h"
+#include "Features/Aimbot/AimbotProjectile/AimbotProjectile.h"
 #include <d3d9.h>
 
 void CVisuals::RestoreWorldModulation()
@@ -76,6 +77,21 @@ void CRender::LoadFonts()
 
 void CRender::LoadStyle()
 {
+}
+
+bool CAimbotProjectile::AutoAirblast(CTFPlayer* /*pLocal*/, CTFWeaponBase* /*pWeapon*/, CUserCmd* /*pCmd*/, CBaseEntity* /*pProjectile*/)
+{
+    return false;
+}
+
+float CAimbotProjectile::GetSplashRadius(CTFWeaponBase* /*pWeapon*/, CTFPlayer* /*pPlayer*/)
+{
+    return 0.0f;
+}
+
+float CAimbotProjectile::GetSplashRadius(CBaseEntity* /*pProjectile*/, CTFWeaponBase* /*pWeapon*/, CTFPlayer* /*pPlayer*/, float /*flScale*/, CTFWeaponBase* /*pAirblast*/)
+{
+    return 0.0f;
 }
 
 #endif // TEXTMODE 

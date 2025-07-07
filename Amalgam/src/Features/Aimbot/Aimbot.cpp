@@ -3,9 +3,7 @@
 #include "AimbotSafety.h"
 #include "TextmodeConfig.h"
 #include "AimbotHitscan/AimbotHitscan.h"
-#ifndef TEXTMODE
 #include "AimbotProjectile/AimbotProjectile.h"
-#endif
 #include "AimbotMelee/AimbotMelee.h"
 #include "AutoDetonate/AutoDetonate.h"
 #include "AutoAirblast/AutoAirblast.h"
