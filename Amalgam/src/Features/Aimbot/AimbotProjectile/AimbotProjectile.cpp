@@ -196,6 +196,9 @@ float CAimbotProjectile::GetSplashRadius(CTFWeaponBase* pWeapon, CTFPlayer* pPla
 
 float CAimbotProjectile::GetSplashRadius(CBaseEntity* pProjectile, CTFWeaponBase* pWeapon, CTFPlayer* pPlayer, float flScale, CTFWeaponBase* pAirblast)
 {
+#ifdef TEXTMODE
+	return 0.f;
+#else
 	float flRadius = 0.f;
 	if (pAirblast)
 	{
@@ -231,6 +234,7 @@ float CAimbotProjectile::GetSplashRadius(CBaseEntity* pProjectile, CTFWeaponBase
 		}
 	}
 	return flRadius * flScale;
+#endif
 }
 
 static inline int GetSplashMode(CTFWeaponBase* pWeapon)
@@ -2239,6 +2243,9 @@ bool CAimbotProjectile::CanHit(Target_t& tTarget, CTFPlayer* pLocal, CTFWeaponBa
 
 bool CAimbotProjectile::AutoAirblast(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd, CBaseEntity* pProjectile)
 {
+#ifdef TEXTMODE
+	return false;
+#else
 	auto vTargets = SortTargets(pLocal, pWeapon);
 	if (vTargets.empty())
 		return false;
@@ -2265,4 +2272,5 @@ bool CAimbotProjectile::AutoAirblast(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, 
 	}
 
 	return false;
+#endif
 }

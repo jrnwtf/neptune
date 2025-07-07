@@ -645,4 +645,45 @@ void CProjectileSimulation::SetupTrace(CTraceFilterCollideable& filter, int& nMa
 		nMask |= CONTENTS_WATER;
 	}
 }
+#else
+// TEXTMODE stubs for missing methods
+bool CProjectileSimulation::GetInfo(CTFPlayer* pPlayer, CTFWeaponBase* pWeapon, Vec3 vAngles, ProjectileInfo& tProjInfo, int iFlags, float flAutoCharge)
+{
+	return false;
+}
+
+void CProjectileSimulation::GetInfo(CBaseEntity* pProjectile, ProjectileInfo& tProjInfo)
+{
+	// Empty implementation for TEXTMODE
+}
+
+bool CProjectileSimulation::Initialize(ProjectileInfo& tProjInfo, bool bSimulate, bool bWorld)
+{
+	return false;
+}
+
+void CProjectileSimulation::RunTick(ProjectileInfo& tProjInfo, bool bPath)
+{
+	// Empty implementation for TEXTMODE
+}
+
+Vec3 CProjectileSimulation::GetOrigin()
+{
+	return Vec3();
+}
+
+Vec3 CProjectileSimulation::GetVelocity()
+{
+	return Vec3();
+}
+
+void CProjectileSimulation::SetupTrace(CTraceFilterCollideable& filter, int& nMask, CTFWeaponBase* pWeapon, int nTick, bool bQuick)
+{
+	// Empty implementation for TEXTMODE
+}
+
+void CProjectileSimulation::SetupTrace(CTraceFilterCollideable& filter, int& nMask, CBaseEntity* pProjectile)
+{
+	// Empty implementation for TEXTMODE
+}
 #endif
