@@ -1,9 +1,4 @@
-// Disable these hooks entirely in text-only builds.
-#ifdef TEXTMODE
-
-// (intentionally left empty – scoreboard avatar hooks are not required)
-
-#else
+#ifndef TEXTMODE
 
 #include "../SDK/SDK.h"
 #include "../Features/Players/PlayerUtils.h"
@@ -98,3 +93,4 @@ MAKE_HOOK(SectionedListPanel_SetItemFgColor, S::SectionedListPanel_SetItemFgColo
 
 	CALL_ORIGINAL(rcx, itemID, color);
 }
+#endif
