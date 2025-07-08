@@ -1,5 +1,4 @@
 #include "AutoVote.h"
-
 #include "../../Players/PlayerUtils.h"
 #include "../../Misc/NamedPipe/NamedPipe.h"
 
@@ -12,10 +11,10 @@ void CAutoVote::UserMessage(bf_read& msgData)
 	char sTarget[256]; msgData.ReadString(sTarget, sizeof(sTarget));
 	const int iTarget = msgData.ReadByte() >> 1;
 	msgData.Seek(0);
-
+	
 	if (!Vars::Misc::Automation::AutoVote.Value)
 		return;
-
+	
 	PlayerInfo_t pi{};
 	if (I::EngineClient->GetPlayerInfo(iTarget, &pi))
 	{
@@ -25,7 +24,7 @@ void CAutoVote::UserMessage(bf_read& msgData)
 			return;
 		}
 	}
-
+	
 	PlayerInfo_t callerPi{};
 	if (I::EngineClient->GetPlayerInfo(iCaller, &callerPi))
 	{
@@ -35,7 +34,7 @@ void CAutoVote::UserMessage(bf_read& msgData)
 			return;
 		}
 	}
-
+	
 	bool bIsKickVote = iTarget != 0;
 	
 	if (bIsKickVote)
@@ -48,5 +47,17 @@ void CAutoVote::UserMessage(bf_read& msgData)
 			I::ClientState->SendStringCmd(std::format("vote {} option2", iVoteID).c_str());
 			return;
 		}
+		
+		// Vote F1 (yes) if target is prioritized and not friend/party
+		if (F::PlayerUtils.IsPrioritized(iTarget)
+			&& !H::Entities.IsFriend(iTarget)
+			&& !H::Entities.InParty(iTarget))
+		{
+			I::ClientState->SendStringCmd(std::format("vote {} option1", iVoteID).c_str());
+			return;
+		}
 	}
+	
+	// Default vote F1 (yes)
+	I::ClientState->SendStringCmd(std::format("vote {} option1", iVoteID).c_str());
 }
