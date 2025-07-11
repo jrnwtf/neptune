@@ -196,13 +196,13 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVirtual(I::ClientModeShared
 	F::Aimbot.Run(pLocal, pWeapon, pCmd);
 	F::NavBot.Run(pLocal, pWeapon, pCmd);
 	F::NavEngine.Run(pCmd);
-	F::EnginePrediction.End(pLocal, pCmd);
-
 	F::CritHack.Run(pLocal, pWeapon, pCmd);
 	F::NoSpread.Run(pLocal, pWeapon, pCmd);
+	F::Resolver.CreateMove(pLocal);
+	F::EnginePrediction.End(pLocal, pCmd);
+
 	F::Misc.RunPost(pLocal, pCmd, *pSendPacket);
 	F::PacketManip.Run(pLocal, pWeapon, pCmd, pSendPacket);
-	F::Resolver.CreateMove(pLocal);
 #ifndef TEXTMODE
 	F::Visuals.CreateMove(pLocal, pWeapon);
 #endif

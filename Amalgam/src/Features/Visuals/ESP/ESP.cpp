@@ -72,7 +72,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 		}
 
 		int iClassNum = pPlayer->m_iClass();
-		auto pWeapon = pPlayer->m_hActiveWeapon().Get()->As<CTFWeaponBase>();
+		auto pWeapon = pPlayer->m_hActiveWeapon()->As<CTFWeaponBase>();
 
 		// distance things
 		const Vec3 vDelta = pPlayer->m_vecOrigin() - pLocal->m_vecOrigin();
@@ -1006,6 +1006,8 @@ void CESP::DrawPlayers()
 				switch (H::Entities.GetModel(pPlayer->entindex()))
 				{
 				case FNV1A::Hash32Const("models/vsh/player/saxton_hale.mdl"):
+				case FNV1A::Hash32Const("models/vsh/player/hell_hale.mdl"):
+				case FNV1A::Hash32Const("models/vsh/player/santa_hale.mdl"):
 					DrawBones(pPlayer, aBones, { HITBOX_SAXTON_HEAD, HITBOX_SAXTON_CHEST, HITBOX_SAXTON_PELVIS }, tCache.m_tColor);
 					DrawBones(pPlayer, aBones, { HITBOX_SAXTON_CHEST, HITBOX_SAXTON_LEFT_UPPER_ARM, HITBOX_SAXTON_LEFT_FOREARM, HITBOX_SAXTON_LEFT_HAND }, tCache.m_tColor);
 					DrawBones(pPlayer, aBones, { HITBOX_SAXTON_CHEST, HITBOX_SAXTON_RIGHT_UPPER_ARM, HITBOX_SAXTON_RIGHT_FOREARM, HITBOX_SAXTON_RIGHT_HAND }, tCache.m_tColor);
