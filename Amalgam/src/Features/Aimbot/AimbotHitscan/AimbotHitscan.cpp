@@ -1425,7 +1425,6 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 		bool bShouldScope = false;
 		bool bShouldUnscope = false;
 		
-		// Distance-based autoscope (cathook-style)
 		if (Vars::Aimbot::Hitscan::Modifiers.Value & Vars::Aimbot::Hitscan::ModifiersEnum::DistanceAutoscope)
 		{
 			bool bHasEnemiesInRange = HasEnemiesInRange(pLocal, Vars::Aimbot::Hitscan::DistanceAutoscopeRange.Value);

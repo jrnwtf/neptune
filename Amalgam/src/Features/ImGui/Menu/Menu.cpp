@@ -1865,8 +1865,6 @@ void CMenu::MenuNavEng(int iTab)
 					{
 						FSlider(Vars::NavEng::NavBot::StickyDangerRange);
 						FSlider(Vars::NavEng::NavBot::ProjectileDangerRange);
-						FToggle(Vars::NavEng::NavBot::AutoScopeUseCachedResults);
-						FTooltip("should double the performance of the movesim method by only checking every 2nd tick");
 					} EndSection();
 				}
 				if (Section("Queueing"))
