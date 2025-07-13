@@ -173,7 +173,6 @@ private:
 public:
 	void Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd);
 	void Reset();
-	void Draw(CTFPlayer* pLocal);
 };
 
 ADD_FEATURE(CNavBot, NavBot);
