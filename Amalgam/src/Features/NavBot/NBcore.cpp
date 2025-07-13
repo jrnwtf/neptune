@@ -2461,194 +2461,6 @@ void CNavBot::UpdateSlot(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, ClosestEnemy
 	}
 }
 
-void CNavBot::AutoScope(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
-{
-	static bool bKeep = false;
-	static bool bShouldClearCache = false;
-	static Timer tScopeTimer{};
-	bool bIsClassic = pWeapon->GetWeaponID() == TF_WEAPON_SNIPERRIFLE_CLASSIC;
-	if (!Vars::NavEng::NavBot::AutoScope.Value || pWeapon->GetWeaponID() != TF_WEAPON_SNIPERRIFLE && !bIsClassic && pWeapon->GetWeaponID() != TF_WEAPON_SNIPERRIFLE_DECAP)
-	{
-		bKeep = false;
-		m_mAutoScopeCache.clear();
-		return;
-	}
-
-	if (!Vars::NavEng::NavBot::AutoScopeUseCachedResults.Value)
-		bShouldClearCache = true;
-
-	if (bShouldClearCache)
-	{
-		m_mAutoScopeCache.clear();
-		bShouldClearCache = false;
-	}
-	else if (m_mAutoScopeCache.size())
-		bShouldClearCache = true;
-
-	if (bIsClassic)
-	{
-		if (bKeep)
-		{
-			if (!(pCmd->buttons & IN_ATTACK))
-				pCmd->buttons |= IN_ATTACK;
-			if (tScopeTimer.Check(Vars::NavEng::NavBot::AutoScopeCancelTime.Value)) // cancel classic charge
-				pCmd->buttons |= IN_JUMP;
-		}
-		if (!pLocal->OnSolid() && !(pCmd->buttons & IN_ATTACK))
-			bKeep = false;
-	}
-	else
-	{
-		if (bKeep)
-		{
-			if (pLocal->InCond(TF_COND_ZOOMED))
-			{
-				if (tScopeTimer.Check(Vars::NavEng::NavBot::AutoScopeCancelTime.Value))
-				{
-					bKeep = false;
-					pCmd->buttons |= IN_ATTACK2;
-					return;
-				}
-			}
-		}
-	}
-
-	CNavArea* pCurrentDestinationArea = nullptr;
-	auto pCrumbs = F::NavEngine.getCrumbs();
-	if (pCrumbs->size() > 4)
-		pCurrentDestinationArea = pCrumbs->at(4).navarea;
-
-	auto vLocalOrigin = pLocal->GetAbsOrigin();
-	auto pLocalNav = pCurrentDestinationArea ? pCurrentDestinationArea : F::NavEngine.findClosestNavSquare(vLocalOrigin);
-	if (!pLocalNav)
-		return;
-
-	Vector vFrom = pLocalNav->m_center;
-	vFrom.z += PLAYER_JUMP_HEIGHT;
-
-	std::vector<std::pair<CBaseEntity*, float>> vEnemiesSorted;
-	for (auto pEnemy : H::Entities.GetGroup(EGroupType::PLAYERS_ENEMIES))
-	{
-		if (pEnemy->IsDormant())
-			continue;
-
-		if (!ShouldTarget(pLocal, pWeapon, pEnemy->entindex()))
-			continue;
-
-		vEnemiesSorted.emplace_back(pEnemy, pEnemy->GetAbsOrigin().DistToSqr(vLocalOrigin));
-	}
-
-	for (auto pEnemyBuilding : H::Entities.GetGroup(EGroupType::BUILDINGS_ENEMIES))
-	{
-		if (pEnemyBuilding->IsDormant())
-			continue;
-
-		if (!ShouldTargetBuilding(pLocal, pEnemyBuilding->entindex()))
-			continue;
-
-		vEnemiesSorted.emplace_back(pEnemyBuilding, pEnemyBuilding->GetAbsOrigin().DistToSqr(vLocalOrigin));
-	}
-
-	if (vEnemiesSorted.empty())
-		return;
-
-	std::sort(vEnemiesSorted.begin(), vEnemiesSorted.end(), [&](std::pair<CBaseEntity*, float> a, std::pair<CBaseEntity*, float> b) -> bool { return a.second < b.second; });
-
-	auto CheckVisibility = [&](const Vec3& vTo, int iEntIndex) -> bool
-		{
-			CGameTrace trace = {};
-			CTraceFilterWorldAndPropsOnly filter = {};
-
-			// Trace from local pos first
-			SDK::Trace(Vector(vLocalOrigin.x, vLocalOrigin.y, vLocalOrigin.z + PLAYER_JUMP_HEIGHT), vTo, MASK_SHOT | CONTENTS_GRATE, &filter, &trace);
-			bool bHit = trace.fraction == 1.0f;
-			if (!bHit)
-			{
-				// Try to trace from our destination pos
-				SDK::Trace(vFrom, vTo, MASK_SHOT | CONTENTS_GRATE, &filter, &trace);
-				bHit = trace.fraction == 1.0f;
-			}
-
-			if (iEntIndex != -1)
-				m_mAutoScopeCache[iEntIndex] = bHit;
-
-			if (bHit)
-			{
-				if (bIsClassic)
-					pCmd->buttons |= IN_ATTACK;
-				else if (!pLocal->InCond(TF_COND_ZOOMED) && !(pCmd->buttons & IN_ATTACK2))
-					pCmd->buttons |= IN_ATTACK2;
-
-				tScopeTimer.Update();
-				return bKeep = true;
-			}
-			return false;
-		};
-
-	bool bSimple = Vars::NavEng::NavBot::AutoScope.Value == Vars::NavEng::NavBot::AutoScopeEnum::Simple;
-
-	int iMaxTicks = TIME_TO_TICKS(0.5f);
-	PlayerStorage tStorage;
-	for (auto [pEnemy, _] : vEnemiesSorted)
-	{
-		int iEntIndex = Vars::NavEng::NavBot::AutoScopeUseCachedResults.Value ? pEnemy->entindex() : -1;
-		if (m_mAutoScopeCache.contains(iEntIndex))
-		{
-			if (m_mAutoScopeCache[iEntIndex])
-			{
-				if (bIsClassic)
-					pCmd->buttons |= IN_ATTACK;
-				else if (!pLocal->InCond(TF_COND_ZOOMED) && !(pCmd->buttons & IN_ATTACK2))
-					pCmd->buttons |= IN_ATTACK2;
-
-				tScopeTimer.Update();
-				bKeep = true;
-				break;
-			}
-			continue;
-		}
-
-		Vector vNonPredictedPos = pEnemy->GetAbsOrigin();
-		vNonPredictedPos.z += PLAYER_JUMP_HEIGHT;
-		if (CheckVisibility(vNonPredictedPos, iEntIndex))
-			return;
-
-		if (!bSimple)
-		{
-			F::MoveSim.Initialize(pEnemy, tStorage, false);
-			if (tStorage.m_bFailed)
-			{
-				F::MoveSim.Restore(tStorage);
-				continue;
-			}
-	
-			for (int i = 0; i < iMaxTicks; i++)
-				F::MoveSim.RunTick(tStorage);
-		}
-
-		bool bResult = false;
-		Vector vPredictedPos = bSimple ? pEnemy->GetAbsOrigin() + pEnemy->GetAbsVelocity() * iMaxTicks : tStorage.m_vPredictedOrigin;
-		
-		auto pTargetNav = F::NavEngine.findClosestNavSquare(vPredictedPos);
-		if (pTargetNav)
-		{
-			Vector vTo = pTargetNav->m_center;
-
-			// If player is in the air dont try to vischeck nav areas below him, check the predicted position instead
-			if (!pEnemy->As<CBasePlayer>()->OnSolid() && vTo.DistToSqr(vPredictedPos) >= pow(400.f, 2))
-				vTo = vPredictedPos;
-
-			vTo.z += PLAYER_JUMP_HEIGHT;
-			bResult = CheckVisibility(vTo, iEntIndex);
-		}
-		if (!bSimple)
-			F::MoveSim.Restore(tStorage);
-
-		if (bResult)
-			break;
-	}
-}
-
 bool IsWeaponValidForDT(CTFWeaponBase* pWeapon)
 {
 	if (!pWeapon)
@@ -2724,7 +2536,6 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 	if (!Vars::NavEng::NavBot::Enabled.Value || !Vars::NavEng::NavEngine::Enabled.Value || !F::NavEngine.isReady())
 	{
 		m_iStayNearTargetIdx = -1;
-		m_mAutoScopeCache.clear();
 		return;
 	}
 
@@ -2743,10 +2554,7 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 	// Frame distribution for expensive operations
 	static int frameDistributionCounter = 0;
 	frameDistributionCounter = (frameDistributionCounter + 1) % 4;
-	
-	// High priority operations (every frame)
-	AutoScope(pLocal, pWeapon, pCmd);
-	
+		
 	// Distribute expensive operations across frames
 	switch (frameDistributionCounter)
 	{
@@ -2900,7 +2708,6 @@ void CNavBot::Reset( )
 	m_iMySentryIdx = -1;
 	m_iMyDispenserIdx = -1;
 	m_vSniperSpots.clear( );
-	m_mAutoScopeCache.clear();
 	
 	// Clear new blacklist management data
 	m_mAreaDangerScore.clear();
@@ -3145,90 +2952,7 @@ bool CNavBot::MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 	return false;
 }
 
-void CNavBot::Draw(CTFPlayer* pLocal)
-{
-	if (!(Vars::Menu::Indicators.Value & Vars::Menu::IndicatorsEnum::NavBot) || !pLocal->IsAlive())
-		return;
 
-	auto bIsReady = F::NavEngine.isReady();
-	if (!Vars::Debug::Info.Value && !bIsReady)
-		return;
-
-	int x = Vars::Menu::NavBotDisplay.Value.x;
-	int y = Vars::Menu::NavBotDisplay.Value.y + 8;
-	const auto& fFont = H::Fonts.GetFont(FONT_INDICATORS);
-	const int nTall = fFont.m_nTall + H::Draw.Scale(1);
-
-	EAlign align = ALIGN_TOP;
-	if (x <= 100 + H::Draw.Scale(50, Scale_Round))
-	{
-		x -= H::Draw.Scale(42, Scale_Round);
-		align = ALIGN_TOPLEFT;
-	}
-	else if (x >= H::Draw.m_nScreenW - 100 - H::Draw.Scale(50, Scale_Round))
-	{
-		x += H::Draw.Scale(42, Scale_Round);
-		align = ALIGN_TOPRIGHT;
-	}
-
-	const auto& cColor = F::NavEngine.isPathing() ? Vars::Menu::Theme::Active.Value : Vars::Menu::Theme::Inactive.Value;
-	const auto& cReadyColor = bIsReady ? Vars::Menu::Theme::Active.Value : Vars::Menu::Theme::Inactive.Value;
-	auto local_area = F::NavEngine.findClosestNavSquare(pLocal->GetAbsOrigin());
-	const int iInSpawn = local_area ? local_area->m_TFattributeFlags & (TF_NAV_SPAWN_ROOM_BLUE | TF_NAV_SPAWN_ROOM_RED | TF_NAV_SPAWN_ROOM_EXIT) : -1;
-	std::wstring sJob = L"None";
-	switch (F::NavEngine.current_priority)
-	{
-	case patrol:
-		sJob = m_bDefending ? L"Defend" : L"Patrol";
-		break;
-	case lowprio_health:
-		sJob = L"Get health (Low-Prio)";
-		break;
-	case staynear:
-		sJob = std::format(L"Follow enemy ( {} )", m_sFollowTargetName.data());
-		break;
-	case run_reload:
-		sJob = L"Run reload";
-		break;
-	case run_safe_reload:
-		sJob = L"Run safe reload";
-		break;
-	case snipe_sentry:
-		sJob = L"Snipe sentry";
-		break;
-	case ammo:
-		sJob = L"Get ammo";
-		break;
-	case capture:
-		sJob = L"Capture";
-		break;
-	case prio_melee:
-		sJob = L"Melee";
-		break;
-	case engineer:
-		sJob = std::format(L"Engineer ({})", m_sEngineerTask.data());
-		break;
-	case health:
-		sJob = L"Get health";
-		break;
-	case escape_spawn:
-		sJob = L"Escape spawn";
-		break;
-	case danger:
-		sJob = L"Escape danger";
-		break;
-	default:
-		break;
-	}
-
-	H::Draw.StringOutlined(fFont, x, y, cColor, Vars::Menu::Theme::Background.Value, align, std::format(L"Job: {} {}", sJob, std::wstring(F::CritHack.m_bForce ? L"(Crithack on)" : L"")).data());
-	if (Vars::Debug::Info.Value)
-	{
-		H::Draw.StringOutlined(fFont, x, y += nTall, cReadyColor, Vars::Menu::Theme::Background.Value, align, std::format("Is ready: {}", std::to_string(bIsReady)).c_str());
-		H::Draw.StringOutlined(fFont, x, y += nTall, cReadyColor, Vars::Menu::Theme::Background.Value, align, std::format("In spawn: {}", std::to_string(iInSpawn)).c_str());
-		H::Draw.StringOutlined(fFont, x, y += nTall, cReadyColor, Vars::Menu::Theme::Background.Value, align, std::format("Area flags: {}", std::to_string(local_area ? local_area->m_TFattributeFlags : -1)).c_str());
-	}
-}
 
 
 
