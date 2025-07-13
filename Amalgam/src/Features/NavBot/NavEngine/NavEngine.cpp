@@ -852,6 +852,11 @@ bool CNavEngine::isReady(bool bRoundCheck)
 	return true;
 }
 
+bool CNavEngine::isInactive(float flTime)
+{
+	return inactivity.Check(flTime);
+}
+
 bool CNavEngine::findNearestNavNode(CTFPlayer* pLocal)
 {
 	if (!pLocal || !pLocal->IsAlive() || !map || !isReady() || !I::EngineClient || !I::EngineClient->IsInGame())

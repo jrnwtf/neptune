@@ -180,6 +180,8 @@ public:
 	// Clear by category
 	void clearFreeBlacklist(BlacklistReason reason) { std::erase_if(map->free_blacklist, [&reason](const auto& entry) { return entry.second.value == reason.value; }); }
 
+	bool isInactive(float flTime);
+
 	CNavParser::Crumb current_crumb;
 	void followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd);
 	bool findNearestNavNode(CTFPlayer* pLocal);

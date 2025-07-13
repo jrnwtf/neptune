@@ -430,7 +430,7 @@ bool CAimbotHitscan::NavBotNeedsJump(CTFPlayer* pLocal) const
 	if (flHeightDiff > flJumpThreshold && flHeightDiff <= PLAYER_JUMP_HEIGHT)
 		return true;
 	
-	if (F::NavEngine.inactivity.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2))
+	if (F::NavEngine.isInactive(Vars::NavEng::NavEngine::StuckTime.Value / 2))
 	{
 		if (F::NavEngine.map)
 		{
