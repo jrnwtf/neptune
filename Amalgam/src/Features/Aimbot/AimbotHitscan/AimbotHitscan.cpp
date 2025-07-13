@@ -7,7 +7,7 @@
 #include "../../Ticks/Ticks.h"
 #include "../../Visuals/Visuals.h"
 #include "../../Simulation/MovementSimulation/MovementSimulation.h"
-#include "../../NavBot/NavBot.h"
+#include "../../NavBot/NBheader.h"
 #include "../../../Utils/Math/SIMDMath.h"
 #include <unordered_set>
 #include <algorithm>

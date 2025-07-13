@@ -68,7 +68,6 @@ namespace
 
 void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 {
-	// Initialize CPU optimization system
 	static bool systemInitialized = false;
 	if (!systemInitialized)
 	{
@@ -78,21 +77,17 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 		systemInitialized = true;
 	}
 
-	// Update optimization system
 	CpuOptimization::g_OptimizationManager.Update();
 
-	// Use frequency controller for less critical functions
 	static bool frameDistribution = false;
 	frameDistribution = !frameDistribution;
 	
-	// High priority functions (every frame)
 	if (CPU_OPT_EXPENSIVE_FEATURE_CHECK())
 	{
 		CheatsBypass();
 		WeaponSway();
 	}
 
-	// Medium priority functions (every other frame)
 	if (frameDistribution)
 	{
 		NoiseSpam(pLocal);
@@ -105,7 +100,6 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 		BotNetworking();
 	}
 
-	// Low priority functions (distributed)
 	static int lowPriorityCounter = 0;
 	lowPriorityCounter = (lowPriorityCounter + 1) % 4;
 	
@@ -140,12 +134,10 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 		AchievementSpam(pLocal);
 	}
 
-	// Early exit for invalid movement states
 	if (!pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->m_MoveType() != MOVETYPE_WALK || 
 		pLocal->IsSwimming() || pLocal->InCond(TF_COND_SHIELD_CHARGE) || pLocal->InCond(TF_COND_HALLOWEEN_KART))
 		return;
 
-	// Movement functions (high priority)
 	AutoJump(pLocal, pCmd);
 	EdgeJump(pLocal, pCmd);
 	AutoJumpbug(pLocal, pCmd);
@@ -153,7 +145,6 @@ void CMisc::RunPre(CTFPlayer* pLocal, CUserCmd* pCmd)
 	AutoPeek(pLocal, pCmd);
 	BreakJump(pLocal, pCmd);
 	
-	// Cache server identifier less frequently
 	static FastTimer serverIdTimer{};
 	if (serverIdTimer.Run(2.0f))
 		m_sServerIdentifier = GetServerIdentifier();
@@ -925,7 +916,6 @@ void CMisc::NoiseSpam(CTFPlayer* pLocal)
 
 void CMisc::VoiceCommandSpam(CTFPlayer* pLocal)
 {
-	CPU_OPT_SKIP_IF_LOW_PERF();
 	
 	if (!Vars::Misc::Automation::VoiceCommandSpam.Value || !pLocal || !pLocal->IsAlive())
 		return;
@@ -1247,7 +1237,6 @@ void CMisc::CallVoteSpam(CTFPlayer* pLocal)
 // lmaobox if(crash){(dontcrash)} method down here
 void CMisc::ChatSpam(CTFPlayer* pLocal)
 {
-	CPU_OPT_SKIP_IF_VERY_LOW_PERF(2); // Skip on very low performance
 	
 	if (!Vars::Misc::Automation::ChatSpam::Enable.Value || !pLocal || !I::EngineClient)
 	{

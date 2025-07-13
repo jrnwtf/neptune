@@ -9,7 +9,7 @@
 #include "CameraWindow/CameraWindow.h"
 #include "../Players/PlayerUtils.h"
 #include "../Spectate/Spectate.h"
-#include "../NavBot/NavBot.h"
+#include "../NavBot/NBheader.h"
 #include "../CritHack/CritHack.h"
 #include "../Misc/NamedPipe/Namedpipe.h"
 #include <queue>

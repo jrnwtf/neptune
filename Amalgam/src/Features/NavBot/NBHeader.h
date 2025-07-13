@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <format>
+#include "NavEngine/NavCommon.h"
 
 enum slots
 {
