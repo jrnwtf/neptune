@@ -89,6 +89,7 @@ public:
 	std::unordered_map<std::string, std::vector<std::string>> m_mVotekickResponses;
 	void LoadVotekickConfig();
 	void LoadAutoReplyConfig();
+	void AutoMvmReadyUp();
 	
 	void ChatRelay(int speaker, const char* text, bool teamChat = false);
 	void InitializeChatRelay();

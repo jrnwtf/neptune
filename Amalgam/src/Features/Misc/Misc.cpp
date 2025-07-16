@@ -2879,3 +2879,31 @@ void CMisc::StealIdentity(CTFPlayer* pLocal)
 	steamIDTarget.SetFromUint64((0x0110000100000000ULL) | static_cast<uint64_t>(piTarget.friendsID));
 	m_nStolenAvatar = I::SteamFriends->GetLargeFriendAvatar(steamIDTarget);
 }
+
+void CMisc::AutoMvmReadyUp()
+{
+    if (!Vars::Misc::MannVsMachine::AutoMvmReadyUp.Value)
+        return;
+
+    auto pLocal = H::Entities.GetLocal();
+    if (!pLocal)
+        return;
+
+    auto pGameRules = I::TFGameRules();
+    if (!pGameRules)
+        return;
+
+    if (!pGameRules->m_bPlayingMannVsMachine() || 
+        !pGameRules->m_bInWaitingForPlayers() || 
+        pGameRules->m_iRoundState() != GR_STATE_BETWEEN_RNDS)
+        return;
+
+    const int iLocalIndex = pLocal->entindex();
+    if (iLocalIndex < 0 || iLocalIndex >= 100)
+        return;
+
+    if (!pGameRules->IsPlayerReady(iLocalIndex))
+    {
+        I::EngineClient->ClientCmd_Unrestricted("tournament_player_readystate 1");
+    }
+}
