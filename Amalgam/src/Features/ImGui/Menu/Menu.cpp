@@ -1698,6 +1698,7 @@ void CMenu::MenuMisc(int iTab)
 					FToggle(Vars::Misc::MannVsMachine::InstantRevive, FToggleEnum::Right);
 					FToggle(Vars::Misc::MannVsMachine::AllowInspect, FToggleEnum::Left);
 					FToggle(Vars::Misc::MannVsMachine::RobotDeathAnims, FToggleEnum::Right);
+					FToggle(Vars::Misc::MannVsMachine::AutoMvmReadyUp);
 				} EndSection();
 				if (Section("Spam", 8))
 				{
