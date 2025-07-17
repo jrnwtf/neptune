@@ -152,6 +152,7 @@
 MAKE_SIGNATURE(CTFPlayerSharedUtils_GetEconItemViewByLoadoutSlot, "client.dll", "48 89 6C 24 ? 56 41 54 41 55 41 56 41 57 48 83 EC", 0x0);
 MAKE_SIGNATURE(CEconItemView_GetItemName, "client.dll", "40 53 48 83 EC ? 48 8B D9 C6 81 ? ? ? ? ? E8 ? ? ? ? 48 8B 8B", 0x0);
 
+#ifndef TEXTMODE
 void CESP::Store(CTFPlayer* pLocal)
 {
 	CPU_OPT_SKIP_IF_VERY_LOW_PERF(2); // Skip ESP on very low performance
@@ -190,6 +191,7 @@ void CESP::Store(CTFPlayer* pLocal)
 		break;
 	}
 }
+#endif // TEXTMODE
 
 void CESP::StorePlayers(CTFPlayer* pLocal)
 {
@@ -1149,6 +1151,7 @@ void CESP::StoreWorld()
 	}
 }
 
+#ifndef TEXTMODE
 void CESP::Draw()
 {
 	if (!Vars::ESP::Draw.Value || !I::EngineClient->IsInGame())
@@ -1158,6 +1161,7 @@ void CESP::Draw()
 	DrawBuildings();
 	DrawPlayers();
 }
+#endif // TEXTMODE
 
 void CESP::DrawPlayers()
 {
