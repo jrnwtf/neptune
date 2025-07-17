@@ -2939,13 +2939,15 @@ void CMisc::ExecBuyBot(CTFPlayer* pLocal)
         {
             Vector stations[] = { Vector(-1346.60f, 573.14f, -92.87f), Vector(-1344.79f, 2652.66f, -52.98f) };
             Vector dest = (pLocal->GetAbsOrigin().DistTo(stations[1]) < pLocal->GetAbsOrigin().DistTo(stations[0])) ? stations[1] : stations[0];
-            F::NavEngine.navTo(dest, danger);
+            if (!F::NavEngine.isPathing())
+                F::NavEngine.navTo(dest, danger);
         }
         else if (mapName == "mvm_mannhattan")
         {
             Vector stations[] = { Vector(-625.83f, 2305.69f, -85.87f), Vector(561.83f, 2282.60f, -84.97f) };
             Vector dest = (pLocal->GetAbsOrigin().DistTo(stations[1]) < pLocal->GetAbsOrigin().DistTo(stations[0])) ? stations[1] : stations[0];
-            F::NavEngine.navTo(dest, danger);
+            if (!F::NavEngine.isPathing())
+                F::NavEngine.navTo(dest, danger);
         }
         else
         {
