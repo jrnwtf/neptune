@@ -80,11 +80,11 @@ CNavBot::bot_class_config CNavBot::GetMvMClassConfig(CTFPlayer* pLocal) const
         
     case TF_CLASS_SNIPER:
         // Medium-long range for sniper - around 1300 units
-        return { 1200.0f, 1300.0f, 2000.0f, true };
+        return { 1300.0f, 1400.0f, 2100.0f, true };
         
     case TF_CLASS_ENGINEER:
         // Engineers stay at medium range
-        return { 600.0f, 800.0f, 1200.0f, false };
+        return { 1000.0f, 1100.0f, 1200.0f, false };
         
     case TF_CLASS_HEAVY:
     case TF_CLASS_SOLDIER:
