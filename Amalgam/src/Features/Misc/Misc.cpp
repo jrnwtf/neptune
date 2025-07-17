@@ -5,6 +5,7 @@
 #include "../Aimbot/AutoRocketJump/AutoRocketJump.h"
 #include "NamedPipe/NamedPipe.h"
 #include "../../Utils/Optimization/CpuOptimization.h"
+#include "../NavBot/NavEngine/NavEngine.h"
 #include <fstream>
 #include <format>
 #include <chrono>
@@ -2919,8 +2920,39 @@ void CMisc::ExecBuyBot(CTFPlayer* pLocal)
     auto pGameRules = I::TFGameRules();
     if (!pGameRules || !pGameRules->m_bPlayingMannVsMachine())
         return;
-    if (!pLocal || !pLocal->m_bInUpgradeZone())
+    if (!pLocal)
         return;
+    // cash threshold
+    if (Vars::Misc::MannVsMachine::MaxCash.Value > 0 && pLocal->m_nCurrency() >= Vars::Misc::MannVsMachine::MaxCash.Value)
+        return;
+    if (!pLocal->m_bInUpgradeZone())
+    {
+        const char* levelName = I::EngineClient->GetLevelName();
+        std::string mapName = levelName ? std::string(levelName) : std::string();
+        size_t slash = mapName.find_last_of("/\\");
+        if (slash != std::string::npos)
+            mapName = mapName.substr(slash + 1);
+        size_t dot = mapName.find_last_of('.');
+        if (dot != std::string::npos)
+            mapName = mapName.substr(0, dot);
+        if (mapName == "mvm_rottenburg")
+        {
+            Vector stations[] = { Vector(-1346.60f, 573.14f, -92.87f), Vector(-1344.79f, 2652.66f, -52.98f) };
+            Vector dest = (pLocal->GetAbsOrigin().DistTo(stations[1]) < pLocal->GetAbsOrigin().DistTo(stations[0])) ? stations[1] : stations[0];
+            F::NavEngine.navTo(dest, danger);
+        }
+        else if (mapName == "mvm_mannhattan")
+        {
+            Vector stations[] = { Vector(-625.83f, 2305.69f, -85.87f), Vector(561.83f, 2282.60f, -84.97f) };
+            Vector dest = (pLocal->GetAbsOrigin().DistTo(stations[1]) < pLocal->GetAbsOrigin().DistTo(stations[0])) ? stations[1] : stations[0];
+            F::NavEngine.navTo(dest, danger);
+        }
+        else
+        {
+            return;
+        }
+        return;
+    }
     static auto tfMvmRespec = U::ConVars.FindVar("tf_mvm_respec_enabled");
     if (!tfMvmRespec || tfMvmRespec->GetInt() != 1)
         return;
