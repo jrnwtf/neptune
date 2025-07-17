@@ -1229,6 +1229,7 @@ namespace Vars
 			CVar(AllowInspect, "Allow inspect", false);
 			CVar(RobotDeathAnims, "Robot death animations", false);
 			CVar(AutoMvmReadyUp, "Auto MvM ready up", false);
+			CVar(BuyBot, "Buy Bot", false);
 		SUBNAMESPACE_END(MannVsMachine);
 
 		SUBNAMESPACE_BEGIN(SteamRPC, Steam RPC)
