@@ -1178,10 +1178,14 @@ bool CNavBot::SnipeSentries(CTFPlayer* pLocal)
 
 std::optional<Vector> CNavBot::GetCtfGoal(CTFPlayer* pLocal, int iOurTeam, int iEnemyTeam)
 {
-	// Get Flag related information
-	auto iStatus = F::FlagController.GetStatus(iEnemyTeam);
-	auto vPosition = F::FlagController.GetPosition(iEnemyTeam);
-	auto iCarrierIdx = F::FlagController.GetCarrier(iEnemyTeam);
+    auto tFlagInfo = F::FlagController.GetFlag(iEnemyTeam);
+    if (!tFlagInfo.m_pFlag)
+        return std::nullopt;
+
+    // Get Flag related information
+    auto iStatus = F::FlagController.GetStatus(tFlagInfo.m_pFlag);
+    auto vPosition = F::FlagController.GetPosition(tFlagInfo.m_pFlag);
+    auto iCarrierIdx = F::FlagController.GetCarrier(tFlagInfo.m_pFlag);
 
 	// CTF is the current capture type
 	if (iStatus == TF_FLAGINFO_STOLEN)
