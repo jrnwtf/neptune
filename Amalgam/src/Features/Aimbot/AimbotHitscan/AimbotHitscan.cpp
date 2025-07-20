@@ -1340,6 +1340,138 @@ static inline void DrawVisuals(CTFPlayer* pLocal, Target_t& tTarget, int nWeapon
 	}
 }
 
+bool CAimbotHitscan::IsHitmansHeatmaker(CTFWeaponBase* pWeapon)
+{
+	if (!pWeapon || pWeapon->GetWeaponID() != TF_WEAPON_SNIPERRIFLE)
+		return false;
+	
+	return SDK::AttribHookValue(0, "sniper_rage_DISPLAY_ONLY", pWeapon) > 0;
+}
+
+void CAimbotHitscan::HandleHeatmakerFocus(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd, const std::vector<Target_t>& vTargets)
+{
+	if (!pLocal || !pWeapon || !pCmd || !Vars::Aimbot::Hitscan::Heatmaker::AutoFocus.Value)
+		return;
+	
+	auto pSniperRifle = pWeapon->As<CTFSniperRifle>();
+	if (!pSniperRifle)
+		return;
+	
+	float flRage = pLocal->m_flRageMeter();
+	if (flRage < 100.0f)
+		return;
+	
+	if (pLocal->InCond(TF_COND_SNIPERCHARGE_RAGE_BUFF))
+		return;
+	
+	bool bShouldActivate = ShouldActivateHeatmakerFocus(pLocal, pWeapon, vTargets);
+	
+	if (bShouldActivate)
+	{
+		pCmd->buttons |= IN_RELOAD;
+		
+		static bool bTryAltActivation = false;
+		if (bTryAltActivation)
+		{
+			pCmd->buttons |= IN_ATTACK3;
+		}
+	}
+}
+
+bool CAimbotHitscan::ShouldActivateHeatmakerFocus(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const std::vector<Target_t>& vTargets)
+{
+	if (!pLocal || !pWeapon || vTargets.empty())
+		return false;
+	
+	int iValidTargets = 0;
+	int iHighPriorityTargets = 0;
+	float flClosestDistance = FLT_MAX;
+	
+	Vec3 vLocalPos = pLocal->GetShootPos();
+	float flMaxRange = Vars::Aimbot::Hitscan::Heatmaker::MaxEffectiveRange.Value;
+	float flLowHealthThreshold = Vars::Aimbot::Hitscan::Heatmaker::LowHealthThreshold.Value / 100.0f;
+	
+	for (const auto& target : vTargets)
+	{
+		if (!target.m_pEntity || target.m_pEntity->IsDormant())
+			continue;
+		
+		float flDistance = vLocalPos.DistTo(target.m_vPos);
+		if (flDistance > flMaxRange)
+			continue;
+		
+		iValidTargets++;
+		
+		if (flDistance < flClosestDistance)
+			flClosestDistance = flDistance;
+		
+		if (target.m_pEntity->IsPlayer())
+		{
+			auto pPlayer = target.m_pEntity->As<CTFPlayer>();
+			int iClass = pPlayer->m_iClass();
+			int iHealth = pPlayer->m_iHealth();
+			int iMaxHealth = pPlayer->GetMaxHealth();
+			
+			if (iHealth <= iMaxHealth * flLowHealthThreshold)
+				iHighPriorityTargets++;
+			
+			if (iClass == TF_CLASS_MEDIC || iClass == TF_CLASS_SNIPER || iClass == TF_CLASS_ENGINEER)
+				iHighPriorityTargets++;
+		}
+	}
+	
+	if (iValidTargets >= Vars::Aimbot::Hitscan::Heatmaker::MultiTargetThreshold.Value)
+		return true;
+	
+	if (iHighPriorityTargets >= Vars::Aimbot::Hitscan::Heatmaker::HighPriorityThreshold.Value)
+		return true;
+	
+	if (flClosestDistance < Vars::Aimbot::Hitscan::Heatmaker::CloseRangeDistance.Value && iValidTargets >= 2)
+		return true;
+	
+	if (pLocal->InCond(TF_COND_ZOOMED) && iHighPriorityTargets >= 1)
+	{
+		for (const auto& target : vTargets)
+		{
+			if (!target.m_pEntity || !target.m_pEntity->IsPlayer())
+				continue;
+			
+			auto pPlayer = target.m_pEntity->As<CTFPlayer>();
+			int iClass = pPlayer->m_iClass();
+			
+			if (iClass == TF_CLASS_MEDIC || iClass == TF_CLASS_SNIPER)
+			{
+				Vec3 vEyePos = pLocal->GetShootPos();
+				if (SDK::VisPos(pLocal, target.m_pEntity, vEyePos, target.m_vPos))
+					return true;
+			}
+		}
+	}
+	
+	float flEmergencyHealthPercent = Vars::Aimbot::Hitscan::Heatmaker::EmergencyHealthPercent.Value / 100.0f;
+	if (pLocal->m_iHealth() <= pLocal->GetMaxHealth() * flEmergencyHealthPercent && iValidTargets >= 1)
+		return true;
+	
+	if (pLocal->InCond(TF_COND_ZOOMED) && G::CanHeadshot)
+	{
+		for (const auto& target : vTargets)
+		{
+			if (!target.m_pEntity || !target.m_pEntity->IsPlayer())
+				continue;
+			
+			auto pPlayer = target.m_pEntity->As<CTFPlayer>();
+			
+			if (pPlayer->m_iHealth() >= pPlayer->GetMaxHealth() * 0.8f && 
+				(pPlayer->m_iClass() == TF_CLASS_HEAVY || pPlayer->m_iClass() == TF_CLASS_SOLDIER))
+			{
+				return true;
+			}
+		}
+	}
+	
+	return false;
+}
+
 void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
 	// Critical safety checks to prevent crashes during map loading/transitions
@@ -1426,6 +1558,11 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 	case TF_WEAPON_SNIPERRIFLE:
 	case TF_WEAPON_SNIPERRIFLE_DECAP:
 	{
+		if (IsHitmansHeatmaker(pWeapon))
+		{
+			HandleHeatmakerFocus(pLocal, pWeapon, pCmd, vTargets);
+		}
+
 		bool bScoped = pLocal->InCond(TF_COND_ZOOMED);
 		bool bShouldScope = false;
 		bool bShouldUnscope = false;

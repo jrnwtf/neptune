@@ -167,11 +167,6 @@ void CAutoQueue::SearchCommunityServers()
 	strcpy_s(appFilter.m_szValue, "440");
 	vFilters.push_back(appFilter);
 	
-	MatchMakingKeyValuePair_t dedicatedFilter;
-	strcpy_s(dedicatedFilter.m_szKey, "dedicated");
-	strcpy_s(dedicatedFilter.m_szValue, "1");
-	vFilters.push_back(dedicatedFilter);
-	
 	MatchMakingKeyValuePair_t playersFilter;
 	strcpy_s(playersFilter.m_szKey, "hasplayers");
 	strcpy_s(playersFilter.m_szValue, "1");

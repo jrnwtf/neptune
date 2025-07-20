@@ -345,6 +345,16 @@ namespace Vars
 			CVarEnum(Modifiers, VA_LIST("Modifiers", "Hitscan modifiers"), 0b0100000, DROPDOWN_MULTI, nullptr,
 				VA_LIST("Tapfire", "Wait for headshot", "Wait for charge", "Scoped only", "Auto scope", "Auto rev minigun", "Extinguish team", "Distance-based autoscope"),
 				Tapfire = 1 << 0, WaitForHeadshot = 1 << 1, WaitForCharge = 1 << 2, ScopedOnly = 1 << 3, AutoScope = 1 << 4, AutoRev = 1 << 5, ExtinguishTeam = 1 << 6, DistanceAutoscope = 1 << 7);
+			
+			SUBNAMESPACE_BEGIN(Heatmaker)
+				CVar(AutoFocus, "Auto focus", true);
+				CVar(MultiTargetThreshold, "Multi target threshold", 3, SLIDER_MIN, 1, 10);
+				CVar(HighPriorityThreshold, "High priority threshold", 2, SLIDER_MIN, 1, 5);
+				CVar(CloseRangeDistance, "Close range distance", 500.f, SLIDER_MIN | SLIDER_PRECISION, 200.f, 1000.f, 50.f);
+				CVar(EmergencyHealthPercent, "Emergency health %", 30.f, SLIDER_CLAMP | SLIDER_PRECISION, 10.f, 80.f, 5.f, "%g%%");
+				CVar(LowHealthThreshold, "Low health threshold", 50.f, SLIDER_CLAMP | SLIDER_PRECISION, 20.f, 80.f, 5.f, "%g%%");
+				CVar(MaxEffectiveRange, "Max effective range", 2000.f, SLIDER_MIN | SLIDER_PRECISION, 500.f, 3000.f, 100.f);
+			SUBNAMESPACE_END(Heatmaker);
 			CVar(PointScale, "Point scale", 0.f, SLIDER_CLAMP | SLIDER_PRECISION, 0.f, 100.f, 5.f, "%g%%");
 			CVar(TapFireDist, "Tapfire distance", 1000.f, SLIDER_MIN | SLIDER_PRECISION, 250.f, 1000.f, 50.f);
 			CVar(DistanceAutoscopeRange, "Distance autoscope range", 1950.f, SLIDER_MIN | SLIDER_PRECISION, 500.f, 3000.f, 50.f);

@@ -345,6 +345,16 @@ void CMenu::MenuAimbot(int iTab)
 					}
 					PopTransparent();
 				} EndSection();
+				if (Section("Heatmaker"))
+				{
+					FToggle(Vars::Aimbot::Hitscan::Heatmaker::AutoFocus);
+					FSlider(Vars::Aimbot::Hitscan::Heatmaker::MultiTargetThreshold, FSliderEnum::Left);
+					FSlider(Vars::Aimbot::Hitscan::Heatmaker::HighPriorityThreshold, FSliderEnum::Right);
+					FSlider(Vars::Aimbot::Hitscan::Heatmaker::CloseRangeDistance, FSliderEnum::Left);
+					FSlider(Vars::Aimbot::Hitscan::Heatmaker::MaxEffectiveRange, FSliderEnum::Right);
+					FSlider(Vars::Aimbot::Hitscan::Heatmaker::EmergencyHealthPercent, FSliderEnum::Left);
+					FSlider(Vars::Aimbot::Hitscan::Heatmaker::LowHealthThreshold, FSliderEnum::Right);
+				} EndSection();
 				if (Vars::Debug::Options.Value)
 				{
 					if (Section("##Debug Hitscan"))

@@ -64,6 +64,11 @@ private:
 	void BatchCalculateDistances(const Vec3& eyePos, const std::vector<Target_t>& targets, float* distances) const;
 	void BatchCalculateFOV(const Vec3& viewAngles, const std::vector<Target_t>& targets, float* fovs) const;
 
+	// Hitman's Heatmaker
+	bool IsHitmansHeatmaker(CTFWeaponBase* pWeapon);
+	void HandleHeatmakerFocus(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd, const std::vector<Target_t>& vTargets);
+	bool ShouldActivateHeatmakerFocus(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const std::vector<Target_t>& vTargets);
+
 public:
 	void Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd);
 };
