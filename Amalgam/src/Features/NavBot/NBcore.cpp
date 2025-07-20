@@ -1184,7 +1184,7 @@ std::optional<Vector> CNavBot::GetCtfGoal(CTFPlayer* pLocal, int iOurTeam, int i
 
     // Get Flag related information
     auto iStatus = F::FlagController.GetStatus(tFlagInfo.m_pFlag);
-    auto vPosition = F::FlagController.GetPosition(tFlagInfo.m_pFlag);
+    Vector vPosition = F::FlagController.GetPosition(tFlagInfo.m_pFlag);
     auto iCarrierIdx = F::FlagController.GetCarrier(tFlagInfo.m_pFlag);
 
 	// CTF is the current capture type
@@ -1201,10 +1201,9 @@ std::optional<Vector> CNavBot::GetCtfGoal(CTFPlayer* pLocal, int iOurTeam, int i
 			if (ShouldAssist(pLocal, iCarrierIdx))
 			{
 				// Stay slightly behind and to the side to avoid blocking
-				if (vPosition)
 				{
 					Vector vOffset(40.0f, 40.0f, 0.0f);
-					*vPosition -= vOffset;
+					vPosition -= vOffset;
 				}
 				return vPosition;
 			}

@@ -1860,6 +1860,20 @@ void CMenu::MenuNavEng(int iTab)
 								FSlider(Vars::NavEng::NavBot::BlacklistSlightDangerLimit);
 							}
 							PopTransparent();
+							FSlider(Vars::NavEng::NavBot::Priority_patrol);
+							FSlider(Vars::NavEng::NavBot::Priority_lowprio_health);
+							FSlider(Vars::NavEng::NavBot::Priority_staynear);
+							FSlider(Vars::NavEng::NavBot::Priority_run_reload);
+							FSlider(Vars::NavEng::NavBot::Priority_run_safe_reload);
+							FSlider(Vars::NavEng::NavBot::Priority_snipe_sentry);
+							FSlider(Vars::NavEng::NavBot::Priority_capture);
+							FSlider(Vars::NavEng::NavBot::Priority_ammo);
+							FSlider(Vars::NavEng::NavBot::Priority_prio_melee);
+							FSlider(Vars::NavEng::NavBot::Priority_engineer);
+							FSlider(Vars::NavEng::NavBot::Priority_health);
+							FSlider(Vars::NavEng::NavBot::Priority_escape_spawn);
+							FSlider(Vars::NavEng::NavBot::Priority_danger);
+							PopTransparent();
 						}
 						PopTransparent();
 					}

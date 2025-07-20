@@ -312,53 +312,13 @@ void CFollowBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
     
     Vector vCurrentPos = pLocal->GetAbsOrigin();
     
-    if (m_vLastPosition.IsZero())
-    {
-        m_vLastPosition = vCurrentPos;
-        m_StuckTimer.Update();
-        m_StuckDetectionTimer.Update();
-    }
-    
-    float flDistanceMoved = vCurrentPos.DistTo(m_vLastPosition);
-    
-    const float MIN_MOVEMENT = 20.0f;
-    
-    if (flDistanceMoved < MIN_MOVEMENT && F::NavEngine.isPathing())
-    {
-        if (m_StuckTimer.Check(Vars::NavEng::NavEngine::StuckTime.Value / 2))
-        {
-            m_iStuckCount++;
-            
-            if (m_iStuckCount > TIME_TO_TICKS(Vars::NavEng::NavEngine::StuckDetectTime.Value))
-            {
-                m_bWasStuck = true;
-                
-                SDK::Output("CFollowBot", "Stuck detected, replanning path", { 255, 131, 131 }, 
-                           Vars::Debug::Logging.Value, Vars::Debug::Logging.Value);
-                
-                F::NavEngine.cancelPath();
-                
-                m_iStuckCount = 0;
-                m_StuckTimer.Update();
-                m_StuckDetectionTimer.Update();
-            }
-        }
-    }
-    else
-    {
-        m_iStuckCount = 0;
-        m_StuckTimer.Update();
-        m_bWasStuck = false;
-    }
-    
-    m_vLastPosition = vCurrentPos;
-    
-    bool bShouldUpdatePath = (I::GlobalVars->curtime - m_flLastPathUpdateTime > 0.5f) || m_bWasStuck;
+    bool bIsPathing = F::NavEngine.isPathing();
+    const float flRepathInterval = 1.0f;
+    bool bShouldUpdatePath = !bIsPathing || (I::GlobalVars->curtime - m_flLastPathUpdateTime > flRepathInterval);
     if (bShouldUpdatePath && F::NavEngine.map)
     {
         F::NavEngine.navTo(*vFollowPos, 5);
         m_flLastPathUpdateTime = I::GlobalVars->curtime;
-        m_bWasStuck = false;
     }
 }
 
