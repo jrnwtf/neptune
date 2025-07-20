@@ -265,6 +265,13 @@ bool CAutoQueue::IsServerValid(const gameserveritem_t* pServer)
 			return false;
 	}
 	
+	if (Vars::Misc::Queueing::OnlySteamNetworkingIPs.Value)
+	{
+		std::string sServerIP = pServer->m_NetAdr.GetConnectionAddressString();
+		if (sServerIP.substr(0, 7) != "169.254")
+			return false;
+	}
+	
 	return true;
 }
 

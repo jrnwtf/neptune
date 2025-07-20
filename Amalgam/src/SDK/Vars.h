@@ -1241,6 +1241,7 @@ namespace Vars
 			CVar(RequireNavmesh, "Require navmesh", true);
 			CVar(AvoidPasswordServers, "Avoid password servers", true);
 			CVar(OnlyNonDedicatedServers, "Only non-dedicated servers", false);
+			CVar(OnlySteamNetworkingIPs, "Only SteamNetworking IPs (169.254.*)", false);
 			CVar(PreferSteamNickServers, "Prefer '*'s Server' format", true);
 		SUBNAMESPACE_END(Queueing);
 
