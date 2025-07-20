@@ -1921,7 +1921,8 @@ void CMenu::MenuNavEng(int iTab)
 						FSlider(Vars::Misc::Queueing::MaxPlayersOnServer, FSliderEnum::Right);
 						FToggle(Vars::Misc::Queueing::RequireNavmesh, FToggleEnum::Left);
 						FToggle(Vars::Misc::Queueing::AvoidPasswordServers, FToggleEnum::Right);
-						FToggle(Vars::Misc::Queueing::PreferSteamNickServers, FToggleEnum::Left);
+						FToggle(Vars::Misc::Queueing::OnlyNonDedicatedServers, FToggleEnum::Left);
+						FToggle(Vars::Misc::Queueing::PreferSteamNickServers, FToggleEnum::Right);
 					}
 					PopTransparent();
 				} EndSection();

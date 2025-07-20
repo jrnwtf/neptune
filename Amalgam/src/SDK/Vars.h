@@ -1240,6 +1240,7 @@ namespace Vars
 			CVar(MaxPlayersOnServer, "Max players on server", 24, SLIDER_MIN, 1, 32, 1, "%i");
 			CVar(RequireNavmesh, "Require navmesh", true);
 			CVar(AvoidPasswordServers, "Avoid password servers", true);
+			CVar(OnlyNonDedicatedServers, "Only non-dedicated servers", false);
 			CVar(PreferSteamNickServers, "Prefer '*'s Server' format", true);
 		SUBNAMESPACE_END(Queueing);
 

@@ -190,6 +190,19 @@ void CAutoQueue::SearchCommunityServers()
 		vFilters.push_back(passwordFilter);
 	}
 	
+	if (Vars::Misc::Queueing::OnlyNonDedicatedServers.Value)
+	{
+		MatchMakingKeyValuePair_t nandFilter;
+		strcpy_s(nandFilter.m_szKey, "nand");
+		strcpy_s(nandFilter.m_szValue, "1");
+		vFilters.push_back(nandFilter);
+		
+		MatchMakingKeyValuePair_t dedicatedFilter;
+		strcpy_s(dedicatedFilter.m_szKey, "dedicated");
+		strcpy_s(dedicatedFilter.m_szValue, "1");
+		vFilters.push_back(dedicatedFilter);
+	}
+	
 	MatchMakingKeyValuePair_t* pFilters = vFilters.empty() ? nullptr : vFilters.data();
 	m_hServerListRequest = I::SteamMatchmakingServers->RequestInternetServerList(
 		440,
