@@ -1780,7 +1780,6 @@ void CMenu::MenuNavEng(int iTab)
 							FDropdown(Vars::Misc::Automation::ExcludeProjectileClasses, FDropdownEnum::Multi);
 						}
 						PopTransparent();
-					PopTransparent();
 				    }
 				} EndSection();
 				if (Vars::Debug::Options.Value)
@@ -1875,7 +1874,6 @@ void CMenu::MenuNavEng(int iTab)
 							FSlider(Vars::NavEng::NavBot::Priority_danger);
 							PopTransparent();
 						}
-						PopTransparent();
 					}
 					PopTransparent();
 				} EndSection();
@@ -1900,6 +1898,20 @@ void CMenu::MenuNavEng(int iTab)
 						FToggle(Vars::Misc::Queueing::RQkick, FToggleEnum::Left);
 						FToggle(Vars::Misc::Queueing::RQLTM, FToggleEnum::Right);
 						FToggle(Vars::Misc::Queueing::RQIgnoreFriends, FToggleEnum::Left);
+					}
+					PopTransparent();
+					
+					// Community Server Auto-Queue
+					FToggle(Vars::Misc::Queueing::AutoCommunityQueue, FToggleEnum::Left);
+					PushTransparent(!Vars::Misc::Queueing::AutoCommunityQueue);
+					{
+						FSlider(Vars::Misc::Queueing::ServerSearchDelay, FSliderEnum::Left);
+						FSlider(Vars::Misc::Queueing::MaxTimeOnServer, FSliderEnum::Right);
+						FSlider(Vars::Misc::Queueing::MinPlayersOnServer, FSliderEnum::Left);
+						FSlider(Vars::Misc::Queueing::MaxPlayersOnServer, FSliderEnum::Right);
+						FToggle(Vars::Misc::Queueing::RequireNavmesh, FToggleEnum::Left);
+						FToggle(Vars::Misc::Queueing::AvoidPasswordServers, FToggleEnum::Right);
+						FToggle(Vars::Misc::Queueing::PreferSteamNickServers, FToggleEnum::Left);
 					}
 					PopTransparent();
 				} EndSection();

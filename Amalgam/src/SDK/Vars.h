@@ -1221,6 +1221,16 @@ namespace Vars
 			CVar(RQkick, "Kicked", false);
 			CVar(RQLTM, "dont RQLTM", false);
 			CVar(RQIgnoreFriends, "Ignore Friends", false);
+			
+			// Community Server Auto-Queue
+			CVar(AutoCommunityQueue, "Auto community queue", false);
+			CVar(ServerSearchDelay, "Server search delay", 30, SLIDER_MIN, 10, 300, 5, "%is");
+			CVar(MaxTimeOnServer, "Max time on server", 600, SLIDER_MIN, 60, 3600, 30, "%is");
+			CVar(MinPlayersOnServer, "Min players on server", 6, SLIDER_MIN, 0, 32, 1, "%i");
+			CVar(MaxPlayersOnServer, "Max players on server", 24, SLIDER_MIN, 1, 32, 1, "%i");
+			CVar(RequireNavmesh, "Require navmesh", true);
+			CVar(AvoidPasswordServers, "Avoid password servers", true);
+			CVar(PreferSteamNickServers, "Prefer '*'s Server' format", true);
 		SUBNAMESPACE_END(Queueing);
 
 		SUBNAMESPACE_BEGIN(MannVsMachine, Mann vs. Machine)
