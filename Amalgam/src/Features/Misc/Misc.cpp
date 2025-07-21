@@ -1085,7 +1085,7 @@ void CMisc::AchievementSpam(CTFPlayer* pLocal)
 
 		// Kill Everyone You Meet achievement by default
 		// TODO: add a new column to edit achievement timer & number directly in cheat (like you did with autoitem)
-		int specificAchievementID = 1105;
+		int specificAchievementID = 2332;
 
 		IAchievement* pAchievement = nullptr;
 		for (int i = 0; i < pAchievementMgr->GetAchievementCount(); i++)
