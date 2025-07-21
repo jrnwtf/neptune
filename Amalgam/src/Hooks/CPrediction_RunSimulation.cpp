@@ -3,6 +3,8 @@
 #include "../Features/EnginePrediction/EnginePrediction.h"
 #include "../Features/Ticks/Ticks.h"
 
+#ifndef TEXTMODE
+
 MAKE_SIGNATURE(CPrediction_RunSimulation, "client.dll", "48 83 EC 38 4C 8B 44", 0x0);
 
 MAKE_HOOK(CPrediction_RunSimulation, S::CPrediction_RunSimulation(), void,
@@ -58,3 +60,5 @@ MAKE_HOOK(CPrediction_RunSimulation, S::CPrediction_RunSimulation(), void,
 	CALL_ORIGINAL(rcx, current_command, curtime, cmd, localPlayer);
 	F::EnginePrediction.RestorePlayers();
 }
+
+#endif
