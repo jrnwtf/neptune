@@ -8,7 +8,11 @@ MAKE_HOOK(Host_IsSecureServerAllowed, S::Host_IsSecureServerAllowed(), bool)
 {
 	if (Vars::Misc::Game::VACBypass.Value)
 	{
-		*reinterpret_cast<bool*>(U::Memory.RelToAbs(S::g_bAllowSecureServers())) = true;
+		if (auto uSig = S::g_bAllowSecureServers())
+		{
+			__try { *reinterpret_cast<bool*>(U::Memory.RelToAbs(uSig)) = true; }
+			__except (EXCEPTION_EXECUTE_HANDLER) {}
+		}
 		return true;
 	}
 	return CALL_ORIGINAL();
