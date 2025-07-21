@@ -18,7 +18,6 @@
 #include <string>
 #include "Features/Backtrack/Backtrack.h"
 #include "Features/EnginePrediction/EnginePrediction.h"
-#include "Features/Ticks/Ticks.h"
 #include "Features/ImGui/Menu/Menu.h"
 
 void CVisuals::RestoreWorldModulation()
@@ -395,85 +394,6 @@ void CEnginePrediction::Start(CTFPlayer*, CUserCmd*) {}
 void CEnginePrediction::End(CTFPlayer*, CUserCmd*) {}
 void CEnginePrediction::ScalePlayers(CBaseEntity*) {}
 void CEnginePrediction::RestorePlayers() {}
-
-// -----------------------------
-// CTicks stubs
-// -----------------------------
-
-void CTicks::Run(float /*accumulated_extra_samples*/, bool /*bFinalTick*/, CTFPlayer* /*pLocal*/)
-{
-    // No operation in textmode.
-}
-
-void CTicks::Draw(CTFPlayer* /*pLocal*/)
-{
-    // No operation in textmode.
-}
-
-void CTicks::Reset()
-{
-    // Nothing to reset in textmode.
-}
-
-void CTicks::CLMove(float /*accumulated_extra_samples*/, bool /*bFinalTick*/)
-{
-    // No operation in textmode.
-}
-
-void CTicks::CLMoveManage(CTFPlayer* /*pLocal*/)
-{
-    // No operation in textmode.
-}
-
-void CTicks::CreateMove(CTFPlayer* /*pLocal*/, CUserCmd* /*pCmd*/, bool* /*pSendPacket*/)
-{
-    // No operation in textmode.
-}
-
-void CTicks::AntiWarp(CTFPlayer* /*pLocal*/, CUserCmd* /*pCmd*/)
-{
-    // No operation in textmode.
-}
-
-int CTicks::GetTicks(CTFWeaponBase* /*pWeapon*/)
-{
-    return 0;
-}
-
-int CTicks::GetShotsWithinPacket(CTFWeaponBase* /*pWeapon*/, int /*iTicks*/)
-{
-    return 1;
-}
-
-int CTicks::GetMinimumTicksNeeded(CTFWeaponBase* /*pWeapon*/)
-{
-    return 1;
-}
-
-bool CTicks::CanChoke()
-{
-    return false;
-}
-
-void CTicks::SaveShootPos(CTFPlayer* /*pLocal*/)
-{
-    // No operation.
-}
-
-Vec3 CTicks::GetShootPos()
-{
-    return Vec3();
-}
-
-void CTicks::SaveShootAngle(CUserCmd* /*pCmd*/, bool /*bSendPacket*/)
-{
-    // No operation.
-}
-
-Vec3* CTicks::GetShootAngle()
-{
-    return nullptr;
-}
 
 void CMenu::AddOutput(const std::string& /*sFunction*/, const std::string& /*sLog*/, const Color_t& /*tColor*/)
 {

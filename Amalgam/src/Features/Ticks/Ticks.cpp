@@ -5,8 +5,6 @@
 #include "../Aimbot/AutoRocketJump/AutoRocketJump.h"
 #include "../Backtrack/Backtrack.h"
 
-#ifndef TEXTMODE
-
 void CTicks::Reset()
 {
 	m_bSpeedhack = m_bDoubletap = m_bRecharge = m_bWarp = false;
@@ -450,5 +448,3 @@ void CTicks::Draw(CTFPlayer* pLocal)
 	else
 		H::Draw.StringOutlined(fFont, dtPos.x, dtPos.y + 2, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOP, std::format("Speedhack x{}", Vars::Speedhack::Amount.Value).c_str());
 }
-
-#endif
