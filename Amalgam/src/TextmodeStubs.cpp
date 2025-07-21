@@ -13,6 +13,7 @@
 #include "SDK/Definitions/Interfaces/IVModelRender.h"
 #include <d3d9.h>
 #include <vector>
+#include "Features/Visuals/Materials/Materials.h"
 
 void CVisuals::RestoreWorldModulation()
 {
