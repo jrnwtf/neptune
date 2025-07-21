@@ -359,6 +359,6 @@ void CMaterials::RemoveMaterial(const char* sName)
 	}
 
 	m_bLoaded = true;
-}0
+}
 
 #endif

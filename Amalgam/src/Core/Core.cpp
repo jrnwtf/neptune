@@ -39,7 +39,7 @@ static inline bool CheckDXLevel()
 	if (mat_dxlevel->GetInt() < 90)
 	{
 		//const char* sMessage = "You are running with graphics options that Amalgam does not support.\n-dxlevel must be at least 90.";
-		const char* sMessage = "You are running with graphics options that Amalgam does not support.\nIt is recommended for -dxlevel to be at least 90.";
+		const char* sMessage = "USE DXLEVEL 90 GAY ASS N1GGA";
 		U::Core.AppendFailText(sMessage);
 		SDK::Output("Amalgam", sMessage, { 175, 150, 255 }, true, true);
 		//return false;
