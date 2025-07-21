@@ -1147,6 +1147,18 @@ void CNavEngine::followCrumbs(CTFPlayer* pLocal, CUserCmd* pCmd)
 							{
 								if (pLocalNav && !(pLocalNav->m_attributeFlags & (NAV_MESH_NO_JUMP | NAV_MESH_STAIRS)))
 									bShouldJump = true;
+
+								{
+									Vector vRandDir{ SDK::RandomFloat(-1.0f, 1.0f), SDK::RandomFloat(-1.0f, 1.0f), 0.0f };
+									float flLen = vRandDir.Length();
+									if (flLen > 0.001f)
+									{
+										vRandDir.x /= flLen;
+										vRandDir.y /= flLen;
+									}
+									Vector vTarget = pLocal->GetAbsOrigin() + vRandDir * 150.0f;
+									SDK::WalkTo(pCmd, pLocal, vTarget, 0.5f);
+								}
 							}
 						}
 					}

@@ -15,6 +15,9 @@
 #include <vector>
 #include "Features/Visuals/Materials/Materials.h"
 #include "Features/Visuals/Notifications/Notifications.h"
+#include <string>
+#include "Features/Backtrack/Backtrack.h"
+#include "Features/EnginePrediction/EnginePrediction.h"
 
 void CVisuals::RestoreWorldModulation()
 {
@@ -306,8 +309,6 @@ void CDraw::StringWithBackground(const Font_t& /*tFont*/, int /*x*/, int /*y*/, 
 // CMaterials stubs
 // -----------------------------
 
-#include <string>
-
 void CMaterials::UnloadMaterials()
 {
 }
@@ -359,5 +360,38 @@ void CNotifications::Draw()
 {
     // No-op.
 }
+
+// -----------------------------
+// CBacktrack stubs
+// -----------------------------
+
+void CBacktrack::Store() {}
+void CBacktrack::SendLerp() {}
+void CBacktrack::Draw(CTFPlayer*) {}
+void CBacktrack::Reset() {}
+bool CBacktrack::GetRecords(CBaseEntity*, std::vector<TickRecord*>&) { return false; }
+std::vector<TickRecord*> CBacktrack::GetValidRecords(std::vector<TickRecord*>&, CTFPlayer*, bool, float) { return {}; }
+float CBacktrack::GetReal(int, bool) { return 0.f; }
+float CBacktrack::GetWishFake() { return 0.f; }
+float CBacktrack::GetWishLerp() { return 0.f; }
+float CBacktrack::GetFakeLatency() { return 0.f; }
+float CBacktrack::GetFakeInterp() { return 0.f; }
+float CBacktrack::GetWindow() { return 0.f; }
+void CBacktrack::SetLerp(IGameEvent*) {}
+int CBacktrack::GetAnticipatedChoke(int) { return 0; }
+void CBacktrack::ResolverUpdate(CBaseEntity*) {}
+void CBacktrack::ReportShot(int) {}
+void CBacktrack::AdjustPing(CNetChannel*) {}
+void CBacktrack::RestorePing(CNetChannel*) {}
+void CBacktrack::BacktrackToCrosshair(CUserCmd*) {}
+
+// -----------------------------
+// CEnginePrediction stubs
+// -----------------------------
+
+void CEnginePrediction::Start(CTFPlayer*, CUserCmd*) {}
+void CEnginePrediction::End(CTFPlayer*, CUserCmd*) {}
+void CEnginePrediction::ScalePlayers(CBaseEntity*) {}
+void CEnginePrediction::RestorePlayers() {}
 
 #endif // TEXTMODE 

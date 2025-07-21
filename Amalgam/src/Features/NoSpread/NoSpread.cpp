@@ -18,5 +18,7 @@ void CNoSpread::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 		return;
 
 	F::NoSpreadHitscan.Run(pLocal, pWeapon, pCmd);
+#ifndef TEXTMODE
 	F::NoSpreadProjectile.Run(pLocal, pWeapon, pCmd);
+#endif
 }

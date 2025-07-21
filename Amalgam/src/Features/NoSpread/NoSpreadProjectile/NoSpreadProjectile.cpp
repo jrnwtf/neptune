@@ -1,5 +1,7 @@
 #include "NoSpreadProjectile.h"
 
+#ifndef TEXTMODE
+
 bool CNoSpreadProjectile::ShouldRun(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
 	if (G::PrimaryWeaponType != EWeaponType::PROJECTILE)
@@ -61,3 +63,5 @@ void CNoSpreadProjectile::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCm
 	}
 	}
 }
+
+#endif // !TEXTMODE

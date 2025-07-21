@@ -1,3 +1,4 @@
+#ifndef TEXTMODE
 #include "EnginePrediction.h"
 
 #include "../Ticks/Ticks.h"
@@ -124,3 +125,4 @@ void CEnginePrediction::End(CTFPlayer* pLocal, CUserCmd* pCmd)
 		Simulate(pLocal, pCmd);
 	}
 }
+#endif // TEXTMODE

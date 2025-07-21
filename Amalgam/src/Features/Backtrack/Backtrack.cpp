@@ -3,6 +3,7 @@
 #include "../PacketManip/FakeLag/FakeLag.h"
 #include "../Ticks/Ticks.h"
 
+#ifndef TEXTMODE
 void CBacktrack::Reset()
 {
 	m_mRecords.clear();
@@ -551,3 +552,4 @@ void CBacktrack::Draw(CTFPlayer* pLocal)
 		H::Draw.StringOutlined(fFont, x, y, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, align, std::format("Ping {:.0f} ms", flLatency).c_str());
 	H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, align, std::format("Scoreboard {} ms", iLatencyScoreboard).c_str());
 }
+#endif // TEXTMODE
