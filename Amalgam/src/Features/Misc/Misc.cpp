@@ -1046,8 +1046,8 @@ void CMisc::MicSpam(CTFPlayer* pLocal)
 		"voice_overdrive 0",
 		"voice_scale 0.8",
 		"voice_vox 0",
-		"voice_avggain 0.3",
-		"voice_maxgain 1.0",
+		"voice_avggain 0.0",
+		"voice_maxgain 0.0",
 		"sv_voicecodec vaudio_speex",
 		"sv_voicequality 1"
 	};
