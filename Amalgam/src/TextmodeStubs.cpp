@@ -12,6 +12,7 @@
 #include "SDK/Definitions/Misc/VGUI.h"
 #include "SDK/Definitions/Interfaces/IVModelRender.h"
 #include <d3d9.h>
+#include <vector>
 
 void CVisuals::RestoreWorldModulation()
 {
@@ -197,6 +198,155 @@ void IPanel_PaintTraverse(void* /*rcx*/, VPANEL /*vguiPanel*/, bool /*forceRepai
 void IVModelRender_DrawModelExecute(void* /*rcx*/, const DrawModelState_t& /*pState*/, const ModelRenderInfo_t& /*pInfo*/, matrix3x4* /*pBoneToWorld*/)
 {
     // No-op.
+}
+
+// -----------------------------
+// CDraw stubs
+// -----------------------------
+
+Vec2 CDraw::GetTextSize(const char* /*text*/, const Font_t& /*tFont*/)
+{
+    return Vec2{};
+}
+
+void CDraw::String(const Font_t& /*tFont*/, int /*x*/, int /*y*/, const Color_t& /*tColor*/, const EAlign& /*eAlign*/, const wchar_t* /*wstr*/)
+{
+}
+
+void CDraw::StringOutlined(const Font_t& /*tFont*/, int /*x*/, int /*y*/, const Color_t& /*tColor*/, const Color_t& /*tColorOut*/, const EAlign& /*eAlign*/, const wchar_t* /*wstr*/)
+{
+}
+
+void CDraw::StringWithBackground(const Font_t& /*tFont*/, int /*x*/, int /*y*/, const Color_t& /*tColor*/, const Color_t& /*tColorBg*/, const EAlign& /*eAlign*/, const wchar_t* /*wstr*/)
+{
+}
+
+void CDraw::GradientRect(int /*x*/, int /*y*/, int /*w*/, int /*h*/, const Color_t& /*tColorTop*/, const Color_t& /*tColorBottom*/, bool /*bHorizontal*/)
+{
+}
+
+void CDraw::Line(int /*x1*/, int /*y1*/, int /*x2*/, int /*y2*/, const Color_t& /*tColor*/)
+{
+}
+
+void CDraw::FillRect(int /*x*/, int /*y*/, int /*w*/, int /*h*/, const Color_t& /*tColor*/)
+{
+}
+
+void CDraw::LineRect(int /*x*/, int /*y*/, int /*w*/, int /*h*/, const Color_t& /*tColor*/)
+{
+}
+
+void CDraw::LineRectOutline(int /*x*/, int /*y*/, int /*w*/, int /*h*/, const Color_t& /*tColor*/, const Color_t& /*tColorOut*/, bool /*bInside*/)
+{
+}
+
+void CDraw::FillRectPercent(int /*x*/, int /*y*/, int /*w*/, int /*h*/, float /*t*/, const Color_t& /*tColor*/, const Color_t& /*tColorOut*/, const EAlign& /*eAlign*/, bool /*bAdjust*/)
+{
+}
+
+void CDraw::FillCircle(int /*x*/, int /*y*/, float /*iRadius*/, int /*iSegments*/, Color_t /*clr*/)
+{
+}
+
+void CDraw::LineCircle(int /*x*/, int /*y*/, float /*iRadius*/, int /*iSegments*/, const Color_t& /*clr*/)
+{
+}
+
+void CDraw::FillRoundRect(int /*x*/, int /*y*/, int /*w*/, int /*h*/, int /*iRadius*/, const Color_t& /*tColor*/, int /*iCount*/)
+{
+}
+
+void CDraw::FillPolygon(std::vector<Vertex_t> /*vVertices*/, const Color_t& /*tColor*/)
+{
+}
+
+void CDraw::Texture(int /*x*/, int /*y*/, int /*w*/, int /*h*/, int /*iId*/, const EAlign& /*eAlign*/)
+{
+}
+
+void CDraw::DrawHudTexture(float /*x*/, float /*y*/, float /*s*/, const CHudTexture* /*pTexture*/, Color_t /*tColor*/)
+{
+}
+
+void CDraw::Avatar(int /*x*/, int /*y*/, int /*w*/, int /*h*/, const uint32 /*nFriendID*/, const EAlign& /*eAlign*/)
+{
+}
+
+CHudTexture* CDraw::GetIcon(const char* /*szIcon*/, int /*eIconFormat*/)
+{
+    return nullptr;
+}
+
+Vec2 CDraw::GetTextSize(const wchar_t* /*text*/, const Font_t& /*tFont*/)
+{
+    return Vec2{};
+}
+
+void CDraw::FillRectOutline(int /*x*/, int /*y*/, int /*w*/, int /*h*/, const Color_t& /*tColor*/, const Color_t& /*tColorOut*/)
+{
+}
+
+// Overloads with char* parameters
+void CDraw::String(const Font_t& /*tFont*/, int /*x*/, int /*y*/, const Color_t& /*tColor*/, const EAlign& /*eAlign*/, const char* /*str*/)
+{
+}
+
+void CDraw::StringOutlined(const Font_t& /*tFont*/, int /*x*/, int /*y*/, const Color_t& /*tColor*/, const Color_t& /*tColorOut*/, const EAlign& /*eAlign*/, const char* /*str*/)
+{
+}
+
+void CDraw::StringWithBackground(const Font_t& /*tFont*/, int /*x*/, int /*y*/, const Color_t& /*tColor*/, const Color_t& /*tColorBg*/, const EAlign& /*eAlign*/, const char* /*str*/)
+{
+}
+
+// -----------------------------
+// CMaterials stubs
+// -----------------------------
+
+#include <string>
+
+void CMaterials::UnloadMaterials()
+{
+}
+
+void CMaterials::ReloadMaterials()
+{
+}
+
+IMaterial* CMaterials::Create(char const* /*szName*/, KeyValues* /*pKV*/)
+{
+    return nullptr;
+}
+
+void CMaterials::RemoveMaterial(const char* /*sName*/)
+{
+}
+
+void CMaterials::EditMaterial(const char* /*sName*/, const char* /*sVMT*/)
+{
+}
+
+void CMaterials::AddMaterial(const char* /*sName*/)
+{
+}
+
+std::string CMaterials::GetVMT(unsigned int /*uHash*/)
+{
+    return std::string{};
+}
+
+Material_t* CMaterials::GetMaterial(unsigned int /*uHash*/)
+{
+    return nullptr;
+}
+
+void CMaterials::SetColor(Material_t* /*pMaterial*/, Color_t /*tColor*/)
+{
+}
+
+void CMaterials::Remove(IMaterial* /*pMaterial*/)
+{
 }
 
 #endif // TEXTMODE 
