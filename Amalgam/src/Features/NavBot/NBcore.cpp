@@ -2335,7 +2335,7 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 	switch (frameDistributionCounter)
 	{
 	case 0:
-		UpdateLocalBotPositions(pLocal);
+		// UpdateLocalBotPositions(pLocal);
 		break;
 	case 1:
 		RefreshSniperSpots();
@@ -2405,7 +2405,7 @@ void CNavBot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 			vTasks.emplace_back(staynear, [&]() { return StayNear(pLocal, pWeapon); });
 		}
 		
-		vTasks.emplace_back(run_reload, [&]() { return MoveInFormation(pLocal, pWeapon); });
+		// vTasks.emplace_back(run_reload, [&]() { return MoveInFormation(pLocal, pWeapon); });
 		vTasks.emplace_back(patrol, [&]() { return Roam(pLocal, pWeapon); });
 
 		// Pre-sorted by priority (manual sorting to avoid runtime overhead)

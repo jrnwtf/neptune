@@ -150,9 +150,9 @@ private:
 	std::optional<Vector> GetDoomsdayGoal(CTFPlayer* pLocal, int iOurTeam, int iEnemyTeam);
 	bool CaptureObjectives(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
 
-	void UpdateLocalBotPositions(CTFPlayer* pLocal);
-	bool MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
-	std::optional<Vector> GetFormationOffset(CTFPlayer* pLocal, int positionIndex);
+	// void UpdateLocalBotPositions(CTFPlayer* pLocal);
+	// bool MoveInFormation(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
+	// std::optional<Vector> GetFormationOffset(CTFPlayer* pLocal, int positionIndex);
 	bool Roam(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
 
 	bool EscapeDanger(CTFPlayer* pLocal);
