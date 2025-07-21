@@ -14,6 +14,7 @@
 #include <d3d9.h>
 #include <vector>
 #include "Features/Visuals/Materials/Materials.h"
+#include "Features/Visuals/Notifications/Notifications.h"
 
 void CVisuals::RestoreWorldModulation()
 {
@@ -348,6 +349,15 @@ void CMaterials::SetColor(Material_t* /*pMaterial*/, Color_t /*tColor*/)
 
 void CMaterials::Remove(IMaterial* /*pMaterial*/)
 {
+}
+
+void CNotifications::Add(const std::string& /*sText*/, float /*flLifeTime*/, float /*flPanTime*/, const Color_t& /*tAccent*/, const Color_t& /*tBackground*/, const Color_t& /*tActive*/)
+{
+}
+
+void CNotifications::Draw()
+{
+    // No-op.
 }
 
 #endif // TEXTMODE 

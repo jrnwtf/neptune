@@ -3,6 +3,8 @@
 #include "../../Players/PlayerUtils.h"
 #include "../../Spectate/Spectate.h"
 
+#ifndef TEXTMODE
+
 static float s_flCurrentHeight = 0.0f;
 
 bool CSpectatorList::GetSpectators(CTFPlayer* pTarget)
@@ -164,3 +166,5 @@ void CSpectatorList::Draw(CTFPlayer* pLocal)
 		y += nTall;
 	}
 }
+
+#endif

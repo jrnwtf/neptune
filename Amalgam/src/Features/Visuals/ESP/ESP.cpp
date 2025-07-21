@@ -8,6 +8,8 @@
 #include "../../../Utils/Optimization/CpuOptimization.h"
 #include <cmath>
 
+#ifndef TEXTMODE
+
 // void CESP::DrawYawArrow(const Vec3& vOrigin, float flYaw, float flArrowLength, float flHeadSize, float flHeightOffset, 
 //                       const Color_t& mainColor, const Color_t& outlineColor, const Vec3& vScreenOrigin, 
 //                       Vars::ESP::YawArrowsStyleEnum::YawArrowsStyleEnum style, bool isReal)
@@ -1515,3 +1517,5 @@ void CESP::DrawBones(CTFPlayer* pPlayer, matrix3x4* aBones, std::vector<int> vec
 			H::Draw.Line(vScreenBone.x, vScreenBone.y, vScreenParent.x, vScreenParent.y, clr);
 	}
 }
+
+#endif

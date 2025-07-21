@@ -1,5 +1,7 @@
 #include "PlayerArrows.h"
 
+#ifndef TEXTMODE
+
 void CPlayerArrows::DrawArrowTo(const Vec3& vFromPos, const Vec3& vToPos, Color_t tColor)
 {
 	float flMaxDistance = Vars::ESP::FOVArrows::MaxDistance.Value;
@@ -58,3 +60,5 @@ void CPlayerArrows::Run(CTFPlayer* pLocal)
 		DrawArrowTo(vLocalPos, pPlayer->GetCenter(), tColor);
 	}
 }
+
+#endif

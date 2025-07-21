@@ -1,5 +1,7 @@
 #include "Notifications.h"
 
+#ifndef TEXTMODE
+
 static inline float EaseInOutCubic(float x)
 {
 	return x < 0.5f ? 4 * powf(x, 3) : 1 - powf(-2 * x + 2, 3) / 2;
@@ -86,3 +88,5 @@ void CNotifications::Draw()
 		y += (vSize.y + H::Draw.Scale(8, Scale_Round)) * (1.f - flEase) * (!ShouldReverseY() ? 1 : -1);
 	}
 }
+
+#endif

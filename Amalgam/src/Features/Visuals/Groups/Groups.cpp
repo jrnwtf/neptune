@@ -3,6 +3,8 @@
 #include "../../Players/PlayerUtils.h"
 #include "../../Simulation/ProjectileSimulation/ProjectileSimulation.h"
 
+#ifndef TEXTMODE
+
 bool CGroups::ShouldTargetTeam(bool bType, Group_t& tGroup, CBaseEntity* pEntity, CTFPlayer* pLocal)
 {
 	if (!bType)
@@ -175,3 +177,5 @@ bool CGroups::ShouldTarget(Group_t& tGroup, CBaseEntity* pEntity, CTFPlayer* pLo
 
 	return false;
 }
+
+#endif
