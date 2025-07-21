@@ -176,217 +176,323 @@ namespace F::NamedPipe
 
     void Initialize()
     {
-        Log("NamedPipe::Initialize() called");
-        botId = ReadBotIdFromFile();
-        
-        std::stringstream ss;
-        if (botId == -1)
-        {
-            ss << "Failed to read bot ID from file";
-            Log(ss.str());
-        }
-        else
-        {
-            ss << "Bot ID read from file: " << botId;
-            Log(ss.str());
-        }
+        try {
+            Log("NamedPipe::Initialize() called");
+            botId = ReadBotIdFromFile();
+            
+            std::stringstream ss;
+            if (botId == -1)
+            {
+                ss << "Failed to read bot ID from file";
+                Log(ss.str());
+            }
+            else
+            {
+                ss << "Bot ID read from file: " << botId;
+                Log(ss.str());
+            }
 
-        localBots.clear();
-        Log("Cleared local bots list on startup");
+            localBots.clear();
+            Log("Cleared local bots list on startup");
 
-        pipeThread = std::jthread(ConnectAndMaintainPipe);
-        Log("Pipe thread started");
+            pipeThread = std::jthread(ConnectAndMaintainPipe);
+            Log("Pipe thread started");
+        }
+        catch (const std::exception& e) {
+            Log("Exception in Initialize(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in Initialize()");
+        }
     }
 
     void Shutdown()
     {
-        pipeThread.request_stop();
-        if (pipeThread.joinable()) pipeThread.join();
+        try {
+            pipeThread.request_stop();
+            if (pipeThread.joinable()) pipeThread.join();
+        }
+        catch (const std::exception& e) {
+            Log("Exception in Shutdown(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in Shutdown()");
+        }
     }
 
     void SendStatusUpdate(const std::string& status)
     {
-        // Queue the status update message with high priority
-        QueueMessage("Status", status, true);
-        
-        // Process immediately if connected
-        if (hPipe.valid()) {
-            ProcessMessageQueue();
-        }
-    }
-
-    void ExecuteCommand(const std::string& command)
-    {
-        Log("ExecuteCommand called with: " + command);
-        
-        if (command == "debug navbot")
-        {
-            Log("Debug navbot command received, sending 'kill' to TF2 console");
-            if (I::EngineClient)
-            {
-                I::EngineClient->ClientCmd_Unrestricted("kill");
-                Log("'kill' command sent to TF2 console");
-                SendStatusUpdate("CommandExecuted:kill");
-            }
-            else
-            {
-                Log("Error: EngineClient is not available. 'kill' command not executed");
-                SendStatusUpdate("CommandFailed:kill");
-            }
-            return;
-        }
-        
-        if (command.substr(0, 11) == "loadconfig ")
-        {
-            std::string configName = command.substr(11);
-            Log("Loading config: " + configName);
-            
-            if (F::Configs.LoadConfig(configName, true))
-            {
-                Log("Config loaded successfully: " + configName);
-                SendStatusUpdate("ConfigLoaded:" + configName);
-            }
-            else
-            {
-                Log("Failed to load config: " + configName);
-                SendStatusUpdate("ConfigLoadFailed:" + configName);
-            }
-        }
-        else if (I::EngineClient)
-        {
-            Log("EngineClient is available, sending command to TF2 console");
-            I::EngineClient->ClientCmd_Unrestricted(command.c_str());
-            Log("Command sent to TF2 console: " + command);
-            SendStatusUpdate("CommandExecuted:" + command);
-        }
-        else
-        {
-            Log("Error: EngineClient is not available. Command not executed: " + command);
-            SendStatusUpdate("CommandFailed:" + command);
-        }
-    }
-
-    void SendHealthUpdate()
-    {
-        if (!I::EngineClient || !I::EngineClient->IsInGame())
-            return;
-        
-        auto pLocal = H::Entities.GetLocal();
-        if (!pLocal)
-            return;
-        
-        int health = pLocal->m_iHealth();
-        QueueMessage("Health", std::to_string(health), false);
-    }
-
-    int GetCurrentPlayerClass()
-    {
-        if (!I::EngineClient || !I::EngineClient->IsInGame())
-            return -1;
-        
-        auto pLocal = H::Entities.GetLocal();
-        if (!pLocal)
-            return -1;
-        
-        return pLocal->As<CTFPlayer>()->m_iClass();
-    }
-
-    void SendPlayerClassUpdate(int playerClass)
-    {
-        if (!I::EngineClient || !I::EngineClient->IsInGame())
-            return;
-        
-        if (playerClass == -1)
-            playerClass = GetCurrentPlayerClass();
-        
-        if (playerClass == -1)
-            return;
-        
-        std::string className = "Unknown";
-        const char* classStr = SDK::GetClassByIndex(playerClass);
-        if (classStr)
-            className = classStr;
-        QueueMessage("PlayerClass", className, false);
-    }
-
-    std::string GetCurrentLevelName()
-    {
-        if (!I::EngineClient || !I::EngineClient->IsInGame())
-            return "Unknown";
-        
-        return SDK::GetLevelName();
-    }
-
-    void SendMapUpdate()
-    {
-        if (!I::EngineClient || !I::EngineClient->IsInGame())
-            return;
-        
-        static std::string lastSentMap = "";
-        std::string currentMap = GetCurrentLevelName();
-        
-        if (currentMap == lastSentMap || currentMap == "Unknown")
-            return;
-        
-        lastSentMap = currentMap;
-        QueueMessage("Map", currentMap, false);
-    }
-
-    void SendServerInfo()
-    {
-        if (!I::EngineClient || !I::EngineClient->IsInGame() || I::EngineClient->IsPlayingDemo())
-            return;
-        
-        std::string serverInfo = "Offline";
-        
-        INetChannelInfo* netInfo = I::EngineClient->GetNetChannelInfo();
-        if (netInfo)
-        {
-            // Format: IP:Port
-            const char* address = netInfo->GetAddress();
-            if (address && *address)
-            {
-                serverInfo = address;
-            }
-        }
-        QueueMessage("ServerInfo", serverInfo, false);
-    }
-
-    void UpdateBotInfo()
-    {
-        if (!I::EngineClient)
-            return;
-        
-        SendHealthUpdate();
-        SendPlayerClassUpdate(-1);
-        SendMapUpdate();
-        SendServerInfo();
-    }
-
-    void BroadcastLocalBotId()
-    {
-        if (!I::EngineClient)
-            return;
-
-        // Only proceed if we have a valid steam ID
-        PlayerInfo_t pi{};
-        int localIdx = I::EngineClient->GetLocalPlayer();
-        if (I::EngineClient->GetPlayerInfo(localIdx, &pi) && pi.friendsID != 0)
-        {
-            // Use the friends ID from player info
-            uint32_t friendsID = pi.friendsID;
-            
-            // Add ourselves to the local bots map
-            localBots[friendsID] = true;
-            
-            // Queue local bot broadcast with high priority
-            QueueMessage("LocalBot", std::to_string(friendsID), true);
-            Log("Queued local bot ID broadcast: " + std::to_string(friendsID));
+        try {
+            // Queue the status update message with high priority
+            QueueMessage("Status", status, true);
             
             // Process immediately if connected
             if (hPipe.valid()) {
                 ProcessMessageQueue();
             }
+        }
+        catch (const std::exception& e) {
+            Log("Exception in SendStatusUpdate(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in SendStatusUpdate()");
+        }
+    }
+
+    void ExecuteCommand(const std::string& command)
+    {
+        try {
+            Log("ExecuteCommand called with: " + command);
+            
+            if (command == "debug navbot")
+            {
+                Log("Debug navbot command received, sending 'kill' to TF2 console");
+                if (I::EngineClient)
+                {
+                    I::EngineClient->ClientCmd_Unrestricted("kill");
+                    Log("'kill' command sent to TF2 console");
+                    SendStatusUpdate("CommandExecuted:kill");
+                }
+                else
+                {
+                    Log("Error: EngineClient is not available. 'kill' command not executed");
+                    SendStatusUpdate("CommandFailed:kill");
+                }
+                return;
+            }
+            
+            if (command.substr(0, 11) == "loadconfig ")
+            {
+                std::string configName = command.substr(11);
+                Log("Loading config: " + configName);
+                
+                if (F::Configs.LoadConfig(configName, true))
+                {
+                    Log("Config loaded successfully: " + configName);
+                    SendStatusUpdate("ConfigLoaded:" + configName);
+                }
+                else
+                {
+                    Log("Failed to load config: " + configName);
+                    SendStatusUpdate("ConfigLoadFailed:" + configName);
+                }
+            }
+            else if (I::EngineClient)
+            {
+                Log("EngineClient is available, sending command to TF2 console");
+                I::EngineClient->ClientCmd_Unrestricted(command.c_str());
+                Log("Command sent to TF2 console: " + command);
+                SendStatusUpdate("CommandExecuted:" + command);
+            }
+            else
+            {
+                Log("Error: EngineClient is not available. Command not executed: " + command);
+                SendStatusUpdate("CommandFailed:" + command);
+            }
+        }
+        catch (const std::exception& e) {
+            Log("Exception in ExecuteCommand(): " + std::string(e.what()));
+            try {
+                SendStatusUpdate("CommandException:" + command);
+            } catch (...) {}
+        }
+        catch (...) {
+            Log("Unknown exception in ExecuteCommand()");
+            try {
+                SendStatusUpdate("CommandException:" + command);
+            } catch (...) {}
+        }
+    }
+
+    void SendHealthUpdate()
+    {
+        try {
+            if (!I::EngineClient || !I::EngineClient->IsInGame())
+                return;
+            
+            auto pLocal = H::Entities.GetLocal();
+            if (!pLocal)
+                return;
+            
+            int health = pLocal->m_iHealth();
+            QueueMessage("Health", std::to_string(health), false);
+        }
+        catch (const std::exception& e) {
+            Log("Exception in SendHealthUpdate(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in SendHealthUpdate()");
+        }
+    }
+
+    int GetCurrentPlayerClass()
+    {
+        try {
+            if (!I::EngineClient || !I::EngineClient->IsInGame())
+                return -1;
+            
+            auto pLocal = H::Entities.GetLocal();
+            if (!pLocal)
+                return -1;
+            
+            return pLocal->As<CTFPlayer>()->m_iClass();
+        }
+        catch (const std::exception& e) {
+            Log("Exception in GetCurrentPlayerClass(): " + std::string(e.what()));
+            return -1;
+        }
+        catch (...) {
+            Log("Unknown exception in GetCurrentPlayerClass()");
+            return -1;
+        }
+    }
+
+    void SendPlayerClassUpdate(int playerClass)
+    {
+        try {
+            if (!I::EngineClient || !I::EngineClient->IsInGame())
+                return;
+            
+            if (playerClass == -1)
+                playerClass = GetCurrentPlayerClass();
+            
+            if (playerClass == -1)
+                return;
+            
+            std::string className = "Unknown";
+            const char* classStr = SDK::GetClassByIndex(playerClass);
+            if (classStr)
+                className = classStr;
+            QueueMessage("PlayerClass", className, false);
+        }
+        catch (const std::exception& e) {
+            Log("Exception in SendPlayerClassUpdate(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in SendPlayerClassUpdate()");
+        }
+    }
+
+    std::string GetCurrentLevelName()
+    {
+        try {
+            if (!I::EngineClient || !I::EngineClient->IsInGame())
+                return "Unknown";
+            
+            return SDK::GetLevelName();
+        }
+        catch (const std::exception& e) {
+            Log("Exception in GetCurrentLevelName(): " + std::string(e.what()));
+            return "Unknown";
+        }
+        catch (...) {
+            Log("Unknown exception in GetCurrentLevelName()");
+            return "Unknown";
+        }
+    }
+
+    void SendMapUpdate()
+    {
+        try {
+            if (!I::EngineClient || !I::EngineClient->IsInGame())
+                return;
+            
+            static std::string lastSentMap = "";
+            std::string currentMap = GetCurrentLevelName();
+            
+            if (currentMap == lastSentMap || currentMap == "Unknown")
+                return;
+            
+            lastSentMap = currentMap;
+            QueueMessage("Map", currentMap, false);
+        }
+        catch (const std::exception& e) {
+            Log("Exception in SendMapUpdate(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in SendMapUpdate()");
+        }
+    }
+
+    void SendServerInfo()
+    {
+        try {
+            if (!I::EngineClient || !I::EngineClient->IsInGame() || I::EngineClient->IsPlayingDemo())
+                return;
+            
+            std::string serverInfo = "Offline";
+            
+            INetChannelInfo* netInfo = I::EngineClient->GetNetChannelInfo();
+            if (netInfo)
+            {
+                // Format: IP:Port
+                const char* address = netInfo->GetAddress();
+                if (address && *address)
+                {
+                    serverInfo = address;
+                }
+            }
+            QueueMessage("ServerInfo", serverInfo, false);
+        }
+        catch (const std::exception& e) {
+            Log("Exception in SendServerInfo(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in SendServerInfo()");
+        }
+    }
+
+    void UpdateBotInfo()
+    {
+        try {
+            if (!I::EngineClient)
+                return;
+            
+            SendHealthUpdate();
+            SendPlayerClassUpdate(-1);
+            SendMapUpdate();
+            SendServerInfo();
+        }
+        catch (const std::exception& e) {
+            Log("Exception in UpdateBotInfo(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in UpdateBotInfo()");
+        }
+    }
+
+    void BroadcastLocalBotId()
+    {
+        try {
+            if (!I::EngineClient)
+                return;
+
+            // Only proceed if we have a valid steam ID
+            PlayerInfo_t pi{};
+            int localIdx = I::EngineClient->GetLocalPlayer();
+            if (I::EngineClient->GetPlayerInfo(localIdx, &pi) && pi.friendsID != 0)
+            {
+                // Use the friends ID from player info
+                uint32_t friendsID = pi.friendsID;
+                
+                // Add ourselves to the local bots map
+                localBots[friendsID] = true;
+                
+                // Queue local bot broadcast with high priority
+                QueueMessage("LocalBot", std::to_string(friendsID), true);
+                Log("Queued local bot ID broadcast: " + std::to_string(friendsID));
+                
+                // Process immediately if connected
+                if (hPipe.valid()) {
+                    ProcessMessageQueue();
+                }
+            }
+        }
+        catch (const std::exception& e) {
+            Log("Exception in BroadcastLocalBotId(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in BroadcastLocalBotId()");
         }
     }
 
@@ -463,135 +569,203 @@ namespace F::NamedPipe
 
     void UpdateLocalBotIgnoreStatus()
     {
-        // First, process any pending messages to ensure we have the latest bot info
-        ProcessIncomingQueue();
-        
-        // Broadcast our own ID
-        BroadcastLocalBotId();
-        
-        // Make sure all known local bots are properly tagged
-        for (const auto& [friendsID, isLocal] : localBots)
-        {
-            bool needsUpdate = false;
+        try {
+            // First, process any pending messages to ensure we have the latest bot info
+            ProcessIncomingQueue();
             
-            if (!F::PlayerUtils.HasTag(friendsID, F::PlayerUtils.TagToIndex(IGNORED_TAG)))
-            {
-                needsUpdate = true;
-            }
+            // Broadcast our own ID
+            BroadcastLocalBotId();
             
-            if (!F::PlayerUtils.HasTag(friendsID, F::PlayerUtils.TagToIndex(FRIEND_TAG)))
+            // Make sure all known local bots are properly tagged
+            for (const auto& [friendsID, isLocal] : localBots)
             {
-                needsUpdate = true;
-            }
-            
-            if (needsUpdate)
-            {
-                PlayerInfo_t pi{};
-                for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
+                bool needsUpdate = false;
+                
+                if (!F::PlayerUtils.HasTag(friendsID, F::PlayerUtils.TagToIndex(IGNORED_TAG)))
                 {
-                    if (I::EngineClient->GetPlayerInfo(i, &pi) && pi.friendsID == friendsID)
+                    needsUpdate = true;
+                }
+                
+                if (!F::PlayerUtils.HasTag(friendsID, F::PlayerUtils.TagToIndex(FRIEND_TAG)))
+                {
+                    needsUpdate = true;
+                }
+                
+                if (needsUpdate)
+                {
+                    PlayerInfo_t pi{};
+                    for (int i = 1; i <= I::EngineClient->GetMaxClients(); i++)
                     {
-                        F::PlayerUtils.AddTag(friendsID, F::PlayerUtils.TagToIndex(IGNORED_TAG), true, pi.name);
-                        F::PlayerUtils.AddTag(friendsID, F::PlayerUtils.TagToIndex(FRIEND_TAG), true, pi.name);
-                        Log("Marked local bot as ignored and friend: " + std::string(pi.name));
-                        break;
+                        if (I::EngineClient->GetPlayerInfo(i, &pi) && pi.friendsID == friendsID)
+                        {
+                            F::PlayerUtils.AddTag(friendsID, F::PlayerUtils.TagToIndex(IGNORED_TAG), true, pi.name);
+                            F::PlayerUtils.AddTag(friendsID, F::PlayerUtils.TagToIndex(FRIEND_TAG), true, pi.name);
+                            Log("Marked local bot as ignored and friend: " + std::string(pi.name));
+                            break;
+                        }
                     }
                 }
             }
+        }
+        catch (const std::exception& e) {
+            Log("Exception in UpdateLocalBotIgnoreStatus(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in UpdateLocalBotIgnoreStatus()");
         }
     }
 
     void ClearLocalBots()
     {
-        localBots.clear();
-        Log("Cleared local bots list");
+        try {
+            localBots.clear();
+            Log("Cleared local bots list");
+        }
+        catch (const std::exception& e) {
+            Log("Exception in ClearLocalBots(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in ClearLocalBots()");
+        }
     }
 
     void QueueMessage(const std::string& type, const std::string& content, bool isPriority = false)
     {
-        messageQueue.push({type, content, isPriority});
+        try {
+            messageQueue.push({type, content, isPriority});
+        }
+        catch (const std::exception& e) {
+            Log("Exception in QueueMessage(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in QueueMessage()");
+        }
     }
     
     void ProcessMessageQueue()
     {
-        if(!hPipe.valid()) return;
-        std::vector<PendingMessage> batch;
-        batch.reserve(16);
-        size_t fetched = messageQueue.popBatch(batch, 16, 0);
-        if(fetched==0) return;
+        try {
+            if(!hPipe.valid()) return;
+            std::vector<PendingMessage> batch;
+            batch.reserve(16);
+            size_t fetched = messageQueue.popBatch(batch, 16, 0);
+            if(fetched==0) return;
 
-        for(const auto& msg: batch)
-        {
-            std::string wire;
-            wire = std::to_string(botId==-1?0:botId) + ":" + msg.type + ":" + msg.content + "\n";
-            DWORD written=0;
-            if(!WriteFile(hPipe, wire.c_str(), static_cast<DWORD>(wire.size()), &written, NULL) || written!=wire.size())
+            for(const auto& msg: batch)
             {
-                Log("Failed to write queued message: " + std::to_string(GetLastError()));
-                // push back remaining messages for retry
-                for(auto it=&msg+1; it< batch.data()+fetched; ++it)
-                    messageQueue.push(*it);
-                break;
+                std::string wire;
+                wire = std::to_string(botId==-1?0:botId) + ":" + msg.type + ":" + msg.content + "\n";
+                DWORD written=0;
+                if(!WriteFile(hPipe, wire.c_str(), static_cast<DWORD>(wire.size()), &written, NULL) || written!=wire.size())
+                {
+                    Log("Failed to write queued message: " + std::to_string(GetLastError()));
+                    // push back remaining messages for retry
+                    for(auto it=&msg+1; it< batch.data()+fetched; ++it)
+                        messageQueue.push(*it);
+                    break;
+                }
             }
+        }
+        catch (const std::exception& e) {
+            Log("Exception in ProcessMessageQueue(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in ProcessMessageQueue()");
         }
     }
 
     bool SafeWriteToPipe(const std::string& message)
     {
-        if (!hPipe.valid()) {
-            QueueMessage("Status", "QueuedMessage", false);
-            return false;
-        }
-        
-        DWORD bytesWritten = 0;
-        BOOL success = WriteFile(hPipe, message.c_str(), static_cast<DWORD>(message.length()), &bytesWritten, NULL);
-        
-        if (!success || bytesWritten != message.length()) {
-            DWORD error = GetLastError();
-            Log("WriteFile failed: " + std::to_string(error) + " - " + GetErrorMessage(error));
-            
-            if (error == ERROR_BROKEN_PIPE || error == ERROR_PIPE_NOT_CONNECTED) {
-                hPipe.reset();
+        try {
+            if (!hPipe.valid()) {
+                QueueMessage("Status", "QueuedMessage", false);
+                return false;
             }
+            
+            DWORD bytesWritten = 0;
+            BOOL success = WriteFile(hPipe, message.c_str(), static_cast<DWORD>(message.length()), &bytesWritten, NULL);
+            
+            if (!success || bytesWritten != message.length()) {
+                DWORD error = GetLastError();
+                Log("WriteFile failed: " + std::to_string(error) + " - " + GetErrorMessage(error));
+                
+                if (error == ERROR_BROKEN_PIPE || error == ERROR_PIPE_NOT_CONNECTED) {
+                    hPipe.reset();
+                }
+                return false;
+            }
+            return true;
+        }
+        catch (const std::exception& e) {
+            Log("Exception in SafeWriteToPipe(): " + std::string(e.what()));
             return false;
         }
-        return true;
+        catch (...) {
+            Log("Unknown exception in SafeWriteToPipe()");
+            return false;
+        }
     }
     
     int GetReconnectDelayMs()
     {
-        int delay = std::min(
-            BASE_RECONNECT_DELAY_MS * (1 << std::min(currentReconnectAttempts, 10)), 
-            MAX_RECONNECT_DELAY_MS
-        );
-        
-        int jitter = delay * 0.2 * (static_cast<double>(rand()) / RAND_MAX - 0.5);
-        return delay + jitter;
+        try {
+            int delay = std::min(
+                BASE_RECONNECT_DELAY_MS * (1 << std::min(currentReconnectAttempts, 10)), 
+                MAX_RECONNECT_DELAY_MS
+            );
+            
+            int jitter = delay * 0.2 * (static_cast<double>(rand()) / RAND_MAX - 0.5);
+            return delay + jitter;
+        }
+        catch (const std::exception& e) {
+            Log("Exception in GetReconnectDelayMs(): " + std::string(e.what()));
+            return BASE_RECONNECT_DELAY_MS;
+        }
+        catch (...) {
+            Log("Unknown exception in GetReconnectDelayMs()");
+            return BASE_RECONNECT_DELAY_MS;
+        }
     }
 
     void QueueIncomingMessage(const std::string& type, const std::string& content)
     {
-        std::lock_guard<std::mutex> lock(inboundMutex);
-        inboundQueue.push_back({type, content, false});
+        try {
+            std::lock_guard<std::mutex> lock(inboundMutex);
+            inboundQueue.push_back({type, content, false});
+        }
+        catch (const std::exception& e) {
+            Log("Exception in QueueIncomingMessage(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in QueueIncomingMessage()");
+        }
     }
 
     void ProcessIncomingQueue()
     {
-        std::lock_guard<std::mutex> lock(inboundMutex);
-        
-        auto it = inboundQueue.begin();
-        while (it != inboundQueue.end()) {
-            if (it->type == "Command") {
-                ExecuteCommand(it->content);
-                it = inboundQueue.erase(it);
-            } else if (it->type == "LocalBot") {
-                ProcessLocalBotMessage(it->content);
-                it = inboundQueue.erase(it);
-            } else {
-                // Unknown message type, just remove it
-                Log("Unknown message type in inbound queue: " + it->type);
-                it = inboundQueue.erase(it);
+        try {
+            std::lock_guard<std::mutex> lock(inboundMutex);
+            
+            auto it = inboundQueue.begin();
+            while (it != inboundQueue.end()) {
+                if (it->type == "Command") {
+                    ExecuteCommand(it->content);
+                    it = inboundQueue.erase(it);
+                } else if (it->type == "LocalBot") {
+                    ProcessLocalBotMessage(it->content);
+                    it = inboundQueue.erase(it);
+                } else {
+                    // Unknown message type, just remove it
+                    Log("Unknown message type in inbound queue: " + it->type);
+                    it = inboundQueue.erase(it);
+                }
             }
+        }
+        catch (const std::exception& e) {
+            Log("Exception in ProcessIncomingQueue(): " + std::string(e.what()));
+        }
+        catch (...) {
+            Log("Unknown exception in ProcessIncomingQueue()");
         }
     }
 

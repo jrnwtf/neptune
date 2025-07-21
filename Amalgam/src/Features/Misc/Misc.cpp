@@ -437,12 +437,7 @@ void CMisc::BotNetworking()
 			
 			// Voice settings
 			static auto voice_loopback = U::ConVars.FindVar("voice_loopback");
-			static auto voice_maxgain = U::ConVars.FindVar("voice_maxgain");
 			static auto voice_buffer_ms = U::ConVars.FindVar("voice_buffer_ms");
-			static auto voice_scale = U::ConVars.FindVar("voice_scale");
-			static auto voice_enable = U::ConVars.FindVar("voice_enable");
-			static auto voice_modenable = U::ConVars.FindVar("voice_modenable");
-			static auto voice_steal = U::ConVars.FindVar("voice_steal");
 
 			// Sound settings
 			static auto snd_async_fullyasync = U::ConVars.FindVar("snd_async_fullyasync");
@@ -462,12 +457,7 @@ void CMisc::BotNetworking()
 			if (cl_smooth) cl_smooth->SetValue(0);
 			if (cl_pred_optimize) cl_pred_optimize->SetValue(2);
 			if (voice_loopback) voice_loopback->SetValue(0);
-			if (voice_maxgain) voice_maxgain->SetValue(1.0f);
 			if (voice_buffer_ms) voice_buffer_ms->SetValue(300);
-			if (voice_scale) voice_scale->SetValue(0.0f);
-			if (voice_enable) voice_enable->SetValue(1);
-			if (voice_modenable) voice_modenable->SetValue(1);
-			if (voice_steal) voice_steal->SetValue(2);
 			if (snd_async_fullyasync) snd_async_fullyasync->SetValue(1);
 			if (snd_mixahead) snd_mixahead->SetValue(0.05f);
 			if (snd_spatialize_roundrobin) snd_spatialize_roundrobin->SetValue(0);
