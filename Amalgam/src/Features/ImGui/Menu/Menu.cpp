@@ -1,3 +1,4 @@
+#ifndef TEXTMODE
 #include "Menu.h"
 
 #include "Components.h"
@@ -752,7 +753,6 @@ void CMenu::MenuAimbot(int iTab)
 		}
 		break;
 	}
-	}
 }
 
 void CMenu::MenuVisuals(int iTab)
@@ -843,204 +843,6 @@ void CMenu::MenuVisuals(int iTab)
 				} EndSection();
 			}
 			EndTable();
-			/*
-			// esp groups system i may or may not go through with. not sure what would be best though with ui/user experience
-			static size_t iCurrentGroup = 0;
-			/* Column 1 * /
-			TableNextColumn();
-			{
-				if (Section("Groups"))
-				{
-					static std::string sStaticName;
-
-					PushDisabled(F::Groups.m_vGroups.size() >= sizeof(int) * 8); // for active groups flags
-					{
-						auto vTable = WidgetTable(2, H::Draw.Scale(48), { GetWindowWidth() - H::Draw.Scale(75) - GetStyle().WindowPadding.x });
-
-						SetCursorPos(vTable[0].m_vPos);
-						if (BeginChild(vTable[0].m_sName.c_str(), vTable[0].m_vSize, vTable[0].m_iWindowFlags, vTable[0].m_iChildFlags))
-						{
-							FSDropdown("Name", &sStaticName, {}, FSDropdownEnum::AutoUpdate);
-						} EndChild();
-
-						SetCursorPos(vTable[1].m_vPos);
-						if (BeginChild(vTable[1].m_sName.c_str(), vTable[1].m_vSize, vTable[1].m_iWindowFlags, vTable[1].m_iChildFlags))
-						{
-							PushDisabled(Disabled || sStaticName.empty());
-							{
-								if (FButton("Create", FButtonEnum::Fit, { 0, 40 }))
-								{
-									F::Groups.m_vGroups.emplace_back(sStaticName);
-									sStaticName.clear();
-								}
-							}
-							PopDisabled();
-						} EndChild();
-					}
-					PopDisabled();
-					int i;
-					FDropdown("Active groups", &i, { "" }); // active groups var for binding/quick access. automatically set bits for this var when adding/removing groups
-
-					PushStyleColor(ImGuiCol_Text, F::Render.Inactive.Value);
-					SetCursorPos({ H::Draw.Scale(13), H::Draw.Scale(128) });
-					FText("Groups");
-					SetCursorPosY(GetCursorPosY() - H::Draw.Scale(8));
-					PopStyleColor();
-
-					for (auto it = F::Groups.m_vGroups.begin(); it < F::Groups.m_vGroups.end();)
-					{
-						int iIndex = std::distance(F::Groups.m_vGroups.begin(), it);
-						auto& tGroup = *it;
-
-						ImVec2 vOriginalPos = { H::Draw.Scale(8), GetCursorPosY() - H::Draw.Scale(8) };
-
-						float flWidth = GetWindowWidth() - GetStyle().WindowPadding.x * 2;
-						float flHeight = H::Draw.Scale(28);
-						ImVec2 vDrawPos = GetDrawPos() + vOriginalPos;
-						if (iCurrentGroup != iIndex)
-							GetWindowDrawList()->AddRectFilled(vDrawPos, { vDrawPos.x + flWidth, vDrawPos.y + flHeight }, F::Render.Background1p5, H::Draw.Scale(4));
-						else
-						{
-							ImColor tColor = F::Render.Background1p5L;
-							GetWindowDrawList()->AddRectFilled(vDrawPos, { vDrawPos.x + flWidth, vDrawPos.y + flHeight }, tColor, H::Draw.Scale(4));
-
-							tColor = ColorToVec((VecToColor(F::Render.Background1p5)).Lerp({ 127, 127, 127 }, 1.f / 9, LerpEnum::NoAlpha));
-							float flInset = H::Draw.Scale(0.5f) - 0.5f;
-							GetWindowDrawList()->AddRect({ vDrawPos.x + flInset, vDrawPos.y + flInset }, { vDrawPos.x - flInset + flWidth, vDrawPos.y - flInset + flHeight }, tColor, H::Draw.Scale(4), ImDrawFlags_None, H::Draw.Scale());
-						}
-
-						float flTextWidth = flWidth - H::Draw.Scale(36);
-						SetCursorPos({ vOriginalPos.x + H::Draw.Scale(9), vOriginalPos.y + H::Draw.Scale(7) });
-						FText(TruncateText(tGroup.m_sName, flTextWidth).c_str());
-
-						SetCursorPos({ vOriginalPos.x + flWidth - H::Draw.Scale(26), vOriginalPos.y + H::Draw.Scale(2) });
-						bool bDelete = IconButton(ICON_MD_DELETE);
-
-						SetCursorPos(vOriginalPos);
-						if (Button(std::format("##{}", y).c_str(), { flWidth, flHeight }))
-							iCurrentGroup = y;
-
-							if (!bDelete)
-							++it;
-						else
-						{
-							it = F::Groups.m_vGroups.erase(it);
-							if (iCurrentGroup == y && iCurrentGroup)
-								iCurrentGroup--;
-						}
-					}
-				} EndSection();
-				if (Section("Colors", 8))
-
-				FToggle(Vars::Colors::Relative);
-					if (FGet(Vars::Colors::Relative))
-					{
-						FColorPicker(Vars::Colors::Enemy, FColorPickerEnum::Left);
-						FColorPicker(Vars::Colors::Team, FColorPickerEnum::Right);
-					}
-					else
-					{
-						FColorPicker(Vars::Colors::TeamRed, FColorPickerEnum::Left);
-						FColorPicker(Vars::Colors::TeamBlu, FColorPickerEnum::Right);
-					}
-					FColorPicker(Vars::Colors::Local, FColorPickerEnum::Left);
-					FColorPicker(Vars::Colors::Target, FColorPickerEnum::Right);
-					FColorPicker(Vars::Colors::Health, FColorPickerEnum::Left);
-					FColorPicker(Vars::Colors::Ammo, FColorPickerEnum::Right);
-					FColorPicker(Vars::Colors::Money, FColorPickerEnum::Left);
-					FColorPicker(Vars::Colors::Powerup, FColorPickerEnum::Right);
-					FColorPicker(Vars::Colors::NPC, FColorPickerEnum::Left);
-					FColorPicker(Vars::Colors::Halloween, FColorPickerEnum::Right);
-					// may move these colors over to other spots
-					PushTransparent(!Vars::Colors::Backtrack.Value.a);
-					{
-						FColorPicker(Vars::Colors::Backtrack, FColorPickerEnum::Left);
-					}
-					PopTransparent();
-					PushTransparent(!Vars::Colors::FakeAngle.Value.a);
-					{
-						FColorPicker(Vars::Colors::FakeAngle, FColorPickerEnum::Right);
-					}
-					PopTransparent();
-				} EndSection();
-				// fake angle/viewmodel chams & glow here?
-				if (Section("Other"))
-				{
-					FDropdown(Vars::ESP::Other::SniperSightlines);
-					FToggle(Vars::ESP::Other::PickupTimers);
-				} EndSection();
-			}
-			/* Column 2 * /
-			TableNextColumn();
-			if (0 <= iCurrentGroup && iCurrentGroup < F::Groups.m_vGroups.size())
-			{
-				auto& tGroup = F::Groups.m_vGroups[iCurrentGroup];
-				if (Section("Target"))
-				{
-					FDropdown("Targets", &tGroup.m_iTargets, { "Players", "Buildings", "Projectiles", "Ragdolls", "Objective", "NPCs", "Health", "Ammo", "Money", "Powerups", "Bombs", "Spellbook", "Gargoyle" }, {}, FDropdownEnum::Multi);
-					if (tGroup.m_iConditions & ConditionsEnum::Relative)
-						FDropdown("Conditions", &tGroup.m_iConditions, { "Relative", "Enemy", "Team", "Local", "Friends", "Party", "Priority", "Target", "##Divider", "Scout", "Soldier", "Pyro", "Demoman", "Heavy", "Engineer", "Medic", "Sniper", "Spy" },
-							{ ConditionsEnum::Relative, ConditionsEnum::Enemy, ConditionsEnum::Team, ConditionsEnum::Local, ConditionsEnum::Friends, ConditionsEnum::Party, ConditionsEnum::Priority, ConditionsEnum::Target, ConditionsEnum::Scout, ConditionsEnum::Soldier, ConditionsEnum::Pyro, ConditionsEnum::Demoman, ConditionsEnum::Heavy, ConditionsEnum::Engineer, ConditionsEnum::Medic, ConditionsEnum::Sniper, ConditionsEnum::Spy }, FDropdownEnum::Multi);
-					else	
-						FDropdown("Conditions", &tGroup.m_iConditions, { "Relative", "Enemy", "Team", "BLU", "RED", "Local", "Friends", "Party", "Priority", "Target", "##Divider", "Scout", "Soldier", "Pyro", "Demoman", "Heavy", "Engineer", "Medic", "Sniper", "Spy" }, {}, FDropdownEnum::Multi);
-				} EndSection();
-				if (Section("ESP"))
-				{
-					FDropdown("Draw", &tGroup.m_iESP, { "Name", "Box", "Distance", "Bones", "Health bar", "Health text", "Uber bar", "Uber text", "Class icon", "Class text", "Weapon icon", "Weapon text", "Priority", "Labels", "Buffs", "Debuffs", "Misc", "Lag", "Ping", "KDR", "Owner", "Flags", "Level", "Intel return time" }, {}, FDropdownEnum::Multi);
-					FSlider("Active alpha", &tGroup.m_iActiveAlpha, 0, 255, 5, "%i", FSliderEnum::Clamp | FSliderEnum::Precision);
-					FSlider("Dormant alpha", &tGroup.m_iDormantAlpha, 0, 255, 5, "%i", FSliderEnum::Clamp | FSliderEnum::Precision);
-					FSlider("Dormant duration", &tGroup.m_flDormantDuration, 0.015f, 5.0f, 0.1f, "%gs", FSliderEnum::Min | FSliderEnum::Precision);
-					Divider();
-					FToggle("Out of FOV Arrows", &tGroup.m_bOutOfFOVArrows);
-					FSlider("Offset", &tGroup.m_iOutOfFOVArrowsOffset, 0, 500, 25, "%i", FSliderEnum::Left | FSliderEnum::Min | FSliderEnum::Precision);
-					FSlider("Max distance", &tGroup.m_flOutOfFOVArrowsMaxDistance, 0.f, 5000.f, 50.f, "%g", FSliderEnum::Right | FSliderEnum::Min | FSliderEnum::Precision);
-				} EndSection();
-				if (Section("Chams", 8))
-				{
-					FToggle("Enabled", &tGroup.m_bChams);
-					FMDropdown("Visible material", &tGroup.m_tChams.Visible, FDropdownEnum::Left);
-					FMDropdown("Occluded material", &tGroup.m_tChams.Occluded, FDropdownEnum::Right);
-				} EndSection();
-				if (Section("Glow", 8))
-				{
-					FToggle("Enabled", &tGroup.m_bGlow);
-					PushTransparent(!tGroup.m_tBacktrackGlow.Stencil);
-					{
-						FSlider("Stencil scale", &tGroup.m_tGlow.Stencil, 0.f, 10.f, 1.f, "%.0f", FSliderEnum::Left | FSliderEnum::Min);
-					}
-					PopTransparent();
-					PushTransparent(!tGroup.m_tBacktrackGlow.Blur);
-					{
-						FSlider("Blur scale", &tGroup.m_tGlow.Blur, 0.f, 10.f, 1.f, "%.0f", FSliderEnum::Right | FSliderEnum::Min);
-					}
-					PopTransparent();
-				} EndSection();
-				if (Section("Backtrack", 8))
-				{
-					FToggle("Enabled", &tGroup.m_bBacktrack, FToggleEnum::Left);
-					SetCursorPos({ GetWindowWidth() / 2 + GetStyle().WindowPadding.x / 2, GetRowPos() - H::Draw.Scale(8) });
-					FDropdown("##Draw", &tGroup.m_iBacktrackDraw, { "Last", "First", "##Divider", "Always", "Ignore team" }, {}, FDropdownEnum::Left | FDropdownEnum::Multi, 0, "All");
-					FMDropdown("Material", &tGroup.m_tBacktrackChams.Visible, FDropdownEnum::Left);
-					{
-						auto& tRow = vRowSizes.front();
-						tRow.m_vPos.y += H::Draw.Scale(16), tRow.m_vSize.y -= H::Draw.Scale(16);
-						SetCursorPos({ GetWindowWidth() / 2 + GetStyle().WindowPadding.x / 2, GetRowPos() });
-					}
-					FToggle("Ignore Z", &tGroup.m_bBacktrackIgnoreZ, FToggleEnum::Left);
-					PushTransparent(!tGroup.m_tBacktrackGlow.Stencil);
-					{
-						FSlider("Stencil scale## Backtrack", &tGroup.m_tBacktrackGlow.Stencil, 0.f, 10.f, 1.f, "%.0f", FSliderEnum::Left | FSliderEnum::Min);
-					}
-					PopTransparent();
-					PushTransparent(!tGroup.m_tBacktrackGlow.Blur);
-					{
-						FSlider("Blur scale## Backtrack", &tGroup.m_tBacktrackGlow.Blur, 0.f, 10.f, 1.f, "%.0f", FSliderEnum::Right | FSliderEnum::Min);
-					}
-					PopTransparent();
-				} EndSection();
-			}
-			EndTable();
-			*/
 		}
 		break;
 	}
@@ -2992,7 +2794,6 @@ void CMenu::MenuLogs(int iTab)
 			}
 		} EndSection();
 	}
-	}
 }
 
 void CMenu::MenuSettings(int iTab)
@@ -3006,18 +2807,6 @@ void CMenu::MenuSettings(int iTab)
 	{
 		if (BeginTable("ConfigSettingsTable", 2))
 		{
-			/*
-			if (Section("Config"))
-			{
-				static int iCurrentType = 0;
-				PushFont(F::Render.FontBold);
-				FTabs({ "GENERAL", "VISUAL", }, &iCurrentType, { H::Draw.Scale(20), H::Draw.Scale(28) }, { GetWindowWidth(), 0 }, FTabsEnum::AlignReverse | FTabsEnum::Fit);
-				SetCursorPosY(GetCursorPosY() - H::Draw.Scale());
-				PopFont();
-
-				switch (iCurrentType)
-			*/
-
 			/* Column 1 */
 			TableNextColumn();
 			if (Section("Config"))
@@ -3409,7 +3198,7 @@ void CMenu::MenuSettings(int iTab)
 							break;
 						}
 						if (_tBind.m_bNot && (_tBind.m_iType != BindEnum::Key || _tBind.m_iInfo == BindEnum::KeyEnum::Hold))
-							sType = std::format("not {}", sType);
+							sInfo = std::format("not {}", sInfo);
 
 						ImVec2 vOriginalPos = { H::Draw.Scale(8) + H::Draw.Scale(28) * std::min(x, 3), GetCursorPosY() + H::Draw.Scale(8) };
 
@@ -3821,42 +3610,6 @@ void CMenu::MenuSettings(int iTab)
 				}
 			} EndSection();
 		}
-		/*
-		if (Vars::Debug::Options.Value)
-		{
-			if (Section("Convar spoofer"))
-			{
-				static std::string sName = "", sValue = "";
-
-				FSDropdown("Convar", &sName, {}, FDropdownEnum::Left);
-				FSDropdown("Value", &sValue, {}, FDropdownEnum::Right);
-				if (FButton("Send"))
-				{
-					if (auto pNetChan = static_cast<CNetChannel*>(I::EngineClient->GetNetChannelInfo()))
-					{
-						SDK::Output("Convar", std::format("Sent {} as {}", sName, sValue).c_str(), Vars::Menu::Theme::Accent.Value);
-						NET_SetConVar cmd(sName.c_str(), sValue.c_str());
-						pNetChan->SendNetMsg(cmd);
-
-						sName = sValue = "";
-					}
-				}
-			} EndSection();
-		}
-		*/
-#ifdef DEBUG_HOOKS
-		if (Section("Hooks", 8))
-		{
-			int i = 0; for (auto& pVar : G::Vars)
-			{
-				if (pVar->m_sName.find("Vars::Hooks::") == std::string::npos)
-					continue;
-
-				FToggle(*pVar->As<bool>(), !(i % 2) ? FToggleEnum::Left : FToggleEnum::Right);
-				i++;
-			}
-		} EndSection();
-#endif
 	}
 	}
 }
@@ -4549,3 +4302,4 @@ void CMenu::AddOutput(const std::string& sFunction, const std::string& sLog, con
 	while (m_vOutput.size() > m_iMaxOutputSize)
 		m_vOutput.pop_front();
 }
+#endif // !TEXTMODE

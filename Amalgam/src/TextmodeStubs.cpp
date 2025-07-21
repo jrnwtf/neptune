@@ -19,6 +19,7 @@
 #include "Features/Backtrack/Backtrack.h"
 #include "Features/EnginePrediction/EnginePrediction.h"
 #include "Features/Ticks/Ticks.h"
+#include "Features/ImGui/Menu/Menu.h"
 
 void CVisuals::RestoreWorldModulation()
 {
@@ -472,6 +473,11 @@ void CTicks::SaveShootAngle(CUserCmd* /*pCmd*/, bool /*bSendPacket*/)
 Vec3* CTicks::GetShootAngle()
 {
     return nullptr;
+}
+
+void CMenu::AddOutput(const std::string& /*sFunction*/, const std::string& /*sLog*/, const Color_t& /*tColor*/)
+{
+    // No output in textmode.
 }
 
 #endif // TEXTMODE 
