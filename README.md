@@ -1,3 +1,5 @@
+## this is NOT soft for CHEATING (but for botting)
+
 <p align="center">
   <a href="https://nightly.link/mistakesmultiplied/neptune/workflows/msbuild/master/Amalgamx64Release.zip">
     <img src=".github/assets/download.png" alt="Download" width="auto" height="auto">
