@@ -10,6 +10,7 @@
 #include "../SDK/Events/Events.h"
 #include "../Features/Misc/NamedPipe/NamedPipe.h"
 #include "../Utils/Hash/FNV1A.h"
+#include "../Utils/Console/Console.h"
 
 #include <Psapi.h>
 #include <random>
@@ -46,6 +47,82 @@ static inline bool CheckDXLevel()
 	}
 
 	return true;
+}
+
+static inline void DumpClassIDs()
+{
+	std::ofstream fDump("ClassIDs.txt");
+	fDump << "enum struct ETFClassID\n{\n";
+	ClientClass* m_ClientClass = I::BaseClientDLL->GetAllClasses();
+
+	while (m_ClientClass)
+	{
+		fDump << "	" << m_ClientClass->GetName() << " = " << m_ClientClass->m_ClassID << ",\n";
+		m_ClientClass = m_ClientClass->m_pNext;
+	}
+
+	fDump << "}";
+	fDump.close();
+}
+
+std::ofstream File;
+const char *szClassName;
+
+static inline void DumpTable(RecvTable* pTable, int nDepth)
+{
+	if (!pTable)
+		return;
+
+	const char* Types[7] = { "int", "float", "Vec3", "Vec2", "const char *", "Array", "void *" };
+
+	if (nDepth == 0)
+		File << "class " << szClassName << "\n{\npublic:\n";
+
+	for (int n = 0; n < pTable->m_nProps; n++)
+	{
+		RecvProp* pProp = pTable->GetProp(n);
+
+		if (!pProp)
+			continue;
+
+		std::string_view sVarName(pProp->m_pVarName);
+
+		if (!sVarName.find("baseclass") || !sVarName.find("0") || !sVarName.find("1") || !sVarName.find("2"))
+			continue;
+
+		const char* szType = Types[pProp->GetType()];
+
+		if (sVarName.find("m_b") == 0 && pProp->GetType() == 0)
+			szType = "bool";
+
+		if (sVarName.find("m_vec") == 0)
+			szType = "Vec3";
+
+		if (sVarName.find("m_h") == 0)
+			szType = "EHandle";
+
+		if (pProp->GetOffset())
+			File << "\tNetVar(" << sVarName << ", " << szType << ", \"" << szClassName << "\", \"" << sVarName << "\");\n";
+
+		if (auto DataTable = pProp->GetDataTable())
+			DumpTable(DataTable, nDepth + 1);
+	}
+
+	if (nDepth == 0)
+		File << "};\n";
+}
+
+static inline void DumpTables()
+{
+	File.open("NetVars.h");
+
+	for (ClientClass* pClass = I::BaseClientDLL->GetAllClasses(); pClass; pClass = pClass->m_pNext)
+	{
+		szClassName = pClass->m_pNetworkName;
+		DumpTable(pClass->m_pRecvTable, 0);
+	}
+
+	File.close();
 }
 
 const char* CCore::SearchForDLL(const char* pszDLLSearch)
@@ -181,11 +258,16 @@ void CCore::Load()
 		}
 	}
 
+	U::Console.Initialize("Amalgam");
+
 	if (m_bUnload = m_bFailed = !U::Signatures.Initialize() || !U::Interfaces.Initialize() || !CheckDXLevel())
 		return;
 
 	if (m_bUnload = m_bFailed2 = !U::Hooks.Initialize() || !U::BytePatches.Initialize() || !H::Events.Initialize())
 		return;
+
+	DumpClassIDs();
+	DumpTables();
 
 #ifndef TEXTMODE
 	F::Materials.LoadMaterials();
@@ -197,17 +279,11 @@ void CCore::Load()
 	F::Configs.LoadConfig(F::Configs.m_sCurrentConfig, false);
 	F::Configs.m_bConfigLoaded = true;
 
-	std::vector<const char*> loadedMessages = { "ITS KILLING TIME, YOU HAVE NO CHOICE", "I AM THE SPECTRE", "apple" };
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> distrib(0, static_cast<int>(loadedMessages.size()) - 1);
-	const char* randomLoadedMessage = loadedMessages[distrib(gen)];
-	I::EngineClient->ClientCmd_Unrestricted(std::format("tf_party_chat \"{}\"", randomLoadedMessage).c_str());
-	I::EngineClient->ClientCmd_Unrestricted(std::format("play shivermetimbers/shivermetimbers.mp3").c_str());
 #ifdef TEXTMODE
 	I::EngineClient->ClientCmd_Unrestricted(std::format("cl_hud_playerclass_use_playermodel 0").c_str());
 	I::EngineClient->ClientCmd_Unrestricted(std::format("exec autoexec").c_str());
 #endif
+
 	SDK::Output("Amalgam", "Loaded", { 175, 150, 255 }, true, true, true);
 }
 
@@ -258,19 +334,13 @@ void CCore::Unload()
 	F::NamedPipe::Shutdown();
 	U::ConVars.Unload();
 	F::Materials.UnloadMaterials();
+	U::Console.Unload();
 
 	if (m_bFailed2)
 	{
 		LogFailText();
 		return;
 	}
-
-	std::vector<const char*> unloadedMessages = { "FUCK YOU *nword*.", "KYS", "BARK BARK", "???" };
-	std::random_device rdUnload;
-	std::mt19937 genUnload(rdUnload());
-	std::uniform_int_distribution<> distribUnload(0, static_cast<int>(unloadedMessages.size()) - 1);
-	const char* randomUnloadedMessage = unloadedMessages[distribUnload(genUnload)];
-	I::EngineClient->ClientCmd_Unrestricted(std::format("tf_party_chat \"{}\"", randomUnloadedMessage).c_str());
-	I::EngineClient->ClientCmd_Unrestricted(std::format("play shivermetimbers/shivermetimbers.mp3").c_str());
+	
 	SDK::Output("Amalgam", "Unloaded", { 175, 150, 255 }, true, true);
 }
