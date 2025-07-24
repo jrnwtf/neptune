@@ -6,7 +6,7 @@ MAKE_HOOK(CBaseAnimating_FrameAdvance, S::CBaseAnimating_FrameAdvance(), float, 
 {
 #ifdef DEBUG_HOOKS
 	if (!Vars::Hooks::CBaseAnimating_FrameAdvance[DEFAULT_BIND])
-		return CALL_ORIGINAL(rcx, currentTime);
+		return CALL_ORIGINAL(rcx, flInterval);
 #endif
 
 	if (!Vars::Visuals::Removals::Interpolation.Value || rcx == H::Entities.GetLocal())
