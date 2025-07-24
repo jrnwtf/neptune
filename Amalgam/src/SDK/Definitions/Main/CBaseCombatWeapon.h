@@ -28,4 +28,10 @@ public:
 	VIRTUAL(GetName, const char*, 334, this);
 
 	SIGNATURE(HasAmmo, bool, CBaseCombatWeapon, this);
+
+	OFFSET(m_flCritTokenBucket, float, 3732);
+	OFFSET(m_nCritChecks, int, 3736);
+	OFFSET(m_nCritSeedRequests, int, 3740);
+	OFFSET(m_flLastRapidFireCritCheckTime, float, 4036);
+	OFFSET(m_flCritTime, float, 4020);
 };
