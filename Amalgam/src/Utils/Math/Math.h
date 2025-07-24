@@ -597,7 +597,7 @@ namespace Math
 	inline float GetDistanceMeters(const Vec3& vec1, const Vec3& vec2)
 	{
 		constexpr float HU_TO_METERS = 0.01905f;
-		return (vec1 - vec2).Lenght() * HU_TO_METERS;
+		return (vec1 - vec2).Length() * HU_TO_METERS;
 	}
 }
 
