@@ -23,10 +23,29 @@ namespace Math
 		return a + (b - a) * t;
 	}
 
+	inline Vec3 Lerp(Vec3 a, Vec3 b, float t)
+	{
+		Vec3 ret = {
+			std::lerp(a.x, b.x, t),
+			std::lerp(a.y, b.y, t),
+			std::lerp(a.z, b.z, t)
+		};
+
+		return ret;
+	}
+
 	inline float SimpleSpline(float val)
 	{
 		float flSquared = powf(val, 2);
 		return 3 * flSquared - 2 * flSquared * val;
+	}
+
+	inline float Remap(float val, float in_min, float in_max, float out_min, float out_max)
+	{
+		if (in_min == in_max)
+			return val >= in_max ? out_max : out_min;
+
+		return out_min + (out_max - out_min) * std::clamp((val - in_min) / (in_max - in_min), 0.0f, 1.0f);
 	}
 
 	inline float RemapVal(float flVal, float a, float b, float c, float d, bool bClamp = true)
@@ -64,14 +83,51 @@ namespace Math
 		*pCos = std::cos(flRadians);
 	}
 
+	template<typename F, typename ... T>
+	inline bool CompareGroup(F&& first, T&& ... t)
+	{
+		return ((first == t) || ...);
+	}
+
 	inline float NormalizeAngle(float flAngle, float flRange = 360.f)
 	{
 		return std::isfinite(flAngle) ? std::remainder(flAngle, flRange) : 0.f;
 	}
 
+	inline float NormalizeAngle2(float flAngle)
+	{
+		float f = (flAngle * (1.0f / 360.0f)) + 0.5f;
+		int i = (int)f;
+
+		float fi = (float)i;
+		f = (f < 0.0f && f != fi) ? fi - 1.0f : fi;
+
+		flAngle -= f * 360.0f;
+		return flAngle;
+	}
+
 	inline float NormalizeRad(float flAngle, float flRange = PI * 2)
 	{
 		return std::isfinite(flAngle) ? std::remainder(flAngle, flRange) : 0.f;
+	}
+
+	inline static float AngleDiffRad(float a1, float a2) noexcept
+	{
+		float delta;
+		delta = NormalizeRad(a1 - a2);
+
+		if (a1 > a2)
+		{
+			if (delta >= PI)
+				delta -= PI * 2;
+		}
+		else
+		{
+			if (delta <= -PI)
+				delta += PI * 2;
+		}
+
+		return delta;
 	}
 
 	inline void ClampAngles(Vec3& v)
@@ -170,6 +226,14 @@ namespace Math
 			ClampAngles(vAngles);
 
 		return vAngles;
+	}
+
+	inline Vec3 CalcAngle2(const Vec3& source, const Vec3& destination)
+	{
+		const Vec3 vDelta = (source - destination);
+		const float flHyp = ::sqrtf((vDelta.x * vDelta.x) + (vDelta.y * vDelta.y));
+
+		return { (::atanf(vDelta.z / flHyp) * M_RADPI), (::atanf(vDelta.y / vDelta.x) * M_RADPI) + (180.0f * (vDelta.x >= 0.0f)), 0.0f };
 	}
 
 	inline float CalcFov(const Vec3& vFromAng, const Vec3& vToAng)
@@ -322,11 +386,81 @@ namespace Math
 		return true;
 	}
 
+	inline bool RayVsBox(Vec3& ray_origin, Vec3& ray_angles, Vec3& box_origin, Vec3& box_mins, Vec3& box_maxs)
+	{
+		Vec3 ray_dir = Vec3();
+		AngleVectors(ray_angles, &ray_dir);
+
+		Vec3 box_min_world = box_origin + box_mins;
+		Vec3 box_max_world = box_origin + box_maxs;
+
+		float tmin = (box_min_world.x - ray_origin.x) / ray_dir.x;
+		float tmax = (box_max_world.x - ray_origin.x) / ray_dir.x;
+
+		if (tmin > tmax)
+			std::swap(tmin, tmax);
+
+		float tymin = (box_min_world.y - ray_origin.y) / ray_dir.y;
+		float tymax = (box_max_world.y - ray_origin.y) / ray_dir.y;
+
+		if (tymin > tymax)
+			std::swap(tymin, tymax);
+
+		if ((tmin > tymax) || (tymin > tmax))
+			return false;
+
+		if (tymin > tmin)
+			tmin = tymin;
+
+		if (tymax < tmax)
+			tmax = tymax;
+
+		float tzmin = (box_min_world.z - ray_origin.z) / ray_dir.z;
+		float tzmax = (box_max_world.z - ray_origin.z) / ray_dir.z;
+
+		if (tzmin > tzmax)
+			std::swap(tzmin, tzmax);
+
+		if ((tmin > tzmax) || (tzmin > tmax))
+			return false;
+
+		if (tzmin > tmin)
+			tmin = tzmin;
+
+		if (tzmax < tmax)
+			tmax = tzmax;
+
+		return tmax >= 0.0f && tmin <= tmax;
+	}
+
 	inline void VectorRotate(Vec3& vIn, const matrix3x4& mIn, Vec3& vOut)
 	{
 		vOut.x = vIn.Dot(mIn[0]);
 		vOut.y = vIn.Dot(mIn[1]);
 		vOut.z = vIn.Dot(mIn[2]);
+	}
+
+	inline void RotateTriangle2D(std::array<Vec2, 3>& points, float rotation)
+	{
+		Vec2 center = (points[0] + points[1] + points[2]) / 3;
+
+		for (Vec2& point : points)
+		{
+			point -= center;
+
+			float temp_x = point.x;
+			float temp_y = point.y;
+
+			float theta = DEG2RAD(rotation);
+
+			float c = cosf(theta);
+			float s = sinf(theta);
+
+			point.x = temp_x * c - temp_y * s;
+			point.y = temp_x * s + temp_y * c;
+
+			point += center;
+		}
 	}
 
 	inline void MatrixCopy(const matrix3x4& mIn, matrix3x4& mOut)
@@ -458,6 +592,12 @@ namespace Math
 			}
 		}
 		return vRoots;
+	}
+
+	inline float GetDistanceMeters(const Vec3& vec1, const Vec3& vec2)
+	{
+		constexpr float HU_TO_METERS = 0.01905f;
+		return (vec1 - vec2).Lenght() * HU_TO_METERS;
 	}
 }
 
