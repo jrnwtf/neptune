@@ -7,6 +7,11 @@ Vec3 CTFPlayer::GetEyeAngles()
 	return { m_angEyeAnglesX(), m_angEyeAnglesY(), 0.f };
 }
 
+Vec3 CTFPlayer::GetEyePosition()
+{
+	return m_vecOrigin() + m_vecViewOffset();
+}
+
 Vec3 CTFPlayer::GetViewOffset()
 {
 	if (!IsPlayer())
@@ -85,6 +90,18 @@ bool CTFPlayer::InCond(const ETFCond cond)
 	return false;
 }
 
+bool CTFPlayer::IsZoomed()
+{
+	return InCond(TF_COND_ZOOMED);
+}
+
+bool CTFPlayer::IsStealthed()
+{
+	return InCond(TF_COND_STEALTHED)
+		|| InCond(TF_COND_STEALTHED_USER_BUFF)
+		|| InCond(TF_COND_STEALTHED_USER_BUFF_FADING);
+}
+
 bool CTFPlayer::IsAGhost()
 {
 	return InCond(TF_COND_HALLOWEEN_GHOST_MODE);
@@ -103,6 +120,15 @@ bool CTFPlayer::IsInvisible()
 		return false;
 
 	return m_flInvisibility() >= 1.f;
+}
+
+float CTFPlayer::GetInvisiblePercentage()
+{
+	static auto tf_spy_invis_time = I::CVar->FindVar("tf_spy_invis_time");
+	const float flInvisTime = tf_spy_invis_time ? tf_spy_invis_time->GetFloat() : 1.f;
+	const float GetInvisPercent = Math::RemapVal(m_flInvisChangeCompleteTime() - I::GlobalVars->curtime, flInvisTime, 0.f, 0.f, 100.f);
+
+	return GetInvisPercent;
 }
 
 bool CTFPlayer::IsInvulnerable()
@@ -203,4 +229,154 @@ bool CTFPlayer::CanAttack(bool bCloak, bool bLocal)
 float CTFPlayer::GetCritMult()
 {
 	return Math::RemapVal(m_iCritMult(), 0.f, 255.f, 1.f, 4.f);
+}
+
+Vec3 CTFPlayer::GetBoneOrigin(int bone)
+{
+	matrix3x4 boneMatrix[128];
+
+	try
+	{
+		if (SetupBones(boneMatrix, 128, BONE_USED_BY_HITBOX, I::GlobalVars->curtime))
+			return Vec3(boneMatrix[bone][0][3], boneMatrix[bone][1][3], boneMatrix[bone][2][3]);
+	}
+	catch (...)
+	{
+		//SDK::Output("GetBoneOrigin->Unknown error", "\n", { 133, 0, 255, 255 });
+		return Vec3{};
+	}
+
+	return Vec3{};
+}
+
+Vec3 CTFPlayer::GetHitboxOrigin(int hitbox)
+{
+	matrix3x4 boneMatrix[128];
+
+	const model_t* model;
+	studiohdr_t* hdr;
+
+	mstudiohitboxset_t* set;
+	mstudiobbox_t* hitboxMat;
+
+	Vec3 min, max;
+
+	try
+	{
+		if (!SetupBones(boneMatrix, 128, BONE_USED_BY_HITBOX, I::GlobalVars->curtime))
+		{
+			//SDK::Output("GetHitboxOrigin->SetupBones invalid", "\n", { 133, 0, 255, 255 });
+			return Vec3{};
+		}
+
+		if ((model = GetModel()) == nullptr)
+		{
+			//SDK::Output("GetHitboxOrigin->GetModel invalid", "\n", { 133, 0, 255, 255 });
+			return Vec3{};
+		}
+
+		if ((hdr = I::ModelInfoClient->GetStudiomodel(model)) == nullptr)
+		{
+			//SDK::Output("GetHitboxOrigin->GetStudioModel invalid", "\n", { 133, 0, 255, 255 });
+			return Vec3{};
+		}
+
+		if ((set = hdr->pHitboxSet(0)) == nullptr)
+		{
+			//SDK::Output("GetHitboxOrigin->GetHitboxSet invalid", "\n", { 133, 0, 255, 255 });
+			return Vec3{};
+		}
+
+		if ((hitboxMat = set->pHitbox(hitbox)) == nullptr)
+		{
+			//SDK::Output("GetHitboxOrigin->GetHitbox invalid", "\n", { 133, 0, 255, 255 });
+			return Vec3{};
+		}
+	}
+	catch (...)
+	{
+		//SDK::Output("GetHitboxOrigin->Unknown error", "\n", { 133, 0, 255, 255 });
+		return Vec3{};
+	}
+
+	//M::VectorTransform(hitboxMat->bbmin, boneMatrix[hitboxMat->bone], min);
+	//M::VectorTransform(hitboxMat->bbmax, boneMatrix[hitboxMat->bone], max);
+
+	return ((min + max) * 0.5f);
+}
+
+bool CTFPlayer::ConstructBones(CTFPlayer* pEntity, matrix3x4* pBones, int mask)
+{
+	if (!pEntity)
+		return false;
+
+	Vec3 m_vecUninterpolatedOrigin = pEntity->m_vecOrigin();
+	Vec3 m_vecInterpolatedOrigin = pEntity->GetAbsOrigin();
+	Vec3 m_vecAbsAngles = pEntity->GetAbsAngles();
+	Vec3 m_vecNetworkedAngles = pEntity->GetEyeAngles();
+
+	static ConVar* anim_showstate = I::CVar->FindVar("anim_showstate");
+	anim_showstate->SetValue(pEntity->entindex());
+
+	//G::ConstructingBones = true;
+
+	pEntity->SetAbsAngles(m_vecNetworkedAngles);
+	pEntity->SetAbsOrigin(m_vecUninterpolatedOrigin);
+	//pEntity->m_fFlags() = (EFL_DIRTY_ABSTRANSFORM, EFL_DIRTY_ABSVELOCITY);
+	//pEntity->CalcAbsolutePosition();
+
+	if (!pEntity->SetupBones(pBones, 128, mask, I::GlobalVars->curtime))
+		return false;
+
+	pEntity->SetAbsOrigin(m_vecInterpolatedOrigin);
+	pEntity->SetAbsAngles(m_vecAbsAngles);
+
+	//G::ConstructingBones = false;
+
+	return true;
+}
+
+void CTFPlayer::UpdateButtonState(const int nUserCmdButtonMask)
+{
+	m_afButtonLast() = m_nButtons();
+	m_nButtons() = nUserCmdButtonMask;
+
+	const int buttonsChanged = m_afButtonLast() ^ m_nButtons();
+
+	m_afButtonPressed() = buttonsChanged & m_nButtons();
+	m_afButtonReleased() = buttonsChanged & (~m_nButtons());
+}
+
+std::pair<Vec3, Vec3> CTFPlayer::GetBoundingBox()
+{
+	static int minOffset = U::NetVars.GetNetVar("CBasePlayer", "m_vecMins");
+	static int maxOffset = U::NetVars.GetNetVar("CBasePlayer", "m_vecMaxs");
+
+	Vec3 origin = GetAbsOrigin();
+	return std::make_pair(origin + minOffset, origin + maxOffset);
+}
+
+CTFWeaponBase* CTFPlayer::GetWeaponFromSlot(int nSlot)
+{
+	static int nOffset = U::NetVars.GetNetVar("CBaseCombatCharacter", "m_hMyWeapons");
+	int hWeapon = *reinterpret_cast<int*>(reinterpret_cast<std::uintptr_t>(this) + nOffset + nSlot * 4);
+	return I::ClientEntityList->GetClientEntityFromHandle(hWeapon)->As<CTFWeaponBase>();
+}
+
+std::string CTFPlayer::GetName()
+{
+	PlayerInfo_t info{};
+
+	if (I::EngineClient->GetPlayerInfo(entindex(), &info))
+		return "";
+
+	return info.name;
+}
+
+float CTFPlayer::HealthFraction()
+{
+	if (GetMaxHealth() == 0)
+		return 1.0f;
+
+	return std::clamp(static_cast<float>(m_iHealth()) / static_cast<float>(GetMaxHealth()), 0.0f, 1.0f);
 }
