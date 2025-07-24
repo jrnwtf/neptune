@@ -228,14 +228,6 @@ namespace Math
 		return vAngles;
 	}
 
-	inline Vec3 CalcAngle2(const Vec3& source, const Vec3& destination)
-	{
-		const Vec3 vDelta = (source - destination);
-		const float flHyp = ::sqrtf((vDelta.x * vDelta.x) + (vDelta.y * vDelta.y));
-
-		return { (::atanf(vDelta.z / flHyp) * M_RADPI), (::atanf(vDelta.y / vDelta.x) * M_RADPI) + (180.0f * (vDelta.x >= 0.0f)), 0.0f };
-	}
-
 	inline float CalcFov(const Vec3& vFromAng, const Vec3& vToAng)
 	{
 		Vec3 vFromForward = Vec3();
