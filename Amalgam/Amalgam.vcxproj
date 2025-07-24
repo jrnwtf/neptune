@@ -916,7 +916,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;__CONFIGURATION__="Release";__PLATFORM__="x64";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;__CONFIGURATION__="Release";__PLATFORM__="x64";DEBUG_HOOKS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
@@ -1105,6 +1105,19 @@
     <ClCompile Include="src\BytePatches\BytePatches.cpp" />
     <ClCompile Include="src\Core\Core.cpp" />
     <ClCompile Include="src\DllMain.cpp" />
+    <ClCompile Include="src\Hooks\CBaseAnimating_FrameAdvance.cpp" />
+    <ClCompile Include="src\Hooks\CBaseEntity_Interpolate.cpp" />
+    <ClCompile Include="src\Hooks\CBasePlayer_CalcDeathCamView.cpp" />
+    <ClCompile Include="src\Hooks\CBasePlayer_CalcFreezeCamView.cpp" />
+    <ClCompile Include="src\Hooks\CClientState_GetTime.cpp" />
+    <ClCompile Include="src\Hooks\CInterpolatedVarArrayBase_Interpolate.cpp" />
+    <ClCompile Include="src\Hooks\CMultiPlayerAnimState_ComputePoseParamAimYaw.cpp" />
+    <ClCompile Include="src\Hooks\CNetChannel_ProcessPacket.cpp" />
+    <ClCompile Include="src\Hooks\CPrediction_RunCommand.cpp" />
+    <ClCompile Include="src\Hooks\CSequenceTransitioner_CheckForSequenceChange.cpp" />
+    <ClCompile Include="src\Hooks\CTFPartyClient_BCanRequestToJoinPlayer.cpp" />
+    <ClCompile Include="src\Hooks\CTFRocketLauncher_FireProjectile.cpp" />
+    <ClCompile Include="src\Hooks\HostState_Restart.cpp" />
     <ClCompile Include="src\TextmodeStubs.cpp" />
     <ClCompile Include="src\Features\Aimbot\Aimbot.cpp" />
     <ClCompile Include="src\Features\Aimbot\AimbotGlobal\AimbotGlobal.cpp" />
