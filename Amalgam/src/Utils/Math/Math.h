@@ -111,25 +111,6 @@ namespace Math
 		return std::isfinite(flAngle) ? std::remainder(flAngle, flRange) : 0.f;
 	}
 
-	inline static float AngleDiffRad(float a1, float a2) noexcept
-	{
-		float delta;
-		delta = NormalizeRad(a1 - a2);
-
-		if (a1 > a2)
-		{
-			if (delta >= PI)
-				delta -= PI * 2;
-		}
-		else
-		{
-			if (delta <= -PI)
-				delta += PI * 2;
-		}
-
-		return delta;
-	}
-
 	inline void ClampAngles(Vec3& v)
 	{
 		v.x = std::clamp(NormalizeAngle(v.x), -89.f, 89.f);
