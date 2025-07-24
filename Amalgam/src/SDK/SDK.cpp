@@ -1334,12 +1334,6 @@ void SDK::Friction(Vec3& velocity, float surface_friction)
 	}
 }
 
-bool SDK::IsLoopback()
-{
-	INetChannelInfo* net = I::EngineClient->GetNetChannelInfo();
-	return net && net->IsLoopback();
-}
-
 float SDK::AirburstDamageForce(Vec3& size, float damage, float scale)
 {
 	float force = damage * (static_cast<float>((48 * 48 * 82.0)) / (size.x * size.y * size.z)) * scale;
