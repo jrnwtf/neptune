@@ -4,6 +4,10 @@
 #include "CUserCmd.h"
 
 MAKE_SIGNATURE(CBasePlayer_GetAmmoCount, "client.dll", "48 89 5C 24 ? 57 48 83 EC ? 48 63 DA 48 8B F9 83 FB", 0x0);
+MAKE_SIGNATURE(CBasePlayer_GetFOV, "client.dll", "40 53 48 83 EC ? 48 8B D9 0F 29 74 24 ? 48 8B 0D ? ? ? ? 48 8B 01", 0x0);
+MAKE_SIGNATURE(CBasePlayer_InFirstPersonView, "client.dll", "E8 ? ? ? ? 48 8B 17 84 C0", 0x0);
+MAKE_SIGNATURE(CBasePlayer_UpdateButtonState, "client.dll", "44 8B 81 24 16", 0x0);
+MAKE_SIGNATURE(CBasePlayer_UsingStandardWeaponsInVehicle, "client.dll", "48 89 5C 24 ? 57 48 83 EC ? 8B 91 ? ? ? ? 48 8B F9 85 D2 74 ? B8 ? ? ? ? 83 FA ? 74 ? 0F B7 C2 4C 8B 05", 0x0);
 
 class CBasePlayer : public CBaseCombatCharacter
 {
@@ -90,8 +94,25 @@ public:
 	VIRTUAL(PostThink, void, 263, this);
 	VIRTUAL(GetRenderedWeaponModel, CBaseAnimating*, 252, this);
 	VIRTUAL_ARGS(SelectItem, void, 272, (const char* ptr, int subtype), this, ptr, subtype);
+	VIRTUAL(ItemPostFrame, void, 265, this);
 
 	SIGNATURE_ARGS(GetAmmoCount, int, CBasePlayer, (int iAmmoType), this, iAmmoType);
+	SIGNATURE(GetFOV, float, CBasePlayer, this);
+	SIGNATURE(InFirstPersonView, bool, CBasePlayer, this);
+	SIGNATURE_ARGS(UpdateButtonState, void, CBasePlayer, (uint32_t buttons), this, buttons);
+	SIGNATURE(UsingStandardWeaponsInVehicle, bool, CBasePlayer, this);
+
+	inline void SetCurrentCmd(CUserCmd* pCmd)
+	{
+		static int nOffset = U::NetVars.GetNetVar("CBasePlayer", "m_hConstraintEntity") - 8;
+		*reinterpret_cast<CUserCmd**>(uintptr_t(this) + nOffset) = pCmd;
+	}
+
+	inline int& GetImpulse()
+	{
+		static const int nOffset = U::NetVars.GetNetVar("CBasePlayer", "m_iBonusChallenge") + 68;
+		return *reinterpret_cast<int*>(reinterpret_cast<DWORD_PTR>(this) + nOffset);
+	}
 
 	bool IsAlive();
 	Vec3 GetShootPos();
