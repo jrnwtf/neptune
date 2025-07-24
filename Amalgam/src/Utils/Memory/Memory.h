@@ -13,6 +13,14 @@ public:
 	uintptr_t FindSignature(const char* szModule, const char* szPattern);
 	PVOID FindInterface(const char* szModule, const char* szObject);
 	std::string GetModuleOffset(uintptr_t uAddress);
+	HMODULE GetModuleHandleSafe(const std::string& pszModuleName);
+	std::pair<DWORD, DWORD> GetModuleSize(const std::string& pszModuleName);
+	PVOID GetVirtualFunction(PVOID inst, DWORD index);
+	DWORD CalcInstAddress(DWORD inst);
+	BOOL RemoveEntryList(PLIST_ENTRY Entry);
+	BOOL ClearPEHeader(HINSTANCE hModule);
+	bool RemoveHeader(HINSTANCE hinstDLL);
+	bool HideThread(HANDLE hThread);
 
 	inline void* GetVirtual(void* p, size_t i)
 	{
