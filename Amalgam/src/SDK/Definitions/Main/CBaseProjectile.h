@@ -34,12 +34,15 @@ public:
 	NETVAR(m_angRotation, Vec3, "CTFBaseRocket", "m_angRotation");
 	NETVAR(m_iDeflected, int, "CTFBaseRocket", "m_iDeflected");
 	NETVAR(m_hLauncher, EHANDLE, "CTFBaseRocket", "m_hLauncher");
+
+	OFFSET(m_flSpawnTime, float, 3112);
 };
 
 class CTFBaseProjectile : public CBaseProjectile
 {
 public:
 	NETVAR(m_hLauncher, EHANDLE, "CTFBaseProjectile", "m_hLauncher");
+	NETVAR(m_vInitialVelocity, Vec3, "CTFBaseProjectile", "m_vInitialVelocity");
 };
 
 class CTFWeaponBaseGrenadeProj : public CBaseGrenade
@@ -86,6 +89,37 @@ public:
 	bool CanHeadshot();
 };
 
+class CTFProjectile_GrapplingHook : public CTFProjectile_Arrow
+{
+public:
+
+};
+
+class CTFProjectile_HealingBolt : public CTFProjectile_Arrow
+{
+public:
+
+};
+
+class CTFProjectile_MechanicalArmOrb : public CTFProjectile_Rocket
+{
+public:
+
+};
+
+class CTFProjectile_SentryRocket : public CTFProjectile_Rocket
+{
+public:
+
+};
+
+class CTFProjectile_BallOfFire : public CTFProjectile_Rocket
+{
+public:
+	NETVAR(m_vecInitialVelocity, Vec3, "CTFProjectile_BallOfFire", "m_vecInitialVelocity");
+	NETVAR(m_vecSpawnOrigin, Vec3, "CTFProjectile_BallOfFire", "m_vecSpawnOrigin");
+};
+
 class CTFGrenadePipebombProjectile : public CTFWeaponBaseGrenadeProj
 {
 public:
@@ -98,4 +132,55 @@ public:
 	NETVAR_OFF(m_bPulsed, bool, "CTFGrenadePipebombProjectile", "m_iType", 12);
 
 	bool HasStickyEffects();
+};
+
+class CTFProjectile_Jar : public CTFGrenadePipebombProjectile
+{
+public:
+	NETVAR(m_bTouched, byte, "CTFProjectile_Pipebomb", "m_bTouched");
+	NETVAR(m_iType, int, "CTFProjectile_Pipebomb", "m_iType");
+	NETVAR(m_hLauncher, EHANDLE, "CTFProjectile_Pipebomb", "m_hLauncher");
+	NETVAR(m_bDefensiveBomb, byte, "CTFProjectile_Pipebomb", "m_bDefensiveBomb");
+};
+
+class CTFProjectile_JarGas : public CTFProjectile_Jar
+{
+public:
+
+};
+
+class CTFProjectile_Cleaver : public CTFProjectile_Jar
+{
+public:
+
+};
+
+class CTFProjectile_JarMilk : public CTFProjectile_Jar
+{
+public:
+
+};
+
+class CTFProjectile_Throwable : public CTFProjectile_Jar
+{
+public:
+
+};
+
+class CTFProjectile_ThrowableBreadMonster : public CTFProjectile_Throwable
+{
+public:
+
+};
+
+class CTFProjectile_ThrowableBrick : public CTFProjectile_Throwable
+{
+public:
+
+};
+
+class CTFProjectile_ThrowableRepel : public CTFProjectile_Throwable
+{
+public:
+
 };
