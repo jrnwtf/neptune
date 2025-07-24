@@ -823,6 +823,20 @@ void SDK::GetProjectileFireSetup(CTFPlayer* pPlayer, const Vec3& vAngIn, Vec3 vO
 	}
 }
 
+void SDK::GetProjectileFireSetupAirblast(CTFPlayer* pPlayer, const Vec3& vAngIn, Vec3 vPosIn, Vec3& vAngOut, bool bInterp)
+{
+	const Vec3 vShootPos = bInterp ? pPlayer->GetEyePosition() : pPlayer->GetShootPos();
+
+	Vec3 vForward; Math::AngleVectors(vAngIn, &vForward);
+
+	Vec3 vEndPos = vShootPos + (vForward * MAX_TRACE_LENGTH);
+	CGameTrace trace = {};
+	CTraceFilterWorldAndPropsOnly filter = {};
+	Trace(vShootPos, vEndPos, MASK_SOLID, &filter, &trace);
+
+	Math::VectorAngles(trace.endpos - vPosIn, vAngOut);
+}
+
 //Pasted from somewhere in the valves tf2 server code
 float SDK::CalculateSplashRadiusDamageFalloff(CTFWeaponBase* pWeapon, CTFPlayer* pAttacker, CTFWeaponBaseGrenadeProj* pProjectile, float flRadius)
 {
@@ -1116,4 +1130,219 @@ bool SDK::IsSaxton(CTFPlayer* pPlayer)
 	std::transform(mapName.begin(), mapName.end(), mapName.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
 	return mapName.find("vsh_") != std::string::npos;
+}
+
+bool SDK::IsWeaponHitscan(CTFWeaponBase* wep)
+{
+	if (!wep || wep->GetWeaponID() == TF_WEAPON_MEDIGUN || IsWeaponProjectile(wep) || IsWeaponMelee(wep))
+		return false;
+
+	return (wep->GetDamageType() & DMG_BULLET) || (wep->GetDamageType() & DMG_BUCKSHOT);
+}
+
+bool SDK::IsWeaponMelee(CTFWeaponBase* wep)
+{
+	if (!wep)
+		return false;
+
+	return wep->GetSlot() == 2;
+}
+
+bool SDK::IsWeaponProjectile(CTFWeaponBase* wep)
+{
+	if (!wep)
+		return false;
+
+	switch (wep->GetWeaponID())
+	{
+	case TF_WEAPON_ROCKETLAUNCHER:
+	{
+		if (wep->m_iItemDefinitionIndex() == Soldier_m_RocketJumper)
+			return false;
+
+		return true;
+	}
+	case TF_WEAPON_PIPEBOMBLAUNCHER:
+	{
+		if (wep->m_iItemDefinitionIndex() == Demoman_s_StickyJumper)
+			return false;
+
+		return true;
+	}
+	case TF_WEAPON_ROCKETLAUNCHER_DIRECTHIT:
+	case TF_WEAPON_GRENADELAUNCHER:
+	case TF_WEAPON_FLAREGUN:
+	case TF_WEAPON_COMPOUND_BOW:
+	case TF_WEAPON_CROSSBOW:
+	case TF_WEAPON_PARTICLE_CANNON:
+	case TF_WEAPON_DRG_POMSON:
+	case TF_WEAPON_RAYGUN:
+	case TF_WEAPON_FLAREGUN_REVENGE:
+	case TF_WEAPON_CANNON:
+	case TF_WEAPON_SYRINGEGUN_MEDIC:
+	case TF_WEAPON_FLAME_BALL:
+	case TF_WEAPON_FLAMETHROWER:
+	case TF_WEAPON_SHOTGUN_BUILDING_RESCUE:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool SDK::IsWeaponChargeable(CTFWeaponBase* wep)
+{
+	if (!wep)
+		return false;
+
+	switch (wep->GetWeaponID())
+	{
+	case TF_WEAPON_PIPEBOMBLAUNCHER:
+	case TF_WEAPON_COMPOUND_BOW:
+	case TF_WEAPON_CANNON:
+	case TF_WEAPON_SNIPERRIFLE_CLASSIC:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool SDK::IsWeaponCapableOfHeadshot(CTFWeaponBase* pWeapon)
+{
+	auto pOwner = pWeapon->m_hOwnerEntity().Get();
+
+	if (!pOwner)
+		return false;
+
+	bool bMaybe = false, bIsSniperRifle = false, bIsRevolver = false;
+
+	switch (pWeapon->GetWeaponID())
+	{
+	case TF_WEAPON_COMPOUND_BOW:
+		return true;
+	case TF_WEAPON_SNIPERRIFLE:
+	case TF_WEAPON_SNIPERRIFLE_CLASSIC:
+	case TF_WEAPON_SNIPERRIFLE_DECAP:
+		//bMaybe = bIsSniperRifle = pOwner->As<CTFPlayer>()->IsZoomed();
+		break;
+	case TF_WEAPON_REVOLVER:
+		bMaybe = bIsRevolver = true;
+		break;
+	default: break;
+	}
+
+	if (bMaybe)
+	{
+		int nWeaponMode = static_cast<int>(SDK::AttribHookValue(0.0f, "set_weapon_mode", pWeapon));
+
+		if (bIsSniperRifle)
+			return nWeaponMode != 1;
+
+		else if (bIsRevolver)
+			return nWeaponMode == 1;
+	}
+
+	return false;
+}
+
+bool SDK::IsBehindAndFacingTarget(const Vec3& vPlayerCenter, const Vec3& vTargetCenter, const Vec3& vPlayerViewAngles, const Vec3& vTargetEyeAngles)
+{
+	Vec3 vToTarget = {};
+
+	vToTarget = vTargetCenter - vPlayerCenter;
+	vToTarget.z = 0.0f;
+	vToTarget.Normalize();
+
+	Vec3 vPlayerForward = {};
+	Math::AngleVectors(vPlayerViewAngles, &vPlayerForward);
+
+	vPlayerForward.z = 0.0f;
+	vPlayerForward.Normalize();
+
+	Vec3 vTargetForward = {};
+	Math::AngleVectors(vTargetEyeAngles, &vTargetForward);
+
+	vTargetForward.z = 0.0f;
+	vTargetForward.Normalize();
+
+	float flPosVsTargetViewDot = vToTarget.Dot(vTargetForward);
+	float flPosVsOwnerViewDot = vToTarget.Dot(vPlayerForward);
+	float flViewAnglesDot = vTargetForward.Dot(vPlayerForward);
+
+	return flPosVsTargetViewDot > 0.0f && flPosVsOwnerViewDot > 0.5f && flViewAnglesDot > -0.3f;
+}
+
+int SDK::TimeToTicks(float time)
+{
+	return static_cast<int>(0.5f + time / I::GlobalVars->interval_per_tick);
+}
+
+float SDK::TicksToTime(int tick)
+{
+	return I::GlobalVars->interval_per_tick * static_cast<float>(tick);
+}
+
+float SDK::GetLerp()
+{
+	static auto cl_interp = U::ConVars.FindVar("cl_interp");
+	static auto cl_interp_ratio = U::ConVars.FindVar("cl_interp_ratio");
+	static auto cl_updaterate = U::ConVars.FindVar("cl_updaterate");
+
+	return std::max(cl_interp->GetFloat(), cl_interp_ratio->GetFloat() / cl_updaterate->GetFloat());
+}
+
+float SDK::GetLatency()
+{
+	INetChannelInfo* net = I::EngineClient->GetNetChannelInfo();
+
+	if (!net)
+		return 0.0f;
+
+	return net->GetLatency(FLOW_INCOMING) + net->GetLatency(FLOW_OUTGOING);
+}
+
+float SDK::GetGravity()
+{
+	static auto sv_gravity = U::ConVars.FindVar("sv_gravity");
+	return sv_gravity->GetFloat();
+}
+
+float SDK::GetServerTime()
+{
+	return TicksToTime(I::ClientState->m_ClockDriftMgr.m_nServerTick + 1);
+}
+
+void SDK::Friction(Vec3& velocity, float surface_friction)
+{
+	float speed = velocity.Length();
+
+	if (speed < 0.1f)
+		return;
+
+	static auto sv_friction = U::ConVars.FindVar("sv_friction");
+	const float friction = sv_friction->GetFloat() * surface_friction;
+
+	static auto sv_stopspeed = U::ConVars.FindVar("sv_stopspeed");
+	const float control = (speed < sv_stopspeed->GetFloat()) ? sv_stopspeed->GetFloat() : speed;
+
+	const float drop = control * friction * I::GlobalVars->interval_per_tick;
+	float new_speed = std::max(0.0f, speed - drop);
+
+	if (new_speed != speed)
+	{
+		new_speed /= speed;
+		velocity *= new_speed;
+	}
+}
+
+bool SDK::IsLoopback()
+{
+	INetChannelInfo* net = I::EngineClient->GetNetChannelInfo();
+	return net && net->IsLoopback();
+}
+
+float SDK::AirburstDamageForce(Vec3& size, float damage, float scale)
+{
+	float force = damage * (static_cast<float>((48 * 48 * 82.0)) / (size.x * size.y * size.z)) * scale;
+	force = std::min(force, 1000.0f);
+	return force;
 }
