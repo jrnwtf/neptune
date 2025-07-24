@@ -13,9 +13,11 @@ bool CNullInterfaces::Initialize()
 {
 	I::TFPartyClient = S::Get_TFPartyClient.Call<CTFPartyClient*>();
 	Validate(I::TFPartyClient);
+	printf("TFPartyClient %x\n", I::TFPartyClient);
 
 	I::KeyValuesSystem = U::Memory.GetModuleExport<IKeyValuesSystem*(*)()>("vstdlib.dll", "KeyValuesSystem")();
 	Validate(I::KeyValuesSystem);
+	printf("KeyValuesSystem %x\n", I::KeyValuesSystem);
 
 	// Validate SteamClient before using it
 	if (!I::SteamClient)
