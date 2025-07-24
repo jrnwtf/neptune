@@ -75,6 +75,8 @@ public:
 	NETVAR_OFF(m_nButtons, int, "CBasePlayer", "m_hConstraintEntity", -12);
 	NETVAR_OFF(m_pCurrentCommand, CUserCmd*, "CBasePlayer", "m_hConstraintEntity", -8);
 	NETVAR_OFF(m_afButtonLast, int, "CBasePlayer", "m_hConstraintEntity", -24);
+	NETVAR_OFF(m_afButtonPressed, int, "CBasePlayer", "m_hConstraintEntity", -20);
+	NETVAR_OFF(m_afButtonReleased, int, "CBasePlayer", "m_hConstraintEntity", -16);
 	NETVAR_OFF(m_flWaterJumpTime, float, "CBasePlayer", "m_fOnTarget", -60);
 	NETVAR_OFF(m_flSwimSoundTime, float, "CBasePlayer", "m_fOnTarget", -44);
 	NETVAR_OFF(m_vecLadderNormal, Vec3, "CBasePlayer", "m_fOnTarget", -36);
