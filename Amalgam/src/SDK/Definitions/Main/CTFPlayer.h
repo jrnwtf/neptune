@@ -178,6 +178,8 @@ public:
 	NETVAR(m_iCampaignMedals, int, "CTFPlayer", "m_iCampaignMedals");
 	NETVAR(m_iPlayerSkinOverride, int, "CTFPlayer", "m_iPlayerSkinOverride");
 	NETVAR(m_bViewingCYOAPDA, bool, "CTFPlayer", "m_bViewingCYOAPDA");
+	NETVAR(m_bRegenerating, bool, "CTFPlayer", "m_bRegenerating");
+
 	inline void* m_Shared()
 	{
 		static int nOffset = U::NetVars.GetNetVar("CTFPlayer", "m_Shared");
@@ -209,11 +211,15 @@ public:
 	SIGNATURE(UpdateWearables, void, CTFPlayer, this);
 
 	Vec3 GetEyeAngles();
+	Vec3 GetEyePosition();
 	Vec3 GetViewOffset(); // use on nonlocal players
 	bool InCond(const ETFCond cond);
+	bool IsZoomed();
+	bool IsStealthed();
 	bool IsAGhost();
 	bool IsTaunting();
 	bool IsInvisible();
+	float GetInvisiblePercentage();
 	bool IsInvulnerable();
 	bool IsUbered();
 	bool IsCritBoosted();
@@ -221,6 +227,14 @@ public:
 	bool IsMarked();
 	bool CanAttack(bool bCloak = true, bool bLocal = true);
 	float GetCritMult();
+	Vec3 GetBoneOrigin(int bone);
+	Vec3 GetHitboxOrigin(int hitbox);
+	bool ConstructBones(CTFPlayer* pEntity, matrix3x4* pBones, int mask);
+	void UpdateButtonState(const int nUserCmdButtonMask);
+	std::pair<Vec3, Vec3> GetBoundingBox();
+	CTFWeaponBase* GetWeaponFromSlot(int nSlot);
+	std::string GetName();
+	float HealthFraction();
 };
 
 class CTFRagdoll : public CBaseFlex
