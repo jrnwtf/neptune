@@ -279,6 +279,19 @@
     <ClCompile Include="src\Hooks\CHudTournamentSetup_OnTick.cpp" />
     <ClCompile Include="src\Hooks\SendTable_GetCRC.cpp" />
     <ClCompile Include="src\Hooks\Host_Error.cpp" />
+    <ClCompile Include="src\Hooks\CBaseAnimating_FrameAdvance.cpp" />
+    <ClCompile Include="src\Hooks\CBaseEntity_Interpolate.cpp" />
+    <ClCompile Include="src\Hooks\CBasePlayer_CalcDeathCamView.cpp" />
+    <ClCompile Include="src\Hooks\CBasePlayer_CalcFreezeCamView.cpp" />
+    <ClCompile Include="src\Hooks\CClientState_GetTime.cpp" />
+    <ClCompile Include="src\Hooks\CInterpolatedVarArrayBase_Interpolate.cpp" />
+    <ClCompile Include="src\Hooks\CMultiPlayerAnimState_ComputePoseParamAimYaw.cpp" />
+    <ClCompile Include="src\Hooks\CNetChannel_ProcessPacket.cpp" />
+    <ClCompile Include="src\Hooks\CPrediction_RunCommand.cpp" />
+    <ClCompile Include="src\Hooks\CSequenceTransitioner_CheckForSequenceChange.cpp" />
+    <ClCompile Include="src\Hooks\CTFPartyClient_BCanRequestToJoinPlayer.cpp" />
+    <ClCompile Include="src\Hooks\CTFRocketLauncher_FireProjectile.cpp" />
+    <ClCompile Include="src\Hooks\HostState_Restart.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Utils\UtlVector\UtlVector.h" />
