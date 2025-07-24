@@ -292,6 +292,7 @@
     <ClCompile Include="src\Hooks\CTFPartyClient_BCanRequestToJoinPlayer.cpp" />
     <ClCompile Include="src\Hooks\CTFRocketLauncher_FireProjectile.cpp" />
     <ClCompile Include="src\Hooks\HostState_Restart.cpp" />
+    <ClCompile Include="src\Utils\Console\Console.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Utils\UtlVector\UtlVector.h" />
@@ -714,6 +715,7 @@
     <ClInclude Include="src\Features\NavBot\Fbot.h" />
     <ClInclude Include="src\Features\NavBot\NavEngine\Controllers\MPController\MPController.h" />
     <ClInclude Include="src\Features\Misc\NamedPipe\NamedPipeUtils.h" />
+    <ClInclude Include="src\Utils\Console\Console.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
